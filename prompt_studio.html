@@ -238,6 +238,11 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 
   <div class="row" style="margin-top:0">
     <button class="btn" onclick="exportData()" style="flex:1">Export JSON</button>
+    <select class="inp" id="import-mode" style="flex:1">
+      <option value="all">Import: タグ+Groups</option>
+      <option value="tags">Import: タグ系だけ</option>
+      <option value="groups">Import: Groupsだけ</option>
+    </select>
     <button class="btn" onclick="document.getElementById('imp-file').click()" style="flex:1">Import JSON</button>
     <input id="imp-file" type="file" accept=".json" style="display:none" onchange="importData(this)">
   </div>
@@ -1320,21 +1325,29 @@ function importData(input){
   reader.onload=e=>{
     try{
       const data=JSON.parse(e.target.result);
-      if(!Array.isArray(data.tags)) throw new Error('tagsフィールドがないのだ');
-      let added=0,metaAdded=0,catAdded=0;
-      data.tags.forEach(t=>{if(typeof t==='string'&&!tags.includes(t)){tags.push(t);added++;}});
-      if(data.meta&&typeof data.meta==='object') Object.entries(data.meta).forEach(([k,v])=>{if(typeof v?.ja==='string'){tagMeta[k]={...(tagMeta[k]||{}),ja:v.ja};metaAdded++;}});
-      if(data.cats&&typeof data.cats==='object') Object.entries(data.cats).forEach(([k,v])=>{tagCats[k]=v;catAdded++;});
-      if(data.catDefs&&Array.isArray(data.catDefs)) data.catDefs.forEach(c=>{if(!catDefs.includes(c)) catDefs.push(c);});
-      if(data.loraList&&Array.isArray(data.loraList)) data.loraList.forEach(l=>{if(!loraList.find(x=>x.id===l.id)) loraList.push(l);});
-      if(data.loraSets&&Array.isArray(data.loraSets)) data.loraSets.forEach(s=>{if(!loraSets.find(x=>x.id===s.id)) loraSets.push(s);});
-      if(data.stock&&Array.isArray(data.stock)) data.stock.forEach(s=>{if(typeof s==='string'&&!stock.includes(s)) stock.push(s);});
-      if(data.promptGroups&&Array.isArray(data.promptGroups)) data.promptGroups.forEach(g=>{if(g&&g.id&&!promptGroups.find(x=>x.id===g.id)) promptGroups.push(g);});
+      const mode=document.getElementById('import-mode')?.value||'all';
+      const importTags=mode==='all'||mode==='tags';
+      const importGroups=mode==='all'||mode==='groups';
+      if(importTags&&!Array.isArray(data.tags)&&!data.meta&&!data.cats&&!data.catDefs&&!data.loraList&&!data.loraSets&&!data.stock) throw new Error('タグ系データが見つからないのだ');
+      if(importGroups&&!Array.isArray(data.promptGroups)) throw new Error('promptGroupsフィールドがないのだ');
+      let added=0,metaAdded=0,catAdded=0,loraAdded=0,setAdded=0,stockAdded=0,groupAdded=0;
+      if(importTags){
+        if(Array.isArray(data.tags)) data.tags.forEach(t=>{if(typeof t==='string'&&!tags.includes(t)){tags.push(t);added++;}});
+        if(data.meta&&typeof data.meta==='object') Object.entries(data.meta).forEach(([k,v])=>{if(typeof v?.ja==='string'){tagMeta[k]={...(tagMeta[k]||{}),ja:v.ja};metaAdded++;}});
+        if(data.cats&&typeof data.cats==='object') Object.entries(data.cats).forEach(([k,v])=>{tagCats[k]=v;catAdded++;});
+        if(data.catDefs&&Array.isArray(data.catDefs)) data.catDefs.forEach(c=>{if(!catDefs.includes(c)) catDefs.push(c);});
+        if(data.loraList&&Array.isArray(data.loraList)) data.loraList.forEach(l=>{if(!loraList.find(x=>x.id===l.id)){loraList.push(l);loraAdded++;}});
+        if(data.loraSets&&Array.isArray(data.loraSets)) data.loraSets.forEach(s=>{if(!loraSets.find(x=>x.id===s.id)){loraSets.push(s);setAdded++;}});
+        if(data.stock&&Array.isArray(data.stock)) data.stock.forEach(s=>{if(typeof s==='string'&&!stock.includes(s)){stock.push(s);stockAdded++;}});
+      }
+      if(importGroups){
+        data.promptGroups.forEach(g=>{if(g&&g.id&&!promptGroups.find(x=>x.id===g.id)){promptGroups.push(g);groupAdded++;}});
+      }
       if(promptGroups.length && !activeGroupId) activeGroupId=promptGroups[0].id;
       saveTags();saveMeta();saveCats();saveLoras();saveSets();saveStock();saveGroups();
       renderTags(); renderCatBar(); renderLoras(); renderLoraSets(); renderStock(); renderGroups(); renderGroupSelectors();
-      log.innerHTML=`<span style="color:var(--accent)">+${added}タグ、${metaAdded}件メモ、${catAdded}件カテゴリをインポートしたのだ</span>`;
-      toast(`${added}タグをインポートしたのだ！`);
+      log.innerHTML=`<span style="color:var(--accent)">Import ${escH(mode)}: +${added}タグ、${metaAdded}件メモ、${catAdded}件カテゴリ、${loraAdded} LoRA、${setAdded}セット、${stockAdded}ストック、${groupAdded} Groups</span>`;
+      toast(`Import ${mode}: ${added}タグ / ${groupAdded} Groups`);
     }catch(err){ log.innerHTML=`<span style="color:var(--danger)">エラー: ${escH(err.message)}</span>`; }
     input.value='';
   };
