@@ -1,0 +1,2878 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0c;--surface:#111114;--surface2:#18181c;--surface3:#202026;--surface4:#282830;
+  --border:#2a2a34;--border2:#353540;
+  --accent:#e8ff60;--accent2:#60e8ff;--accent3:#ff6090;
+  --tag-sel:#252a10;--tag-sel-b:#e8ff60;
+  --text:#e8e8f0;--muted:#606070;--muted2:#808090;
+  --danger:#ff5566;
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+  --r:8px;--r2:5px;
+}
+body.light{
+  --bg:#f2f2f0;--surface:#ffffff;--surface2:#ebebea;--surface3:#dcdcda;--surface4:#cecece;
+  --border:#d0d0ce;--border2:#bbbbba;--text:#1a1a20;--muted:#808090;--muted2:#606070;
+  --tag-sel:#e8f8d0;--tag-sel-b:#88aa20;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;padding:12px 14px 80px}
+
+/* ── Header ── */
+.hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.hd-title{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--accent);flex:1}
+.hd-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+/* ── Theme bar ── */
+.theme-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:7px 12px;background:var(--surface);border-radius:6px;border:1px solid var(--border);flex-wrap:wrap}
+.theme-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.theme-dots{display:flex;gap:5px;flex:1}
+.theme-dot{width:17px;height:17px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .12s;display:inline-block}
+.light-toggle{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer}
+
+/* ── Auto-import bar ── */
+.ai-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:7px 12px;background:var(--surface);border-radius:6px;border:1px solid var(--border)}
+.ai-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;white-space:nowrap}
+.ai-status{font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Tabs ── */
+.tabs{position:sticky;top:8px;display:flex;gap:2px;margin-bottom:14px;background:var(--surface);border-radius:var(--r);padding:3px;border:1px solid var(--border);z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.tab{flex:1;padding:7px 4px;text-align:center;font-family:var(--sans);font-size:12px;font-weight:500;letter-spacing:.02em;cursor:pointer;border-radius:6px;color:var(--muted);transition:all .15s;border:none;background:transparent;white-space:nowrap}
+.tab.active{background:var(--surface3);color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.tab-kbd{display:inline-block;margin-left:5px;font-family:var(--mono);font-size:9px;color:var(--muted);opacity:.78}
+.tab.active .tab-kbd{color:var(--accent2)}
+.panel{display:none}.panel.active{display:block}
+
+/* ── Common ── */
+.sl{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;margin-top:14px}
+textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:13px;padding:10px 12px;resize:vertical;outline:none;line-height:1.7;transition:border-color .15s}
+textarea:focus{border-color:var(--accent2)}
+textarea::placeholder{color:var(--muted)}
+#reg-input{min-height:150px;max-height:420px;overflow:auto;white-space:pre-wrap}
+.row{display:flex;gap:6px;margin-top:8px;align-items:stretch;flex-wrap:wrap}
+.btn{padding:7px 13px;border-radius:var(--r2);border:1px solid var(--border);font-family:var(--sans);font-size:12px;font-weight:500;letter-spacing:.02em;cursor:pointer;transition:all .15s;background:var(--surface2);color:var(--text);white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
+.btn.primary:hover{background:#f0ff80}
+.btn.secondary{border-color:var(--accent2);color:var(--accent2)}
+.btn.secondary:hover{background:var(--accent2);color:#111}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.sm{padding:4px 9px;font-size:11px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.inp{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-family:var(--sans);font-size:13px;padding:7px 10px;outline:none;transition:border-color .15s;width:100%}
+.inp:focus{border-color:var(--accent2)}
+.inp::placeholder{color:var(--muted)}
+
+/* ── Tag area ── */
+.tag-area{display:flex;flex-wrap:wrap;gap:5px;min-height:52px;max-height:280px;overflow:auto;padding:10px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border);scroll-behavior:smooth}
+.tag-scroll-row{display:flex;justify-content:flex-end;gap:5px;margin-top:6px}
+.tag-scroll-btn{padding:4px 9px;border-radius:var(--r2);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer}
+.tag-scroll-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:var(--r2);background:var(--surface2);border:1px solid var(--border);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .12s;user-select:none;color:var(--text)}
+.tag:hover{border-color:var(--accent);color:var(--accent)}
+.tag.selected{background:var(--tag-sel);border-color:var(--tag-sel-b);color:var(--accent)}
+.tag .del{color:var(--muted);font-size:10px;line-height:1;transition:color .12s}
+.tag .del:hover{color:var(--danger)}
+.tag-ja{font-size:9px;color:var(--muted);font-family:var(--sans);margin-left:1px;transition:color .12s}
+.tag:hover .tag-ja,.tag.selected .tag-ja{color:inherit}
+.tag-ja-edit{font-size:9px;color:var(--muted);cursor:pointer;opacity:0;transition:opacity .12s;padding:0 1px}
+.tag:hover .tag-ja-edit{opacity:1}
+.tag-empty{color:var(--muted);font-size:12px;font-style:italic;align-self:center}
+.ja-inline-input{background:var(--surface2);border:1px solid var(--accent2);border-radius:3px;color:var(--text);font-family:var(--sans);font-size:10px;padding:1px 5px;outline:none;margin-left:2px;width:76px}
+
+/* ── Output ── */
+.out-box{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--accent2);font-family:var(--mono);font-size:12px;padding:10px 12px;min-height:48px;word-break:break-all;line-height:1.7;white-space:pre-wrap}
+.fmt-toggle{display:flex;gap:2px;background:var(--surface);border-radius:6px;padding:2px;border:1px solid var(--border)}
+.fmt-btn{padding:4px 11px;border-radius:4px;border:none;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
+.fmt-btn.active{background:var(--surface3);color:var(--text)}
+
+/* ── Jump bar ── */
+.jump-bar{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px}
+.jump-chip{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .12s;user-select:none}
+.jump-chip:hover{border-color:var(--accent);color:var(--accent)}
+.jump-chip.active{background:var(--accent);color:#111;border-color:var(--accent)}
+
+/* ── Reg chips ── */
+.reg-chip{display:inline-flex;align-items:flex-start;gap:4px;max-width:100%;padding:3px 8px;border-radius:4px;font-family:var(--sans);font-size:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;user-select:none;transition:all .12s;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.reg-chip.on{background:var(--tag-sel);border-color:var(--tag-sel-b);color:var(--accent)}
+.reg-chip .chk{font-size:10px;width:10px;text-align:center;flex-shrink:0;margin-top:2px}
+.reg-live-list{display:flex;flex-wrap:wrap;gap:4px;max-height:220px;overflow:auto;padding:2px}
+.reg-dup-chip{display:inline-flex;align-items:flex-start;gap:4px;max-width:100%;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:11px;background:var(--surface2);border:1px solid var(--danger);color:var(--danger);opacity:.7;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.reg-result-chip{display:inline-flex;flex-direction:column;max-width:100%;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:11px;background:var(--tag-sel);border:1px solid var(--tag-sel-b);color:var(--accent);white-space:normal;overflow-wrap:anywhere}
+
+/* ── LoRA ── */
+.lora-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px;transition:border-color .15s}
+.lora-card:hover{border-color:var(--border2)}
+.lora-card.active-lora{border-color:var(--accent);background:var(--tag-sel)}
+.lora-name{font-family:var(--sans);font-size:13px;color:var(--text);font-weight:500}
+.lora-file{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;word-break:break-all}
+.lora-weight-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.lora-weight-val{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:28px;text-align:right}
+input[type=range]{flex:1;accent-color:var(--accent);height:3px}
+.lora-actions{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.lora-set-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:all .12s}
+.lora-set-card:hover{border-color:var(--accent);color:var(--accent)}
+.lora-set-name{font-family:var(--mono);font-size:12px;color:var(--text)}
+.lora-set-detail{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+
+/* ── Category tabs ── */
+.cat-bar{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px}
+.cat-chip{font-family:var(--sans);font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .12s;user-select:none}
+.cat-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.cat-chip.active{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.cat-chip.accent{border-color:var(--accent);color:var(--accent)}
+
+/* ── Trans ── */
+.trans-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.trans-row{display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.trans-row:last-child{border-bottom:none}
+.trans-tag-label{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:180px;flex:1 1 220px;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;line-height:1.6;padding-top:3px}
+.trans-ja-input{flex:1 1 180px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:12px;padding:4px 8px;outline:none;min-width:0;transition:border-color .15s}
+.trans-ja-input:focus{border-color:var(--accent2)}
+.trans-result{margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:var(--r2);font-family:var(--mono);font-size:12px;color:var(--accent2);min-height:34px;word-break:break-all;cursor:pointer;border:1px solid transparent;transition:border-color .15s}
+.trans-result:hover{border-color:var(--accent2)}
+.trans-result.empty{color:var(--muted);font-style:italic}
+
+/* ── Builder ── */
+.builder-lora-strip{display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);min-height:36px}
+.blora-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r2);background:var(--surface2);border:1px solid var(--border);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .12s;user-select:none;color:var(--muted)}
+.blora-chip.on{background:var(--tag-sel);border-color:var(--tag-sel-b);color:var(--accent)}
+.code-out{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:12px;font-family:var(--mono);font-size:11px;color:var(--accent2);white-space:pre;overflow-x:auto;line-height:1.7;min-height:80px}
+
+/* ── One-liner ── */
+.stock-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:6px;transition:border-color .15s}
+.stock-item:hover{border-color:var(--border2)}
+.stock-text{font-family:var(--sans);font-size:12px;color:var(--text);flex:1;word-break:break-all;line-height:1.6;cursor:pointer}
+.stock-text:hover{color:var(--accent2)}
+
+/* ── Prompt Groups ── */
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;cursor:pointer;transition:all .12s}
+.group-card:hover{border-color:var(--accent)}
+.group-card.active{background:var(--tag-sel);border-color:var(--tag-sel-b)}
+.group-name{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text)}
+.group-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+.prompt-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;margin-bottom:7px}
+.prompt-item.dragging{opacity:.55;border-color:var(--accent2)}
+.prompt-item.drag-over{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.prompt-item.hit-current{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 18px rgba(102,217,239,.18)}
+.prompt-item-text{font-family:var(--sans);font-size:12px;color:var(--text);line-height:1.65;word-break:break-word;overflow-wrap:anywhere}
+.prompt-order-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:20px;border-radius:999px;border:1px solid var(--border2);background:var(--surface2);color:var(--accent);font-family:var(--mono);font-size:10px;font-weight:700;margin-top:1px;flex:0 0 auto;cursor:grab;user-select:none}
+.prompt-order-badge.order-edit{background:var(--tag-sel);border-color:var(--accent);color:var(--text)}
+.prompt-order-badge:active{cursor:grabbing}
+.prompt-hit{background:var(--accent);color:#071014;border-radius:3px;padding:0 2px}
+.prompt-size-badge{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--accent2);border:1px solid var(--border2);background:var(--surface2);border-radius:4px;padding:1px 6px;margin-right:5px}
+.prompt-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.prompt-send-size{display:inline-grid;grid-template-columns:112px 54px 54px auto;gap:4px;align-items:center}
+.prompt-send-size .inp{font-size:10px;padding:4px 6px}
+@media(max-width:720px){.prompt-send-size{grid-template-columns:1fr 1fr 1fr auto;width:100%}}
+.group-prompt-editor{margin-top:8px;padding:8px;border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface2)}
+.group-prompt-editor textarea{min-height:92px}
+.group-prompt-editor-grid{display:grid;grid-template-columns:150px 80px 80px 1fr;gap:6px;margin-top:6px}
+@media(max-width:720px){.group-prompt-editor-grid{grid-template-columns:1fr 1fr}.group-prompt-editor-grid .size-preset,.group-prompt-editor-grid .neg-field{grid-column:1/-1}}
+.group-empty{font-size:12px;color:var(--muted);font-style:italic;padding:10px 0}
+
+
+/* ── Workspace layout ── */
+.workspace-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(280px,1.2fr);gap:12px;align-items:start}
+.workspace-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.workspace-card .sl:first-child{margin-top:0}
+.panel-intro{margin-bottom:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--muted2);font-size:12px}
+.compose-grid{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(260px,.95fr) minmax(300px,1.05fr);gap:12px;align-items:start}
+.compose-sidebar{position:sticky;top:12px}
+.summary-list{display:grid;gap:6px}
+.summary-item{display:flex;justify-content:space-between;gap:10px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);font-size:12px}
+.summary-item span:last-child{font-family:var(--mono);color:var(--accent2)}
+.mini-help{font-size:11px;color:var(--muted);line-height:1.7}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+@media (max-width:980px){.compose-grid{grid-template-columns:1fr}.compose-sidebar{position:static}}
+@media (max-width:820px){.workspace-grid{grid-template-columns:1fr}}
+
+/* ── Misc ── */
+.count-badge{font-family:var(--mono);font-size:10px;color:var(--muted);padding:3px 0}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:18px;right:14px;background:var(--accent);color:#111;font-family:var(--mono);font-size:12px;font-weight:700;padding:7px 14px;border-radius:6px;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateY(0)}
+.scroll-btns{position:fixed;right:12px;top:58%;bottom:auto;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px;z-index:90}
+.scroll-btn{width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.scroll-btn:hover{border-color:var(--accent);color:var(--accent)}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.badge{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px;background:var(--surface3);color:var(--muted);border:1px solid var(--border);margin-left:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hd">
+  <div class="hd-dot"></div>
+  <div class="hd-title">Prompt Studio</div>
+  <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">v2.1</span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('library')" title="Option + 1">Library <span class="tab-kbd">⌥1</span></button>
+  <button class="tab" onclick="switchTab('compose')" title="Option + 2">Compose <span class="tab-kbd">⌥2</span></button>
+  <button class="tab" onclick="switchTab('groups')" title="Option + 3">Groups <span class="tab-kbd">⌥3</span></button>
+  <button class="tab" onclick="switchTab('assist')" title="Option + 4">Assist <span class="tab-kbd">⌥4</span></button>
+  <button class="tab" onclick="switchTab('settings')" title="Option + 5">Settings <span class="tab-kbd">⌥5</span></button>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ LIBRARY TAB ═══ -->
+<div id="tab-library" class="panel active">
+  <div class="panel-intro">素材を整える場所です。タグとLoRAを登録しておくと、Compose でそのまま使えます。</div>
+  <div class="workspace-grid">
+    <section class="workspace-card">
+
+  <div class="row" style="margin-top:0">
+    <button class="btn" onclick="exportData()" style="flex:1">Export JSON</button>
+    <button class="btn" onclick="document.getElementById('imp-file').click()" style="flex:1">Import JSON</button>
+    <input id="imp-file" type="file" accept=".json" style="display:none" onchange="importData(this)">
+  </div>
+  <div id="imp-log" style="margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--muted)"></div>
+
+  <div class="divider"></div>
+
+  <!-- Register sub-section -->
+  <div class="sl" style="margin-top:0">プロンプトを貼り付けて登録</div>
+  <textarea id="reg-input" rows="7" placeholder="masterpiece, best quality, 1girl, solo..." oninput="previewReg()" wrap="soft"></textarea>
+  <div id="reg-live" style="margin-top:7px;min-height:0"></div>
+  <div id="reg-trans-sec"></div>
+  <div class="row">
+    <button class="btn primary" onclick="registerSelected()" style="flex:1">選択を登録</button>
+    <button class="btn" onclick="registerAll()">全て登録</button>
+    <button class="btn" onclick="clearReg()">Clear</button>
+  </div>
+  <div id="reg-preview" style="margin-top:10px"></div>
+
+  <div class="divider"></div>
+
+  <!-- Library sub-section -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:6px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="sl" style="margin:0">ライブラリ</span>
+      <div class="fmt-toggle">
+        <button class="fmt-btn active" id="sort-reg" onclick="setSort('reg')">登録順</button>
+        <button class="fmt-btn" id="sort-alpha" onclick="setSort('alpha')">A-Z</button>
+        <button class="fmt-btn" id="sort-ja" onclick="setSort('ja')">あ-ん</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="position:relative;display:inline-flex;align-items:center">
+        <input class="inp" id="search-box" placeholder="search..." style="width:120px;padding-right:24px" oninput="renderTags();toggleSearchClear()">
+        <span id="search-clear" onclick="clearSearch()" style="display:none;position:absolute;right:7px;cursor:pointer;font-size:11px;color:var(--muted)" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">✕</span>
+      </div>
+      <button class="btn sm danger" onclick="clearAllTags()">Clear All</button>
+    </div>
+  </div>
+
+  <!-- Category bar -->
+  <div class="sl" style="margin-top:0">カテゴリ</div>
+  <div style="margin-bottom:6px;padding:8px 10px;background:var(--surface2);border-radius:var(--r2);border:1px solid var(--border)">
+    <div style="font-family:var(--sans);font-size:11px;color:var(--muted);line-height:1.8">
+      <span style="color:var(--accent2)">quality</span> — masterpiece, best quality など品質系 ／
+      <span style="color:var(--accent2)">character</span> — 1girl, long hair, blue eyes など人物・キャラ描写 ／
+      <span style="color:var(--accent2)">clothes</span> — 服の種類・形状・素材・フィット感（dress, oversized clothes, loose shirt など） ／
+      <span style="color:var(--accent2)">clothes/expression</span> — 服の一時的な状態・乱れ・濡れ・汚れ・変化（wet clothes, torn clothes など） ／
+      <span style="color:var(--accent2)">emotion</span> — happy, sad, embarrassed, angry など感情 ／
+      <span style="color:var(--accent2)">pose/expression</span> — sitting, looking at viewer, arms crossed など身体動作・視線 ／
+      <span style="color:var(--accent2)">style/technique</span> — pixel art, anime style, watercolor など画風・技法 ／
+      <span style="color:var(--accent2)">background</span> — outdoor, city, forest など背景・ロケーション ／
+      <span style="color:var(--accent2)">camera/angle</span> — close-up, from above, wide shot など構図・カメラ ／
+      <span style="color:var(--accent2)">effect</span> — bokeh, motion blur, sparkle など画面効果 ／
+      <span style="color:var(--accent2)">other</span> — その他
+    </div>
+  </div>
+  <div class="cat-bar" id="cat-bar"></div>
+
+  <div class="jump-bar" id="jump-bar"></div>
+  <div id="tag-area" class="tag-area"><span class="tag-empty">タグがまだないのだ</span></div>
+  <div class="tag-scroll-row">
+    <button class="tag-scroll-btn" onclick="scrollTagArea('tag-area','top')">タグ先頭へ</button>
+    <button class="tag-scroll-btn" onclick="scrollTagArea('tag-area','bottom')">タグ末尾へ</button>
+  </div>
+  <div id="count-badge" class="count-badge"></div>
+
+  <div class="sl">出力</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="fmt-toggle">
+      <button class="fmt-btn active" id="fmt-comma" onclick="setFmt('comma')">Comma</button>
+      <button class="fmt-btn" id="fmt-lines" onclick="setFmt('lines')">Lines</button>
+    </div>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="sel-count">0 selected</span>
+  </div>
+  <div style="margin-top:6px"><div id="out-box" class="out-box"></div></div>
+  <div class="row">
+    <button class="btn primary" onclick="copyOut()" style="flex:1">Copy Output</button>
+    <button class="btn" onclick="selectAll()">Select All</button>
+    <button class="btn" onclick="clearSel()">Clear Sel</button>
+  </div>
+
+
+    </section>
+    <section class="workspace-card">
+
+  <div class="sl">LoRAを追加</div>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+    <input class="inp" id="lora-name-inp" placeholder="表示名（例: Pixel Art XL）">
+    <input class="inp" id="lora-file-inp" placeholder="ファイル名.ckpt" style="grid-column:1/-1">
+  </div>
+  <div style="margin-top:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">WEIGHT</span>
+      <span class="lora-weight-val" id="lora-w-val">1.00</span>
+    </div>
+    <input type="range" id="lora-w-inp" min="0" max="2" step="0.05" value="1"
+      oninput="document.getElementById('lora-w-val').textContent=parseFloat(this.value).toFixed(2)">
+  </div>
+  <input class="inp" id="lora-memo-inp" placeholder="メモ（任意）" style="margin-top:6px">
+  <div class="row">
+    <button class="btn primary" onclick="addLora()" style="flex:1">Add LoRA</button>
+    <button class="btn" onclick="clearLoraForm()">Clear</button>
+  </div>
+
+  <div class="sl">登録済み LoRA</div>
+  <div id="lora-list"></div>
+
+  <div class="sl">LoRA セット</div>
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <input class="inp" id="lora-set-name-inp" placeholder="セット名（例: キャラ生成セット）" style="flex:1">
+    <button class="btn secondary" onclick="saveLoraSet()">セット保存</button>
+  </div>
+  <div id="lora-set-list"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ COMPOSE TAB ═══ -->
+<div id="tab-compose" class="panel">
+  <div class="panel-intro">ここが制作の中心です。タグとLoRAを選びながら、生成用のプロンプトとコードをまとめます。</div>
+  <div class="compose-grid">
+    <aside class="workspace-card compose-sidebar">
+      <div class="sl">現在の構成</div>
+      <div class="summary-list">
+        <div class="summary-item"><span>Positive tags</span><span id="compose-pos-count">0</span></div>
+        <div class="summary-item"><span>Active LoRA</span><span id="compose-lora-count">0</span></div>
+        <div class="summary-item"><span>Steps / CFG</span><span id="compose-params">20 / 7</span></div>
+      </div>
+      <div class="sl">出力の流れ</div>
+      <div class="mini-help">1. 中央でタグとLoRAを選ぶ<br>2. 右側でポジ/ネガを整える<br>3. コードをコピーする</div>
+    </aside>
+    <section class="workspace-card">
+
+  <div class="sl" style="margin-top:0">使用するLoRA</div>
+  <div id="builder-lora-strip" class="builder-lora-strip">
+    <span style="color:var(--muted);font-size:11px;font-style:italic;align-self:center">LibraryでLoRAを登録してから選ぶのだ</span>
+  </div>
+
+  <div class="sl">カテゴリ別タグ選択</div>
+  <div class="cat-bar" id="builder-cat-bar"></div>
+  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
+    <div style="position:relative;display:inline-flex;align-items:center;flex:1;min-width:100px">
+      <input class="inp" id="builder-search" placeholder="search tags..." style="font-size:12px;padding-right:24px" oninput="renderBuilderTags()">
+      <span onclick="document.getElementById('builder-search').value='';renderBuilderTags()" style="position:absolute;right:7px;cursor:pointer;font-size:11px;color:var(--muted)">✕</span>
+    </div>
+    <div class="fmt-toggle">
+      <button class="fmt-btn active" id="bsort-reg"   onclick="setBuilderSort('reg')">登録順</button>
+      <button class="fmt-btn"        id="bsort-alpha" onclick="setBuilderSort('alpha')">A-Z</button>
+      <button class="fmt-btn"        id="bsort-ja"    onclick="setBuilderSort('ja')">あ-ん</button>
+    </div>
+  </div>
+  <div id="builder-tag-area" class="tag-area" style="margin-bottom:8px"><span class="tag-empty">タグがまだないのだ</span></div>
+  <div class="tag-scroll-row">
+    <button class="tag-scroll-btn" onclick="scrollTagArea('builder-tag-area','top')">タグ先頭へ</button>
+    <button class="tag-scroll-btn" onclick="scrollTagArea('builder-tag-area','bottom')">タグ末尾へ</button>
+  </div>
+
+
+    </section>
+    <section class="workspace-card">
+  <div class="sl">ポジティブプロンプト</div>
+  <textarea id="b-pos" rows="3" placeholder="タグをクリックして追加するか直接入力するのだ" oninput="buildCode()"></textarea>
+
+  <div class="sl">ネガティブプロンプト</div>
+  <textarea id="b-neg" rows="2" placeholder="worst quality, low quality, bad anatomy..." oninput="buildCode()"></textarea>
+
+  <div class="sl">Batch サイズ / Group</div>
+  <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px">
+    <div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">PRESET</div>
+      <select class="inp" id="batch-size-preset" onchange="applySizePresetToInputs(this.value,'batch-width','batch-height')"></select>
+    </div>
+    <div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">WIDTH</div>
+      <input class="inp" id="batch-width" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="704">
+    </div>
+    <div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">HEIGHT</div>
+      <input class="inp" id="batch-height" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="832">
+    </div>
+  </div>
+  <div class="row">
+    <select class="inp" id="compose-group-select" style="flex:1"></select>
+    <button class="btn secondary" onclick="addComposeToGroup()">Add to Group</button>
+  </div>
+
+  <div class="sl">ステップ / CFG</div>
+  <div style="display:flex;gap:8px">
+    <div style="flex:1">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">STEPS</div>
+      <input class="inp" id="b-steps" type="number" value="20" min="1" max="150" oninput="buildCode()">
+    </div>
+    <div style="flex:1">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">CFG SCALE</div>
+      <input class="inp" id="b-cfg" type="number" value="7" min="1" max="30" step="0.5" oninput="buildCode()">
+    </div>
+    <div style="flex:1">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">IMAGES/PROMPT</div>
+      <input class="inp" id="b-imgs" type="number" value="1" min="1" max="16" oninput="buildCode()">
+    </div>
+  </div>
+
+  <div class="sl">生成コード出力</div>
+  <div id="code-out" class="code-out"></div>
+  <div class="row">
+    <button class="btn primary" onclick="copyCode()" style="flex:1">Copy Script OPTIONS</button>
+    <button class="btn secondary" onclick="copyPromptOnly()" style="flex:1">Copy Prompt + ,</button>
+    <button class="btn" onclick="clearBuilder()">Clear</button>
+  </div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ GROUPS TAB ═══ -->
+<div id="tab-groups" class="panel">
+  <div class="panel-intro">テーマ別に完成プロンプトを束ねる場所です。仕事中、プライベート、表情差分などのセットを作って、Draw Things用にまとめてコピーできます。</div>
+  <div class="workspace-grid">
+    <section class="workspace-card">
+      <div class="sl" style="margin-top:0">Prompt Groups</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="inp" id="group-name-inp" placeholder="グループ名（例: 仕事中の様子）" style="flex:1">
+        <button class="btn primary" onclick="createPromptGroup()">作成</button>
+      </div>
+      <div id="group-list"></div>
+    </section>
+    <section class="workspace-card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">
+        <div>
+          <div class="sl" style="margin:0">Group Detail</div>
+          <div id="group-detail-title" style="font-size:13px;color:var(--muted);margin-top:2px">グループを選択してください</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn sm secondary" onclick="copyActiveGroupBatch()">Copy Batch</button>
+          <button class="btn sm" onclick="renameActiveGroup()">Rename</button>
+          <button class="btn sm danger" onclick="deleteActiveGroup()">Delete</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="sl" style="margin-top:0">順番編集</div>
+      <div class="row">
+        <button class="btn sm secondary" onclick="startGroupOrderEdit()">順番編集開始</button>
+        <button class="btn sm" onclick="reverseActiveGroupOrder()">Group全体を逆順</button>
+        <button class="btn sm primary" onclick="confirmGroupOrderEdit()">確定して番号振り直し</button>
+        <button class="btn sm danger" onclick="cancelGroupOrderEdit()">キャンセル</button>
+      </div>
+      <div id="group-order-edit-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
+      <div class="divider"></div>
+      <textarea id="group-bulk-input" rows="4" placeholder="複数プロンプトを貼って、選択中グループへまとめて追加できます。&#10;704x832 | prompt A&#10;832x704 | prompt B"></textarea>
+      <div class="row">
+        <button class="btn secondary" onclick="addBulkToActiveGroup()" style="flex:1">貼り付けをGroupへ追加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="sl" style="margin-top:0">選択プロンプトを一括編集</div>
+      <div class="row">
+        <button class="btn sm" onclick="selectAllGroupPrompts(true)">全選択</button>
+        <button class="btn sm" onclick="selectAllGroupPrompts(false)">選択解除</button>
+        <button class="btn sm" onclick="clearAllGroupPromptSelections()">全Group選択解除</button>
+        <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompose()">選択をComposeへ</button>
+      </div>
+      <div id="group-cross-select-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
+      <div style="display:grid;grid-template-columns:minmax(150px,1.4fr) 80px 80px auto;gap:6px;margin-top:8px;align-items:center">
+        <select class="inp" id="group-send-size-preset" onchange="applySizePresetToInputs(this.value,'group-send-width','group-send-height')"></select>
+        <input class="inp" id="group-send-width" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="W">
+        <input class="inp" id="group-send-height" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="H">
+        <button class="btn sm" onclick="clearGroupSendSize()">送信サイズClear</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px">ここは全体用の一時サイズです。各プロンプト横の個別サイズがある場合は、そちらを優先します。Group保存内容は変わりません。</div>
+      <div style="display:grid;grid-template-columns:minmax(140px,1fr) auto auto auto minmax(140px,1fr) auto;gap:6px;margin-top:8px;align-items:center">
+        <input class="inp" id="group-find" placeholder="検索: realistic" oninput="refreshGroupPromptHighlights(true)">
+        <button class="btn sm" onclick="jumpGroupFindHit(-1)">前へ</button>
+        <button class="btn sm" onclick="jumpGroupFindHit(1)">次へ</button>
+        <button class="btn sm" onclick="clearGroupFind()">検索Clear</button>
+        <input class="inp" id="group-replace" placeholder="置換: best quality（空欄なら削除）">
+        <button class="btn sm" onclick="clearGroupReplace()">置換Clear</button>
+      </div>
+      <div class="row">
+        <button class="btn secondary" onclick="bulkReplaceGroupPrompts()" style="flex:1">選択中に適用</button>
+        <button class="btn" onclick="cleanSelectedGroupPrompts()">AI文体Cleaner</button>
+      </div>
+      <div class="divider"></div>
+      <div id="group-prompt-list"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ ASSIST TAB ═══ -->
+<div id="tab-assist" class="panel">
+  <div class="panel-intro">補助ツールをまとめた場所です。翻訳、AI仕分け、整形をここで行います。</div>
+  <div class="workspace-grid">
+    <section class="workspace-card">
+  <div class="sl">日本語 → English（単文）</div>
+  <div style="display:flex;gap:6px">
+    <input class="inp" id="jp-input" placeholder="青い目の銀髪の少女、夕暮れの海辺..." style="flex:1" onkeydown="if(event.key==='Enter')translateSingle()">
+    <button class="btn primary" id="trans-btn" onclick="translateSingle()">Translate</button>
+  </div>
+  <div id="trans-result" class="trans-result empty" style="margin-top:7px">翻訳結果がここに出るのだ（クリックでコピー）</div>
+  <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted)">→ クリックでコピー。Libraryの登録欄に貼ってそのまま追加できるのだ</div>
+
+  <div class="sl">バッチ翻訳 &amp; 登録</div>
+  <textarea id="batch-jp" rows="4" placeholder="青い髪&#10;猫耳の少女&#10;夕暮れの空&#10;（1行1テキスト）"></textarea>
+  <div class="row">
+    <button class="btn primary" id="batch-btn" onclick="batchTransReg()" style="flex:1">Translate &amp; Register All</button>
+  </div>
+  <div id="batch-log" style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.8"></div>
+      <div class="divider"></div>
+
+  <div class="sl" style="margin-top:0">改行プロンプトを一行化</div>
+  <textarea id="ol-input" rows="5" placeholder="masterpiece, best quality,&#10;1girl, solo,&#10;long hair, white dress,&#10;..."></textarea>
+  <div class="row">
+    <button class="btn primary" onclick="doOneliner()" style="flex:1">一行化 &amp; ストック</button>
+    <button class="btn" onclick="document.getElementById('ol-input').value=''">Clear</button>
+  </div>
+  <div id="ol-result" style="margin-top:8px"></div>
+  <div class="sl">追加先Group</div>
+  <div class="row">
+    <select class="inp" id="assist-group-select" style="flex:1" onchange="setAssistTargetGroup(this.value)"></select>
+    <button class="btn secondary" onclick="switchTab('groups')">Groupsを開く</button>
+  </div>
+  <div class="row">
+    <input class="inp" id="assist-new-group-name" placeholder="新規Group名（例: 仕事中の様子）" style="flex:1">
+    <button class="btn" onclick="createAssistGroup()">新規Group作成</button>
+  </div>
+
+  <div class="divider"></div>
+  <div class="sl" style="margin-top:0">AI生成プロンプト取り込み</div>
+  <textarea id="ai-import-input" rows="7" placeholder="AIが出したPrompt群をそのまま貼るのだ。&#10;Prompt 1（日常配達シーン） / Scene 1 / 1. タイトル / ### タイトル などを検出します。&#10;1行で Prompt 1, Positive, ... Prompt 2, Positive, ... と続く形式もOK。&#10;手動で分けたい時は、3行以上空けるか --- だけの行を入れてください。"></textarea>
+  <div class="row">
+    <select class="inp" id="ai-import-size-preset" style="flex:1"></select>
+    <button class="btn primary" onclick="previewAIPromptImport()">取り込みPreview</button>
+    <button class="btn secondary" onclick="addAIPromptImportToGroup()">Groupへ一括登録</button>
+    <button class="btn" onclick="document.getElementById('ai-import-input').value='';document.getElementById('ai-import-result').innerHTML=''">Clear</button>
+  </div>
+  <div id="ai-import-result" style="margin-top:8px"></div>
+
+  <div class="divider"></div>
+  <div class="sl" style="margin-top:0">プロンプト群を1行ごとに分割</div>
+  <textarea id="split-input" rows="6" placeholder="過去に溜めたプロンプト群を貼り付けるのだ。&#10;空行区切り / --- 区切り / 既存のサイズ付き行を分割できます。"></textarea>
+  <div class="row">
+    <button class="btn primary" onclick="splitPromptBlocks()" style="flex:1">1行ごとに分割</button>
+    <button class="btn" onclick="document.getElementById('split-input').value='';document.getElementById('split-result').innerHTML=''">Clear</button>
+  </div>
+  <div id="split-result" style="margin-top:8px"></div>
+
+  <div class="divider"></div>
+  <div class="sl" style="margin-top:0">AI Prompt Cleaner</div>
+  <textarea id="cleaner-input" rows="5" placeholder="AIが書いた説明文っぽいプロンプトを貼るのだ。&#10;例: A realistic photo of a woman sitting in a cafe, while soft sunlight streams through the window."></textarea>
+  <div class="row">
+    <button class="btn primary" onclick="runPromptCleaner()" style="flex:1">画像生成向けに圧縮</button>
+    <button class="btn" onclick="document.getElementById('cleaner-input').value='';document.getElementById('cleaner-result').innerHTML=''">Clear</button>
+  </div>
+  <div id="cleaner-result" style="margin-top:8px"></div>
+
+  <div class="sl">ストック一覧 <span class="badge" id="ol-count">0</span></div>
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <input class="inp" id="ol-search" placeholder="search stocks..." style="flex:1" oninput="renderStock()">
+    <button class="btn sm danger" onclick="clearStock()">Clear All</button>
+  </div>
+  <div id="ol-list"></div>
+    </section>
+    <section class="workspace-card">
+  <div class="sl" style="margin-top:0">AI カテゴリ仕分け</div>
+  <div style="padding:8px 10px;background:var(--surface2);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.8">
+    登録済みタグをAIにカテゴリ仕分けさせるのだ。仕分け後にプレビューで確認・手修正してから適用できるのだ。<br>
+    <span style="color:var(--accent2)">任意仕分け</span>：タグをクリックして選んでから実行 ／ <span style="color:var(--accent)">一括仕分け</span>：uncategorizedを全部まとめて実行
+  </div>
+
+  <!-- 仕分けモード切替 -->
+  <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <div class="fmt-toggle">
+        <button class="fmt-btn active" id="catmode-sel" onclick="setCatMode('select')">任意選択</button>
+        <button class="fmt-btn" id="catmode-all" onclick="setCatMode('all')">未分類一括</button>
+        <button class="fmt-btn" id="catmode-pose-select" onclick="setCatMode('pose-select')">pose任意</button>
+        <button class="fmt-btn" id="catmode-pose-all" onclick="setCatMode('pose-all')">pose一括</button>
+      </div>
+    <span style="font-size:11px;color:var(--muted)" id="catmode-desc">タグをクリックして選択 → 仕分け実行</span>
+  </div>
+
+  <!-- 任意選択モード用タグエリア -->
+  <div id="catsel-area" style="margin-bottom:8px">
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
+      <div style="position:relative;display:inline-flex;align-items:center;flex:1;min-width:100px">
+        <input class="inp" id="catsel-search" placeholder="search..." style="font-size:12px;padding-right:24px" oninput="renderCatSelTags()">
+        <span onclick="document.getElementById('catsel-search').value='';renderCatSelTags()" style="position:absolute;right:7px;cursor:pointer;font-size:11px;color:var(--muted)">✕</span>
+      </div>
+      <div class="fmt-toggle">
+        <button class="fmt-btn active" id="catsel-sort-reg"   onclick="setCatSelSort('reg')">登録順</button>
+        <button class="fmt-btn"        id="catsel-sort-alpha" onclick="setCatSelSort('alpha')">A-Z</button>
+        <button class="fmt-btn"        id="catsel-sort-cat"   onclick="setCatSelSort('cat')">カテゴリ</button>
+      </div>
+      <button class="btn sm" id="catsel-filter-uncat" onclick="filterCatSelUncategorized()">未分類だけ</button>
+    </div>
+    <div id="catsel-tags" class="tag-area" style="min-height:44px"><span class="tag-empty">タグをクリックして選ぶのだ</span></div>
+    <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+      <span style="font-size:11px;color:var(--muted)" id="catsel-count">0 件選択中</span>
+      <button class="btn sm" onclick="catSelClear()">選択クリア</button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:0">
+    <button class="btn secondary" onclick="runLibCategorize()" id="lib-cat-btn" style="flex:1">AIで仕分け実行</button>
+  </div>
+
+  <!-- 仕分けプレビュー -->
+  <div id="lib-cat-preview" style="margin-top:10px"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ SETTINGS TAB ═══ -->
+<div id="tab-settings" class="panel">
+  <div class="panel-intro">頻繁には触らない設定をここへ集約しました。</div>
+  <div class="settings-grid">
+    <section class="workspace-card">
+      <div class="sl" style="margin-top:0">Theme</div>
+<div class="theme-bar">
+  <span class="theme-label">THEME</span>
+  <div class="theme-dots" id="theme-dots"></div>
+  <label class="light-toggle">
+    <input type="checkbox" id="light-toggle" onchange="toggleLight(this.checked)"> LIGHT
+  </label>
+</div>
+    </section>
+    <section class="workspace-card">
+      <div class="sl" style="margin-top:0">Auto-import</div>
+<div class="ai-bar">
+  <span class="ai-label">AUTO-IMPORT</span>
+  <span class="ai-status" id="ai-status">未設定</span>
+  <button class="btn sm" onclick="setAutoImport()">ファイル設定</button>
+  <button class="btn sm danger" id="ai-clear-btn" onclick="clearAutoImport()" style="display:none">解除</button>
+</div>
+    </section>
+    <section class="workspace-card">
+
+  <div class="sl" style="margin-top:0">バックエンド</div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div class="fmt-toggle">
+      <button class="fmt-btn" id="backend-claude" onclick="setBackend('claude')">Claude API</button>
+      <button class="fmt-btn active" id="backend-ollama" onclick="setBackend('ollama')">Ollama</button>
+    </div>
+  </div>
+  <div id="claude-cfg" style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:2;min-width:180px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">API KEY</div>
+        <input class="inp" id="claude-key" type="password" placeholder="sk-ant-..." style="font-size:11px">
+      </div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">MODEL</div>
+        <input class="inp" id="claude-model" value="claude-sonnet-4-20250514" style="font-size:11px">
+      </div>
+    </div>
+  </div>
+  <div id="ollama-cfg" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:2;min-width:150px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">ENDPOINT</div>
+        <input class="inp" id="ollama-url" value="http://localhost:11434" style="font-size:11px">
+      </div>
+      <div style="flex:1;min-width:110px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:4px">MODEL</div>
+        <input class="inp" id="ollama-model" value="llama3.2" style="font-size:11px">
+      </div>
+      <button class="btn sm" onclick="fetchOllamaModels()">Fetch</button>
+    </div>
+    <div id="ollama-models" style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px"></div>
+  </div>
+
+
+    </section>
+  </div>
+</div>
+
+<div class="scroll-btns">
+  <button class="scroll-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+  <button class="scroll-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">↓</button>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STORAGE KEYS
+// ═══════════════════════════════════════════════════════════
+const SK_TAGS   = 'prompt_tags_v1';
+const SK_META   = 'prompt_tags_meta_v1';
+const SK_THEME  = 'prompt_tags_theme_v1';
+const SK_LORAS  = 'prompt_studio_loras_v1';
+const SK_SETS   = 'prompt_studio_lora_sets_v1';
+const SK_CATS   = 'prompt_studio_cats_v1';      // {tagName: category}
+const SK_CATDEF = 'prompt_studio_catdefs_v1';   // [catName, ...]
+const SK_STOCK  = 'prompt_studio_stock_v1';     // [string, ...]
+const SK_GROUPS = 'prompt_studio_prompt_groups_v1'; // [{id,name,prompts}]
+const DEFAULT_CATS = ['quality','character','clothes','clothes/expression','emotion','pose/expression','style/technique','background','camera/angle','effect','other'];
+const SIZE_PRESETS = [
+  ['704x832','704×832 縦 / current'],
+  ['832x704','832×704 横 / current'],
+  ['1024x1024','1024×1024 正方形'],
+  ['896x1152','896×1152 縦'],
+  ['1152x896','1152×896 横'],
+  ['1024x1536','1024×1536 縦 2:3'],
+  ['1536x1024','1536×1024 横 3:2'],
+  ['1152x1536','1152×1536 縦 3:4'],
+  ['1536x1152','1536×1152 横 4:3'],
+  ['1024x1344','1024×1344 縦'],
+  ['1344x1024','1344×1024 横'],
+  ['832x1216','832×1216 縦長'],
+  ['1216x832','1216×832 横長'],
+  ['768x1344','768×1344 9:16'],
+  ['1344x768','1344×768 16:9'],
+  ['864x1536','864×1536 9:16 大'],
+  ['1536x864','1536×864 16:9 大'],
+  ['1280x1280','1280×1280 正方形 大'],
+  ['1536x1536','1536×1536 正方形 最大'],
+  ['512x768','512×768 軽量縦'],
+  ['768x512','768×512 軽量横']
+];
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let tags = [], tagMeta = {}, tagCats = {}, catDefs = [], loraList = [], loraSets = [], stock = [], promptGroups = [];
+let selected = new Set(), builderLoraOn = new Set(), builderCat = 'ALL', builderSort = 'reg';
+let outFmt = 'comma', sortOrder = 'reg', jumpFilter = null, libCat = 'ALL';
+let currentBackend = 'ollama';
+let regSelected = new Set(), regParsedCache = [];
+let activeGroupId = null;
+let editingGroupPromptId = null;
+let groupPromptSelectionOrder = [];
+let groupFindCursor = -1;
+let draggingGroupPromptId = null;
+let groupOrderEdit = null;
+let groupPromptSendSizes = {}; // {promptId:{width,height}} temporary compose-send overrides
+
+// ═══════════════════════════════════════════════════════════
+//  LOAD / SAVE
+// ═══════════════════════════════════════════════════════════
+function load(){
+  try{ tags = JSON.parse(localStorage.getItem(SK_TAGS)||'[]'); }catch(e){ tags=[]; }
+  try{ tagMeta = JSON.parse(localStorage.getItem(SK_META)||'{}'); }catch(e){ tagMeta={}; }
+  try{ tagCats = JSON.parse(localStorage.getItem(SK_CATS)||'{}'); }catch(e){ tagCats={}; }
+  try{
+    catDefs = JSON.parse(localStorage.getItem(SK_CATDEF)||'[]');
+    if(!catDefs.length) catDefs = [...DEFAULT_CATS];
+    DEFAULT_CATS.forEach(c=>{if(!catDefs.includes(c)) catDefs.push(c);});
+  }catch(e){ catDefs=[...DEFAULT_CATS]; }
+  try{ loraList = JSON.parse(localStorage.getItem(SK_LORAS)||'[]'); }catch(e){ loraList=[]; }
+  try{ loraSets = JSON.parse(localStorage.getItem(SK_SETS)||'[]'); }catch(e){ loraSets=[]; }
+  try{ stock = JSON.parse(localStorage.getItem(SK_STOCK)||'[]'); }catch(e){ stock=[]; }
+  try{ promptGroups = JSON.parse(localStorage.getItem(SK_GROUPS)||'[]'); }catch(e){ promptGroups=[]; }
+  if(promptGroups.length && !activeGroupId) activeGroupId = promptGroups[0].id;
+}
+function saveTags(){ localStorage.setItem(SK_TAGS, JSON.stringify(tags)); }
+function saveMeta(){ localStorage.setItem(SK_META, JSON.stringify(tagMeta)); }
+function saveCats(){ localStorage.setItem(SK_CATS, JSON.stringify(tagCats)); localStorage.setItem(SK_CATDEF, JSON.stringify(catDefs)); }
+function saveLoras(){ localStorage.setItem(SK_LORAS, JSON.stringify(loraList)); }
+function saveSets(){ localStorage.setItem(SK_SETS, JSON.stringify(loraSets)); }
+function saveStock(){ localStorage.setItem(SK_STOCK, JSON.stringify(stock)); }
+function saveGroups(){ localStorage.setItem(SK_GROUPS, JSON.stringify(promptGroups)); }
+
+// ═══════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════
+const TAB_NAMES = ['library','compose','groups','assist','settings'];
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',TAB_NAMES[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='library'){ renderCatBar(); renderTags(); renderLoras(); renderLoraSets(); }
+  if(name==='compose'){ renderBuilderLoras(); renderBuilderCatBar(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary(); renderGroupSelectors(); }
+  if(name==='groups'){ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); }
+  if(name==='assist'){ renderCatSelTags(); renderStock(); renderGroupSelectors(); renderSizePresetSelects(); }
+  if(name==='settings'){ setBackend(currentBackend); }
+}
+function setupTabShortcuts(){
+  document.addEventListener('keydown',e=>{
+    if(!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const n=Number(e.key);
+    if(!Number.isInteger(n) || n<1 || n>TAB_NAMES.length) return;
+    e.preventDefault();
+    switchTab(TAB_NAMES[n-1]);
+    window.scrollTo({top:0,behavior:'smooth'});
+    toast(`${TAB_NAMES[n-1]}へ移動したのだ`);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════
+const THEMES=[
+  {id:'neon',   accent:'#e8ff60',accent2:'#60e8ff',tagSel:'#252a10',tagSelB:'#e8ff60'},
+  {id:'cyan',   accent:'#60e8ff',accent2:'#e8ff60',tagSel:'#102530',tagSelB:'#60e8ff'},
+  {id:'purple', accent:'#c060f0',accent2:'#f060c0',tagSel:'#25103a',tagSelB:'#c060f0'},
+  {id:'orange', accent:'#f0a060',accent2:'#60e8ff',tagSel:'#3a2510',tagSelB:'#f0a060'},
+  {id:'pink',   accent:'#f060a0',accent2:'#e8ff60',tagSel:'#3a1025',tagSelB:'#f060a0'},
+  {id:'red',    accent:'#ff5566',accent2:'#60e8ff',tagSel:'#3a1010',tagSelB:'#ff5566'},
+];
+function applyTheme(th,save=true){
+  const r=document.documentElement.style;
+  r.setProperty('--accent',th.accent); r.setProperty('--accent2',th.accent2);
+  r.setProperty('--tag-sel',th.tagSel); r.setProperty('--tag-sel-b',th.tagSelB);
+  if(save) localStorage.setItem(SK_THEME,JSON.stringify({id:th.id,light:document.body.classList.contains('light')}));
+  renderThemeDots(th.id);
+}
+function renderThemeDots(activeId){
+  document.getElementById('theme-dots').innerHTML=THEMES.map(th=>
+    `<span class="theme-dot" title="${th.id}" data-tid="${th.id}"
+      style="background:${th.accent};border-color:${th.id===activeId?'var(--text)':'transparent'};
+      box-shadow:${th.id===activeId?'0 0 0 1px '+th.accent:'none'}"></span>`
+  ).join('');
+  document.querySelectorAll('.theme-dot').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const th=THEMES.find(t=>t.id===el.dataset.tid);
+      if(th) applyTheme(th);
+    });
+  });
+}
+function toggleLight(on){
+  document.body.classList.toggle('light',on);
+  const s=JSON.parse(localStorage.getItem(SK_THEME)||'{}');
+  localStorage.setItem(SK_THEME,JSON.stringify({...s,light:on}));
+}
+function loadTheme(){
+  try{
+    const s=JSON.parse(localStorage.getItem(SK_THEME)||'{}');
+    const th=THEMES.find(t=>t.id===s.id)||THEMES[0];
+    applyTheme(th,false);
+    if(s.light){document.body.classList.add('light');document.getElementById('light-toggle').checked=true;}
+  }catch(e){applyTheme(THEMES[0],false);}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LORA TAB
+// ═══════════════════════════════════════════════════════════
+function addLora(){
+  const name=document.getElementById('lora-name-inp').value.trim();
+  const file=document.getElementById('lora-file-inp').value.trim();
+  const parsedWeight=parseFloat(document.getElementById('lora-w-inp').value);
+  const weight=Number.isFinite(parsedWeight)?parsedWeight:1;
+  const memo=document.getElementById('lora-memo-inp').value.trim();
+  if(!file){toast('ファイル名を入力してほしいのだ');return;}
+  const id=Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  loraList.push({id,name:name||file,file,weight,memo});
+  saveLoras(); clearLoraForm(); renderLoras();
+  toast('LoRAを追加したのだ！');
+}
+function clearLoraForm(){
+  ['lora-name-inp','lora-file-inp','lora-memo-inp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lora-w-inp').value=1;
+  document.getElementById('lora-w-val').textContent='1.00';
+}
+function renderLoras(){
+  const el=document.getElementById('lora-list');
+  if(!loraList.length){el.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0">まだLoRAがないのだ</div>';return;}
+  el.innerHTML=loraList.map((l,i)=>`
+    <div class="lora-card" id="lcard-${l.id}">
+      <div class="lora-name">${escH(l.name)}</div>
+      <div class="lora-file">${escH(l.file)}</div>
+      ${l.memo?`<div style="font-size:11px;color:var(--muted2);margin-top:3px">${escH(l.memo)}</div>`:''}
+      <div class="lora-weight-row">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">WEIGHT</span>
+        <input type="range" min="0" max="2" step="0.05" value="${l.weight}"
+          oninput="updateLoraWeight('${l.id}',this.value)">
+        <span class="lora-weight-val" id="lw-${l.id}">${l.weight.toFixed(2)}</span>
+      </div>
+      <div class="lora-actions">
+        <button class="btn sm" onclick="editLora('${l.id}')">Edit</button>
+        <button class="btn sm danger" onclick="deleteLora('${l.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+function updateLoraWeight(id,val){
+  const l=loraList.find(x=>x.id===id);
+  if(!l) return;
+  l.weight=parseFloat(val);
+  document.getElementById('lw-'+id).textContent=l.weight.toFixed(2);
+  saveLoras();
+}
+function editLora(id){
+  const l=loraList.find(x=>x.id===id);
+  if(!l) return;
+  document.getElementById('lora-name-inp').value=l.name;
+  document.getElementById('lora-file-inp').value=l.file;
+  document.getElementById('lora-w-inp').value=l.weight;
+  document.getElementById('lora-w-val').textContent=l.weight.toFixed(2);
+  document.getElementById('lora-memo-inp').value=l.memo||'';
+  deleteLora(id,true);
+}
+function deleteLora(id,silent=false){
+  loraList=loraList.filter(x=>x.id!==id);
+  saveLoras(); renderLoras();
+  if(!silent) toast('削除したのだ');
+}
+function saveLoraSet(){
+  const name=document.getElementById('lora-set-name-inp').value.trim();
+  if(!name){toast('セット名を入力してほしいのだ');return;}
+  const active=loraList.filter(l=>builderLoraOn.has(l.id));
+  if(!active.length){
+    // 全部をセットに入れる
+    const snap=loraList.map(l=>({id:l.id,weight:l.weight}));
+    loraSets.push({id:Date.now()+'',name,loras:snap});
+  } else {
+    const snap=active.map(l=>({id:l.id,weight:l.weight}));
+    loraSets.push({id:Date.now()+'',name,loras:snap});
+  }
+  saveSets(); renderLoraSets();
+  document.getElementById('lora-set-name-inp').value='';
+  toast('セットを保存したのだ！');
+}
+function renderLoraSets(){
+  const el=document.getElementById('lora-set-list');
+  if(!loraSets.length){el.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:6px 0">セットなし</div>';return;}
+  el.innerHTML=loraSets.map(s=>{
+    const detail=s.loras.map(sl=>{
+      const l=loraList.find(x=>x.id===sl.id);
+      return l?`${l.name}:${sl.weight.toFixed(2)}`:'(deleted)';
+    }).join(' / ');
+    return `<div class="lora-set-card" onclick="loadLoraSet('${s.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="lora-set-name">${escH(s.name)}</div>
+        <button class="btn sm danger" onclick="event.stopPropagation();deleteLoraSet('${s.id}')">×</button>
+      </div>
+      <div class="lora-set-detail">${escH(detail)}</div>
+    </div>`;
+  }).join('');
+}
+function loadLoraSet(id){
+  const s=loraSets.find(x=>x.id===id);
+  if(!s) return;
+  builderLoraOn.clear();
+  s.loras.forEach(sl=>{
+    const l=loraList.find(x=>x.id===sl.id);
+    if(l){ l.weight=sl.weight; builderLoraOn.add(l.id); }
+  });
+  saveLoras(); renderLoras(); renderBuilderLoras();
+  toast(`セット「${s.name}」を読み込んだのだ！`);
+  switchTab('compose');
+}
+function deleteLoraSet(id){
+  loraSets=loraSets.filter(x=>x.id!==id);
+  saveSets(); renderLoraSets();
+  toast('セットを削除したのだ');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CATEGORY MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function renderCatBar(){
+  const bar=document.getElementById('cat-bar');
+  const allCats=['ALL',...catDefs,'uncategorized'];
+  bar.innerHTML=allCats.map(c=>`<span class="cat-chip${libCat===c?' active':''}" onclick="setLibCat('${escA(c)}')">${escH(c)}</span>`).join('')
+    +`<span class="cat-chip" onclick="addCat()" style="border-style:dashed">＋ 追加</span>`;
+}
+function setLibCat(c){ libCat=c; renderCatBar(); renderTags(); }
+function addCat(){
+  const name=prompt('カテゴリ名を入力するのだ:','');
+  if(!name||!name.trim()) return;
+  const n=name.trim();
+  if(!catDefs.includes(n)){ catDefs.push(n); saveCats(); renderCatBar(); }
+}
+function getTagCat(t){ return tagCats[t]||'uncategorized'; }
+function getCategoryList(){
+  return [...DEFAULT_CATS,...catDefs.filter(c=>!DEFAULT_CATS.includes(c))];
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAGS TAB - Register
+// ═══════════════════════════════════════════════════════════
+function parseTagsFromText(text){
+  return text.split(/[\n,;]+/).map(s=>s.trim().replace(/^["'\s]+|["'\s]+$/g,'')).filter(s=>s.length>0);
+}
+function previewReg(){
+  const raw=document.getElementById('reg-input').value;
+  if(!raw.trim()){document.getElementById('reg-live').innerHTML='';updateTransSec([]);regSelected.clear();regParsedCache=[];return;}
+  const parsed=parseTagsFromText(raw);
+  if(!parsed.length){document.getElementById('reg-live').innerHTML='';updateTransSec([]);regSelected.clear();regParsedCache=[];return;}
+  const newTags=parsed.filter(t=>!tags.includes(t));
+  newTags.filter(t=>!regParsedCache.includes(t)).forEach(t=>regSelected.add(t));
+  [...regSelected].forEach(t=>{if(!newTags.includes(t)) regSelected.delete(t);});
+  regParsedCache=parsed;
+  _renderRegLive(parsed,newTags);
+  updateTransSec(parsed);
+}
+function _renderRegLive(parsed,newTags){
+  const selCount=newTags.filter(t=>regSelected.has(t)).length;
+  document.getElementById('reg-live').innerHTML=
+    `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">
+        <span style="color:var(--accent)">●</span> 新規 ${newTags.length}　
+        <span style="color:var(--danger)">●</span> 重複 ${parsed.length-newTags.length}　
+        <span style="color:var(--accent2)">● 選択 ${selCount}</span></span>`+
+    (newTags.length?`<span style="display:flex;gap:4px"><button class="btn sm" onclick="selAllReg()">全選択</button><button class="btn sm" onclick="deselAllReg()">全解除</button></span>`:'')
+    +`</div><div class="reg-live-list">`
+    +parsed.map(t=>{
+      if(tags.includes(t)) return `<span class="reg-dup-chip"><s>${escH(t)}</s><span style="font-size:9px;flex-shrink:0">dup</span></span>`;
+      const on=regSelected.has(t);
+      return `<span class="reg-chip${on?' on':''}" onclick="toggleRegTag('${escA(t)}')"><span class="chk">${on?'✓':'○'}</span>${escH(t)}</span>`;
+    }).join('')+`</div>`;
+}
+function toggleRegTag(t){ if(regSelected.has(t)) regSelected.delete(t); else regSelected.add(t); _renderRegLive(regParsedCache,regParsedCache.filter(t=>!tags.includes(t))); }
+function selAllReg(){ regParsedCache.filter(t=>!tags.includes(t)).forEach(t=>regSelected.add(t)); _renderRegLive(regParsedCache,regParsedCache.filter(t=>!tags.includes(t))); }
+function deselAllReg(){ regSelected.clear(); _renderRegLive(regParsedCache,regParsedCache.filter(t=>!tags.includes(t))); }
+
+function updateTransSec(parsed){
+  const sec=document.getElementById('reg-trans-sec');
+  const newTags=parsed.filter(t=>!tags.includes(t));
+  if(!newTags.length){sec.innerHTML='';return;}
+  const existing={};
+  sec.querySelectorAll('.trans-ja-input').forEach(inp=>{existing[inp.dataset.tag]=inp.value;});
+
+  // Category assignment UI
+  sec.innerHTML=
+    `<div class="sl" style="margin-top:12px">カテゴリ &amp; 日本語メモ</div>`
+    +`<div class="trans-section">`
+    +newTags.map(t=>`
+      <div class="trans-row">
+        <span class="trans-tag-label" title="${escA(t)}">${escH(t)}</span>
+        <select class="inp" data-cat-tag="${escA(t)}" style="flex:0 1 170px;font-size:11px;padding:4px 6px" onchange="regSelected.has('${escA(t)}')">
+          ${['uncategorized',...catDefs].map(c=>`<option value="${escA(c)}"${(tagCats[t]||'uncategorized')===c?' selected':''}>${escH(c)}</option>`).join('')}
+        </select>
+        <input class="trans-ja-input" data-tag="${escA(t)}" type="text" placeholder="日本語メモ..." value="${escA(existing[t]!==undefined?existing[t]:(tagMeta[t]?.ja||''))}">
+      </div>`).join('')
+    +`</div>`
+    +`<div style="display:flex;gap:6px;margin-top:6px">`
+    +`<button class="btn" id="trans-all-btn" style="flex:1;color:var(--accent2);border-color:var(--accent2)" onclick="transNewTagsAI()">AIで日本語訳を自動入力</button>`
+    +`<button class="btn" id="cat-auto-btn" style="flex:1;color:var(--accent);border-color:var(--accent)" onclick="autoCategorize()">AIでカテゴリ仕分け</button>`
+    +`</div>`;
+}
+
+async function autoCategorize(){
+  const sec=document.getElementById('reg-trans-sec');
+  const rows=[...sec.querySelectorAll('.trans-row')];
+  if(!rows.length){toast('タグがないのだ');return;}
+  const btn=document.getElementById('cat-auto-btn');
+  const resetBtn=()=>{
+    const b=document.getElementById('cat-auto-btn');
+    if(b){ b.disabled=false; b.innerHTML='AIでカテゴリ仕分け'; }
+  };
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>仕分け中…';
+
+  // タグ名と日本語メモを収集
+  const items=rows.map(row=>({
+    tag: row.querySelector('.trans-tag-label')?.textContent||'',
+    ja:  row.querySelector('.trans-ja-input')?.value||'',
+    sel: row.querySelector('[data-cat-tag]'),
+  })).filter(x=>x.tag&&x.sel);
+
+  const cats=getCategoryList();
+
+  const prompt=`You are categorizing Stable Diffusion prompt tags into categories.
+
+Categories available: ${cats.join(', ')}
+
+For each tag below, output ONE line in this exact format:
+TAG_NAME|category
+
+Tags to categorize:
+${items.map(x=>x.ja?`${x.tag} (${x.ja})`:`${x.tag}`).join('\n')}
+
+Rules:
+- quality: masterpiece, best quality, score, rating etc
+- character: hair, eyes, body features, age, gender, race etc
+- clothes: garment type, clothing item, outfit, uniform, shoes, hat, accessories, fabric type, clothing style, silhouette, fit, oversized clothes, loose shirt, tight dress, long sleeves, short skirt etc
+- clothes/expression: temporary or expressive clothing states, disorder or transformation of clothes, wet clothes, torn clothes, disheveled clothes, unbuttoned shirt, soaked shirt, stained uniform, wrinkled clothes, clothes slipping, open jacket etc
+- emotion: emotional states and facial feelings, happy, sad, angry, embarrassed, nervous, tired, crying, confident, shy etc
+- pose/expression: body pose, action, gesture, gaze or looking direction, sitting, standing, arms crossed, looking at viewer etc
+- style/technique: art style, medium, rendering technique etc
+- background: scenery, location, environment, weather etc
+- camera/angle: shot type, angle, depth of field, lens etc
+- effect: lighting effect, particle, blur, glow, overlay etc
+- other: anything that doesn't fit above
+
+Output ONLY the lines, no explanation.`;
+
+  try{
+    const out=await callAI(prompt);
+    const lines=out.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+    let matched=0;
+    lines.forEach(line=>{
+      const [tagPart,cat]=line.split('|').map(s=>s.trim());
+      if(!tagPart||!cat) return;
+      // タグ名マッチ（日本語メモ付きの場合 "tag (ja)" 形式で来るので最初のトークンで照合）
+      const baseTag=tagPart.replace(/\s*\(.*\)$/,'').trim();
+      const item=items.find(x=>x.tag===baseTag||x.tag.toLowerCase()===baseTag.toLowerCase());
+      if(!item||!item.sel) return;
+      const validCat=cats.includes(cat)?cat:'other';
+      item.sel.value=validCat;
+      matched++;
+    });
+    toast(`${matched}件仕分けしたのだ！確認して修正してから登録するのだ`);
+  }catch(e){
+    toast('エラー: '+e.message.split('\n')[0]);
+  }finally{
+    resetBtn();
+  }
+}
+
+async function transNewTagsAI(){
+  const sec=document.getElementById('reg-trans-sec');
+  const inputs=[...sec.querySelectorAll('.trans-ja-input')];
+  if(!inputs.length){toast('翻訳するタグがないのだ');return;}
+  const btn=document.getElementById('trans-all-btn');
+  const resetBtn=()=>{
+    const b=document.getElementById('trans-all-btn');
+    if(b){ b.disabled=false; b.innerHTML='AIで日本語訳を自動入力'; }
+  };
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>翻訳中…';
+  try{
+    const out=await callAI(`Translate each of the following English image generation prompt tags into Japanese. Output one Japanese translation per line, in the same order, Japanese only, no explanations.\n\n${inputs.map(i=>i.dataset.tag).join('\n')}`);
+    const lines=out.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+    inputs.forEach((inp,i)=>{if(lines[i]) inp.value=lines[i];});
+    toast('翻訳完了なのだ！');
+  }catch(e){
+    toast('エラー: '+e.message.split('\n')[0]);
+  }finally{
+    resetBtn();
+  }
+}
+
+function registerSelected(){
+  if(!regSelected.size){toast('タグを選択してほしいのだ');return;}
+  _doReg([...regSelected]);
+}
+function registerAll(){
+  const n=regParsedCache.filter(t=>!tags.includes(t));
+  if(!n.length){toast('新規タグがないのだ');return;}
+  _doReg(n);
+}
+function _doReg(toReg){
+  toReg.forEach(t=>{if(!tags.includes(t)) tags.push(t);});
+  // save cat & meta from UI
+  const sec=document.getElementById('reg-trans-sec');
+  sec.querySelectorAll('.trans-ja-input').forEach(inp=>{
+    const ja=inp.value.trim();
+    if(ja) tagMeta[inp.dataset.tag]={...(tagMeta[inp.dataset.tag]||{}),ja};
+  });
+  sec.querySelectorAll('[data-cat-tag]').forEach(sel=>{
+    const t=sel.dataset.catTag; const c=sel.value;
+    if(c&&c!=='uncategorized') tagCats[t]=c;
+    else delete tagCats[t];
+  });
+  saveTags(); saveMeta(); saveCats();
+  document.getElementById('reg-preview').innerHTML=
+    `<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:5px">+${toReg.length} 件登録</div>`
+    +`<div style="display:flex;flex-wrap:wrap;gap:4px">`
+    +toReg.map(t=>{const ja=tagMeta[t]?.ja;return`<span class="reg-result-chip">${escH(t)}${ja?`<span style="font-family:var(--sans);font-size:9px;color:var(--accent2)">${escH(ja)}</span>`:''}</span>`;}).join('')
+    +`</div>`;
+  document.getElementById('reg-live').innerHTML='';
+  document.getElementById('reg-trans-sec').innerHTML='';
+  regSelected.clear(); regParsedCache=[];
+  toast(`${toReg.length}タグを登録したのだ！`);
+  renderTags();
+}
+function clearReg(){
+  ['reg-input','reg-preview'].forEach(id=>document.getElementById(id)[id.includes('input')?'value':'innerHTML']='');
+  document.getElementById('reg-live').innerHTML='';
+  document.getElementById('reg-trans-sec').innerHTML='';
+  regSelected.clear(); regParsedCache=[];
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAGS TAB - Library
+// ═══════════════════════════════════════════════════════════
+function renderTags(){
+  const area=document.getElementById('tag-area');
+  const q=(document.getElementById('search-box')?.value||'').toLowerCase();
+  let filtered=tags.filter(t=>!q||t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  if(libCat!=='ALL') filtered=filtered.filter(t=>getTagCat(t)===libCat);
+  if(sortOrder==='alpha') filtered=[...filtered].sort((a,b)=>a.localeCompare(b,'en'));
+  else if(sortOrder==='ja') filtered=[...filtered].sort((a,b)=>(tagMeta[a]?.ja||a).localeCompare(tagMeta[b]?.ja||b,'ja'));
+  renderJumpBar(filtered);
+  if(jumpFilter!==null) filtered=filtered.filter(t=>getInitial(t)===jumpFilter);
+  if(!filtered.length){area.innerHTML=`<span class="tag-empty">${tags.length?'検索結果なし':'タグがまだないのだ'}</span>`;document.getElementById('count-badge').textContent='';updateOut();return;}
+  area.innerHTML=filtered.map(t=>{
+    const sel=selected.has(t); const ja=tagMeta[t]?.ja; const cat=getTagCat(t);
+    return `<span class="tag${sel?' selected':''}" onclick="toggleTag(this,'${escA(t)}')">${escH(t)}`
+      +(ja?`<span class="tag-ja">（${escH(ja)}）</span><span class="tag-ja-edit" onclick="event.stopPropagation();editTagJa('${escA(t)}',this)" title="編集">✎</span>`:`<span class="tag-ja-edit" onclick="event.stopPropagation();editTagJa('${escA(t)}',this)" title="追加">＋</span>`)
+      +`<span class="del" onclick="event.stopPropagation();showTagMenu('${escA(t)}',this)">⋯</span></span>`;
+  }).join('');
+  document.getElementById('count-badge').textContent=`${tags.length} tags total`;
+  updateSelCount(); updateOut();
+}
+function showTagMenu(tag,el){
+  const cats=['uncategorized',...catDefs];
+  const cur=getTagCat(tag);
+  const menu=document.createElement('div');
+  menu.style.cssText=`position:fixed;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r);padding:4px;z-index:999;font-family:var(--mono);font-size:11px;min-width:160px;box-shadow:0 4px 16px rgba(0,0,0,.4)`;
+  const rect=el.getBoundingClientRect();
+  menu.style.left=Math.min(rect.left,window.innerWidth-170)+'px';
+  menu.style.top=(rect.bottom+4)+'px';
+  menu.innerHTML=`<div style="padding:4px 8px;color:var(--muted);font-size:10px;border-bottom:1px solid var(--border);margin-bottom:3px">カテゴリ変更</div>`
+    +cats.map(c=>`<div class="menu-cat-item" data-cat="${escH(c)}" style="padding:5px 10px;cursor:pointer;border-radius:4px;color:${c===cur?'var(--accent)':'var(--text)'}" onmouseover="this.style.background='var(--surface4)'" onmouseout="this.style.background=''">${escH(c)}</div>`).join('')
+    +`<div style="height:1px;background:var(--border);margin:3px 0"></div>`
+    +`<div class="menu-del-item" style="padding:5px 10px;cursor:pointer;border-radius:4px;color:var(--danger)" onmouseover="this.style.background='var(--surface4)'" onmouseout="this.style.background=''">Delete</div>`;
+  document.body.appendChild(menu);
+  menu.querySelectorAll('.menu-cat-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+      setTagCat(tag, item.dataset.cat);
+      document.body.contains(menu)&&document.body.removeChild(menu);
+    });
+  });
+  menu.querySelector('.menu-del-item').addEventListener('click',()=>{
+    deleteTag(tag);
+    document.body.contains(menu)&&document.body.removeChild(menu);
+  });
+  setTimeout(()=>document.addEventListener('click',function h(e){if(!menu.contains(e.target)){document.body.contains(menu)&&document.body.removeChild(menu);document.removeEventListener('click',h);}},100));
+}
+function setTagCat(tag,cat){
+  if(cat==='uncategorized') delete tagCats[tag]; else tagCats[tag]=cat;
+  saveCats(); renderTags();
+}
+function deleteTag(tag){ tags=tags.filter(t=>t!==tag); selected.delete(tag); delete tagMeta[tag]; delete tagCats[tag]; saveTags(); saveMeta(); saveCats(); renderTags(); }
+function clearAllTags(){ if(!confirm('全タグを削除するのだ？')) return; tags=[];selected.clear();tagMeta={};tagCats={};saveTags();saveMeta();saveCats();renderTags();toast('全タグを削除したのだ'); }
+function editTagJa(tag,el){
+  const tagEl=el.closest('.tag');
+  if(tagEl.querySelector('.ja-inline-input')) return;
+  const jaSpan=tagEl.querySelector('.tag-ja');
+  const editBtn=tagEl.querySelector('.tag-ja-edit');
+  const input=document.createElement('input');
+  input.className='ja-inline-input'; input.value=tagMeta[tag]?.ja||''; input.placeholder='日本語メモ...';
+  input.onclick=e=>e.stopPropagation();
+  if(editBtn) editBtn.style.display='none';
+  if(jaSpan) jaSpan.replaceWith(input); else editBtn.insertAdjacentElement('beforebegin',input);
+  input.focus(); input.select();
+  const save=()=>{
+    const val=input.value.trim();
+    if(val) tagMeta[tag]={...(tagMeta[tag]||{}),ja:val}; else if(tagMeta[tag]) delete tagMeta[tag].ja;
+    saveMeta(); renderTags();
+  };
+  input.addEventListener('blur',save);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur();}if(e.key==='Escape'){input.removeEventListener('blur',save);renderTags();}});
+}
+function toggleTag(el,tag){ if(selected.has(tag)) selected.delete(tag); else selected.add(tag); el.classList.toggle('selected',selected.has(tag)); updateSelCount(); updateOut(); }
+function selectAll(){ tags.forEach(t=>selected.add(t)); renderTags(); }
+function clearSel(){ selected.clear(); renderTags(); }
+function clearSearch(){ document.getElementById('search-box').value=''; document.getElementById('search-clear').style.display='none'; jumpFilter=null; renderTags(); }
+function toggleSearchClear(){ document.getElementById('search-clear').style.display=document.getElementById('search-box').value?'inline':'none'; }
+function setSort(s){ sortOrder=s; ['reg','alpha','ja'].forEach(k=>document.getElementById('sort-'+k).classList.toggle('active',k===s)); renderTags(); }
+function setFmt(f){ outFmt=f; document.getElementById('fmt-comma').classList.toggle('active',f==='comma'); document.getElementById('fmt-lines').classList.toggle('active',f==='lines'); updateOut(); }
+function updateOut(){ const sel=[...selected]; const box=document.getElementById('out-box'); if(!sel.length){box.textContent='';return;} box.textContent=outFmt==='comma'?sel.join(', '):sel.join('\n'); }
+function updateSelCount(){ document.getElementById('sel-count').textContent=`${selected.size} selected`; }
+function copyOut(){ const text=document.getElementById('out-box').textContent; if(!text){toast('タグを選んでほしいのだ');return;} navigator.clipboard.writeText(outFmt==='comma'?text+', ':text).then(()=>toast('コピーしたのだ！')); }
+
+function getInitial(tag){
+  const c=(tag[0]||'').toUpperCase();
+  if(c>='0'&&c<='9') return '#';
+  if(c>='A'&&c<='Z') return c;
+  const ja=(tagMeta[tag]?.ja||'')[0]||'';
+  if(ja) return ja;
+  return '…';
+}
+function renderJumpBar(filtered){
+  const bar=document.getElementById('jump-bar');
+  if(!bar) return;
+  const available=new Set(filtered.map(t=>getInitial(t)));
+  const ALL_CHARS=['#',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+  const jaChars=sortOrder==='ja'?[...new Set(filtered.map(t=>{const ja=(tagMeta[t]?.ja||'')[0]||'';return ja&&!/[A-Z0-9#…]/.test(ja.toUpperCase())?ja:null;}).filter(Boolean))]:[];
+  const chars=sortOrder==='ja'?[...jaChars,...ALL_CHARS]:ALL_CHARS;
+  const present=chars.filter(c=>available.has(c));
+  bar.innerHTML=`<span class="jump-chip${jumpFilter===null?' active':''}" onclick="setJump(null)">全</span>`+present.map(c=>`<span class="jump-chip${jumpFilter===c?' active':''}" onclick="setJump('${escA(c)}')">${escH(c)}</span>`).join('');
+}
+function setJump(ch){ jumpFilter=ch; renderTags(); }
+function scrollTagArea(id,edge){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.scrollTo({top:edge==='bottom'?el.scrollHeight:0,behavior:'smooth'});
+}
+
+// Export / Import
+function exportData(){
+  const data={version:3,exported:new Date().toISOString(),tags,meta:tagMeta,cats:tagCats,catDefs,loraList,loraSets,stock,promptGroups};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`prompt_studio_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(a.href); toast('エクスポートしたのだ！');
+}
+function importData(input){
+  const file=input.files[0]; if(!file) return;
+  const log=document.getElementById('imp-log');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!Array.isArray(data.tags)) throw new Error('tagsフィールドがないのだ');
+      let added=0,metaAdded=0,catAdded=0;
+      data.tags.forEach(t=>{if(typeof t==='string'&&!tags.includes(t)){tags.push(t);added++;}});
+      if(data.meta&&typeof data.meta==='object') Object.entries(data.meta).forEach(([k,v])=>{if(typeof v?.ja==='string'){tagMeta[k]={...(tagMeta[k]||{}),ja:v.ja};metaAdded++;}});
+      if(data.cats&&typeof data.cats==='object') Object.entries(data.cats).forEach(([k,v])=>{tagCats[k]=v;catAdded++;});
+      if(data.catDefs&&Array.isArray(data.catDefs)) data.catDefs.forEach(c=>{if(!catDefs.includes(c)) catDefs.push(c);});
+      if(data.loraList&&Array.isArray(data.loraList)) data.loraList.forEach(l=>{if(!loraList.find(x=>x.id===l.id)) loraList.push(l);});
+      if(data.loraSets&&Array.isArray(data.loraSets)) data.loraSets.forEach(s=>{if(!loraSets.find(x=>x.id===s.id)) loraSets.push(s);});
+      if(data.stock&&Array.isArray(data.stock)) data.stock.forEach(s=>{if(typeof s==='string'&&!stock.includes(s)) stock.push(s);});
+      if(data.promptGroups&&Array.isArray(data.promptGroups)) data.promptGroups.forEach(g=>{if(g&&g.id&&!promptGroups.find(x=>x.id===g.id)) promptGroups.push(g);});
+      if(promptGroups.length && !activeGroupId) activeGroupId=promptGroups[0].id;
+      saveTags();saveMeta();saveCats();saveLoras();saveSets();saveStock();saveGroups();
+      renderTags(); renderCatBar(); renderLoras(); renderLoraSets(); renderStock(); renderGroups(); renderGroupSelectors();
+      log.innerHTML=`<span style="color:var(--accent)">+${added}タグ、${metaAdded}件メモ、${catAdded}件カテゴリをインポートしたのだ</span>`;
+      toast(`${added}タグをインポートしたのだ！`);
+    }catch(err){ log.innerHTML=`<span style="color:var(--danger)">エラー: ${escH(err.message)}</span>`; }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUILDER TAB
+// ═══════════════════════════════════════════════════════════
+function renderBuilderLoras(){
+  const el=document.getElementById('builder-lora-strip');
+  if(!loraList.length){el.innerHTML='<span style="color:var(--muted);font-size:11px;font-style:italic;align-self:center">LoRAタブで登録してから選ぶのだ</span>';return;}
+  el.innerHTML=loraList.map(l=>`
+    <span class="blora-chip${builderLoraOn.has(l.id)?' on':''}" onclick="toggleBuilderLora('${l.id}')">
+      ${escH(l.name)} <span style="font-size:10px;opacity:.7">${l.weight.toFixed(2)}</span>
+    </span>`).join('');
+}
+function toggleBuilderLora(id){ if(builderLoraOn.has(id)) builderLoraOn.delete(id); else builderLoraOn.add(id); renderBuilderLoras(); buildCode(); updateComposeSummary(); }
+function renderBuilderCatBar(){
+  const bar=document.getElementById('builder-cat-bar');
+  const allCats=['ALL',...catDefs,'uncategorized'];
+  bar.innerHTML=allCats.map(c=>`<span class="cat-chip${builderCat===c?' active':''}" onclick="setBuilderCat('${escA(c)}')">${escH(c)}</span>`).join('');
+}
+function setBuilderCat(c){ builderCat=c; renderBuilderCatBar(); renderBuilderTags(); }
+function setBuilderSort(s){
+  builderSort=s;
+  ['reg','alpha','ja'].forEach(k=>document.getElementById('bsort-'+k)?.classList.toggle('active',k===s));
+  renderBuilderTags();
+}
+function renderBuilderTags(){
+  const area=document.getElementById('builder-tag-area');
+  const q=(document.getElementById('builder-search')?.value||'').toLowerCase();
+  let filtered=builderCat==='ALL'?[...tags]:tags.filter(t=>getTagCat(t)===builderCat);
+  if(q) filtered=filtered.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  if(builderSort==='alpha') filtered=[...filtered].sort((a,b)=>a.localeCompare(b,'en'));
+  if(builderSort==='ja')    filtered=[...filtered].sort((a,b)=>(tagMeta[a]?.ja||a).localeCompare(tagMeta[b]?.ja||b,'ja'));
+  if(!filtered.length){area.innerHTML=`<span class="tag-empty">${tags.length?'検索結果なし':'タグがないのだ'}</span>`;return;}
+  const pos=document.getElementById('b-pos').value;
+  area.innerHTML=filtered.map(t=>{
+    const sel=pos.split(',').map(s=>s.trim()).includes(t);
+    const ja=tagMeta[t]?.ja;
+    return `<span class="tag${sel?' selected':''}" onclick="builderAddTag('${escA(t)}')">${escH(t)}${ja?`<span class="tag-ja">（${escH(ja)}）</span>`:''}</span>`;
+  }).join('');
+}
+function builderAddTag(tag){
+  const ta=document.getElementById('b-pos');
+  const cur=ta.value.trim();
+  const existing=cur?cur.split(',').map(s=>s.trim()):[];
+  if(existing.includes(tag)){
+    ta.value=existing.filter(t=>t!==tag).join(', ');
+  } else {
+    ta.value=cur?(cur+', '+tag):tag;
+  }
+  renderBuilderTags(); buildCode(); updateComposeSummary();
+}
+function buildCode(){
+  const pos=document.getElementById('b-pos').value.trim();
+  const neg=document.getElementById('b-neg').value.trim();
+  const steps=document.getElementById('b-steps').value||20;
+  const cfg=document.getElementById('b-cfg').value||7;
+  const imgs=document.getElementById('b-imgs').value||1;
+  const activeLoras=loraList.filter(l=>builderLoraOn.has(l.id));
+
+  let code=`var OPTIONS = {\n  imagesPerPrompt: ${imgs},\n  seedStart: -1,\n  seedStep: 1,\n  filenamePrefix: "batch",\n  negativePrompt: ${JSON.stringify(neg)},\n  keepPromptAfterRun: true,\n`;
+  if(activeLoras.length){
+    code+=`  loras: [\n`;
+    activeLoras.forEach(l=>{code+=`    { mode: "all", file: ${JSON.stringify(l.file)}, weight: ${l.weight.toFixed(2)} },\n`;});
+    code+=`  ],\n`;
+  }
+  code+=`};\n`;
+  if(pos){
+    const promptLines=pos.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    code+=`\n// Prompts\n`;
+    code+=`var PROMPTS = [\n${promptLines.map(line=>`  ${JSON.stringify(line)},`).join('\n')}\n];\n`;
+  }
+  document.getElementById('code-out').textContent=code;
+  updateComposeSummary();
+}
+function copyCode(){
+  const text=document.getElementById('code-out').textContent;
+  if(!text){toast('まず設定してほしいのだ');return;}
+  navigator.clipboard.writeText(text).then(()=>toast('コードをコピーしたのだ！'));
+}
+function copyPromptOnly(){
+  let text=document.getElementById('b-pos').value.trim();
+  if(!text){toast('プロンプトを選んでほしいのだ');return;}
+  text=text.replace(/,+\s*$/,'')+',';
+  navigator.clipboard.writeText(text).then(()=>toast('プロンプトをコピーしたのだ！'));
+}
+function getComposeSize(){
+  const w=Math.floor(Number(document.getElementById('batch-width')?.value||0));
+  const h=Math.floor(Number(document.getElementById('batch-height')?.value||0));
+  return {width:w>0?w:null,height:h>0?h:null};
+}
+function sizePresetOptions(width,height){
+  const selected=width&&height?`${width}x${height}`:'';
+  return '<option value="">おすすめサイズを選択</option>'
+    + SIZE_PRESETS.map(([value,label])=>`<option value="${escA(value)}"${value===selected?' selected':''}>${escH(label)}</option>`).join('');
+}
+function renderSizePresetSelects(){
+  const el=document.getElementById('batch-size-preset');
+  if(el) el.innerHTML=sizePresetOptions(document.getElementById('batch-width')?.value,document.getElementById('batch-height')?.value);
+  const importEl=document.getElementById('ai-import-size-preset');
+  if(importEl) importEl.innerHTML=sizePresetOptions(null,null);
+  const groupSendEl=document.getElementById('group-send-size-preset');
+  if(groupSendEl) groupSendEl.innerHTML=sizePresetOptions(document.getElementById('group-send-width')?.value,document.getElementById('group-send-height')?.value);
+}
+function applySizePresetToInputs(value,widthId,heightId){
+  const m=String(value||'').match(/^(\d+)x(\d+)$/);
+  if(!m) return;
+  const w=document.getElementById(widthId);
+  const h=document.getElementById(heightId);
+  if(w) w.value=m[1];
+  if(h) h.value=m[2];
+}
+function addComposeToGroup(){
+  const text=document.getElementById('b-pos').value.trim();
+  if(!text){toast('プロンプトを選んでほしいのだ');return;}
+  const size=getComposeSize();
+  addPromptToGroup(getSelectedGroupId('compose-group-select'),{
+    text:text.replace(/,+\s*$/,''),
+    negative:document.getElementById('b-neg').value.trim(),
+    width:size.width,
+    height:size.height,
+    source:'compose'
+  });
+}
+function clearBuilder(){
+  document.getElementById('b-pos').value=''; document.getElementById('b-neg').value='';
+  document.getElementById('batch-width').value=''; document.getElementById('batch-height').value='';
+  builderLoraOn.clear(); renderBuilderLoras(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary();
+}
+
+function updateComposeSummary(){
+  const pos=document.getElementById('b-pos')?.value.trim()||'';
+  const count=pos?pos.split(',').map(s=>s.trim()).filter(Boolean).length:0;
+  const loras=loraList.filter(l=>builderLoraOn.has(l.id)).length;
+  document.getElementById('compose-pos-count')&&(document.getElementById('compose-pos-count').textContent=count);
+  document.getElementById('compose-lora-count')&&(document.getElementById('compose-lora-count').textContent=loras);
+  document.getElementById('compose-params')&&(document.getElementById('compose-params').textContent=`${document.getElementById('b-steps')?.value||20} / ${document.getElementById('b-cfg')?.value||7}`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRANSLATE TAB
+// ═══════════════════════════════════════════════════════════
+function setBackend(b){
+  currentBackend=b;
+  document.getElementById('backend-claude').classList.toggle('active',b==='claude');
+  document.getElementById('backend-ollama').classList.toggle('active',b==='ollama');
+  document.getElementById('claude-cfg').style.display=b==='claude'?'block':'none';
+  document.getElementById('ollama-cfg').style.display=b==='ollama'?'block':'none';
+}
+async function callClaude(prompt){
+  const key=document.getElementById('claude-key').value.trim();
+  const model=document.getElementById('claude-model').value.trim();
+  if(!key) throw new Error('Claude APIキーを入力してほしいのだ');
+  if(!model) throw new Error('Claudeモデルを選んでほしいのだ');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key},
+    body:JSON.stringify({model,max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  if(!res.ok){const b=await res.text().catch(()=>'');throw new Error(`Claude ${res.status}: ${b||res.statusText}`);}
+  const d=await res.json();
+  return d.content?.find(b=>b.type==='text')?.text||'';
+}
+async function callOllama(prompt){
+  const url=(document.getElementById('ollama-url').value||'http://localhost:11434').replace(/\/$/,'');
+  const model=document.getElementById('ollama-model').value.trim();
+  if(!model) throw new Error('Ollamaモデルを選んでほしいのだ');
+  let res;
+  try{ res=await fetch(`${url}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,stream:false,messages:[{role:'user',content:prompt}]})}); }
+  catch(e){ throw new Error(`Ollamaに接続できないのだ。\nOllama本体が起動しているか確認してほしいのだ。\nターミナルで ollama --version / ollama list も落ちる場合はOllama本体の再インストールが必要なのだ。\nfile://から使う場合は OLLAMA_ORIGINS=* ollama serve で起動してほしいのだ`); }
+  if(!res.ok){const b=await res.text().catch(()=>'');throw new Error(`Ollama ${res.status}: ${b||res.statusText}`);}
+  const d=await res.json();
+  return d.message?.content||d.response||'';
+}
+async function callAI(prompt){ return currentBackend==='ollama'?callOllama(prompt):callClaude(prompt); }
+async function fetchOllamaModels(){
+  const url=(document.getElementById('ollama-url').value||'http://localhost:11434').replace(/\/$/,'');
+  const list=document.getElementById('ollama-models');
+  list.innerHTML='<span style="font-family:var(--mono);font-size:10px;color:var(--muted)"><span class="spinner"></span>取得中…</span>';
+  try{
+    const res=await fetch(`${url}/api/tags`);
+    if(!res.ok) throw new Error(res.statusText);
+    const d=await res.json();
+    const models=(d.models||[]).map(m=>m.name);
+    if(!models.length){list.innerHTML='<span style="font-family:var(--mono);font-size:10px;color:var(--muted)">モデルなし</span>';return;}
+    list.innerHTML=models.map(m=>`<button class="btn sm" onclick="document.getElementById('ollama-model').value='${escA(m)}';this.closest('#ollama-models').querySelectorAll('button').forEach(b=>b.classList.remove('primary'));this.classList.add('primary')">${escH(m)}</button>`).join('');
+  }catch(e){
+    const msg=`${e.message||e}`;
+    const hint=msg.includes('Failed to fetch')||msg.includes('Load failed')
+      ? 'Ollamaに接続できません。Ollama本体を起動してください。ターミナルで ollama --version / ollama list も落ちる場合はOllama本体を再インストールしてください。'
+      : msg;
+    list.innerHTML=`<span style="font-family:var(--mono);font-size:10px;color:var(--danger)">Error: ${escH(hint)}</span>`;
+  }
+}
+async function translateSingle(){
+  const text=document.getElementById('jp-input').value.trim();
+  if(!text){toast('テキストを入力してほしいのだ');return;}
+  const btn=document.getElementById('trans-btn');
+  const result=document.getElementById('trans-result');
+  btn.disabled=true; result.innerHTML='<span class="spinner"></span>翻訳中なのだ...'; result.classList.remove('empty');
+  try{
+    const out=await callAI(`Translate the following Japanese text into English prompt tags for image generation (Stable Diffusion style, comma-separated, concise descriptive phrases). Output ONLY the translated tags, nothing else.\n\n${text}`);
+    result.textContent=out.trim(); result.classList.remove('empty');
+    result.onclick=()=>navigator.clipboard.writeText(out.trim()).then(()=>toast('コピーしたのだ！'));
+  }catch(e){
+    result.textContent='エラーなのだ: '+e.message;result.classList.add('empty');
+  }finally{
+    btn.disabled=false;
+  }
+}
+async function batchTransReg(){
+  const lines=document.getElementById('batch-jp').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){toast('テキストを入力してほしいのだ');return;}
+  const btn=document.getElementById('batch-btn');
+  const log=document.getElementById('batch-log');
+  btn.disabled=true; log.textContent=''; let addedTotal=0;
+  try{
+    for(const line of lines){
+      log.innerHTML+=`<span style="color:var(--accent2)">→ ${escH(line)}</span> <span class="spinner"></span><br>`;
+      try{
+        const out=await callAI(`Translate the following Japanese text into English prompt tags for image generation (Stable Diffusion style, comma-separated). Output ONLY the tags.\n\n${line}`);
+        const parsed=parseTagsFromText(out);
+        let added=0;
+        parsed.forEach(t=>{if(!tags.includes(t)){tags.push(t);added++;addedTotal++;}});
+        saveTags();
+        const lastBr=log.innerHTML.lastIndexOf('<br>');
+        log.innerHTML=log.innerHTML.substring(0,lastBr).replace(/<span class="spinner"><\/span>/,'')
+          +` <span style="color:var(--accent)">→ ${escH(parsed.join(', '))} (+${added})</span><br>`;
+      }catch(e){log.innerHTML+=`<span style="color:var(--danger)">Error: ${e.message.split('\n')[0]}</span><br>`;}
+    }
+    toast(`${addedTotal}タグを登録したのだ！`); renderTags();
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ONE-LINER TAB
+// ═══════════════════════════════════════════════════════════
+function doOneliner(){
+  const raw=document.getElementById('ol-input').value;
+  if(!raw.trim()){toast('テキストを入力してほしいのだ');return;}
+  const oneline=raw.split(/[\r\n]+/).map(s=>s.trim().replace(/,\s*$/,'')).filter(Boolean).join(', ');
+  const result=document.getElementById('ol-result');
+  const arg=escA(JSON.stringify(oneline));
+  result.innerHTML=`<div style="padding:10px 12px;background:var(--surface);border:1px solid var(--accent2);border-radius:var(--r);font-family:var(--mono);font-size:12px;color:var(--accent2);word-break:break-all;cursor:pointer;margin-bottom:8px" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('コピーしたのだ！'))">${escH(oneline)}</div>`
+    +`<div class="row" style="margin-top:0"><button class="btn primary" onclick="stockThis(${arg})" style="flex:1">ストックに保存</button><button class="btn secondary" onclick="addTextToSelectedGroup(${arg})">Groupへ追加</button><button class="btn" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('コピーしたのだ！'))">Copy</button></div>`;
+}
+function splitPromptText(raw){
+  const text=String(raw||'').replace(/\r/g,'').trim();
+  if(!text) return [];
+  const normalized=text
+    .replace(/\n\s*[-=]{3,}\s*\n/g,'\n\n')
+    .replace(/\n\s*#{2,}.*\n/g,'\n\n');
+  let chunks=normalized.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean);
+  if(chunks.length<=1){
+    chunks=normalized.split(/\n(?=\s*(?:\d+\s*[xX×]\s*\d+\s*\|\s*)?[A-Za-z0-9])/).map(s=>s.trim()).filter(Boolean);
+  }
+  return chunks.map(s=>s.split(/\n+/).map(line=>line.trim().replace(/,\s*$/,'')).filter(Boolean).join(', ')).filter(Boolean);
+}
+function splitPromptBlocks(){
+  const raw=document.getElementById('split-input').value;
+  const items=splitPromptText(raw);
+  const result=document.getElementById('split-result');
+  if(!items.length){toast('分割するテキストを入力してほしいのだ');return;}
+  const batch=items.join('\n');
+  const batchArg=escA(JSON.stringify(batch));
+  result.innerHTML=
+    `<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px">${items.length}件に分割したのだ</div>`
+    +`<div class="out-box" style="max-height:220px;overflow:auto">${escH(batch)}</div>`
+    +`<div class="row"><button class="btn primary" onclick="navigator.clipboard.writeText(${batchArg}).then(()=>toast('分割結果をコピーしたのだ！'))" style="flex:1">分割結果をコピー</button>`
+    +`<button class="btn secondary" onclick="compressSplitPromptsAI()">AIで圧縮</button>`
+    +`<button class="btn secondary" onclick="addSplitResultToGroup()">Groupへ一括追加</button></div>`;
+}
+function addSplitResultToGroup(){
+  const items=splitPromptText(document.getElementById('split-input').value);
+  if(!items.length){toast('追加する分割結果がないのだ');return;}
+  const groupId=document.getElementById('assist-group-select')?.value||activeGroup()?.id||ensureGroup().id;
+  items.map(parseBatchLine).forEach(item=>addPromptToGroup(groupId,{...item,source:'split'},{silent:true}));
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${items.length}件をGroupへ追加したのだ！`);
+}
+function extractPromptTitle(line){
+  const raw=String(line||'').trim();
+  const m=raw.match(/^(?:Prompt|プロンプト|Scene|シーン|Cut|カット)\s*[\d０-９]+[.)．、]?\s*(?:[（(【「](.*?)[）」】)])?\s*[:：-]?/i);
+  if(m) return (m[1]||raw.replace(/^(?:Prompt|プロンプト|Scene|シーン|Cut|カット)\s*[\d０-９]+[.)．、]?\s*[:：-]?\s*/i,'')).trim();
+  return raw
+    .replace(/^#+\s*/,'')
+    .replace(/^(?:Prompt|プロンプト|Scene|シーン|Cut|カット)\s*[\d０-９]+[.)．、]?\s*[:：-]?\s*/i,'')
+    .replace(/^[\d０-９]+\s*[.)．、:：-]\s*/,'')
+    .replace(/^[（(【「](.*?)[）」】)]$/,'$1')
+    .trim();
+}
+function oneLinePromptBlock(lines){
+  return tidyPromptText(
+    lines
+      .map(s=>String(s||'').trim())
+      .filter(Boolean)
+      .map(s=>s.replace(/^(?:Positive(?:\s*Prompt)?|ポジティブ(?:プロンプト)?|正プロンプト|Prompt)\s*[:：]\s*/i,'').replace(/^(?:Negative(?:\s*Prompt)?|ネガティブ(?:プロンプト)?|負プロンプト)\s*[:：]\s*/i,''))
+      .join(', ')
+  );
+}
+function parseAIPromptImport(raw){
+  const promptHead='(?:Prompt|プロンプト|Scene|シーン|Cut|カット)\\s*[\\d０-９]+';
+  const posLabel='(?:Positive(?:\\s*Prompt)?|ポジティブ(?:プロンプト)?|正プロンプト|Prompt)';
+  const negLabel='(?:Negative(?:\\s*Prompt)?|ネガティブ(?:プロンプト)?|負プロンプト)';
+  const normalized=String(raw||'')
+    .replace(/\r/g,'')
+    .replace(new RegExp(`(?:[,，]\\s*|\\s{2,})(?=${promptHead})`,'gi'),'\n')
+    .replace(new RegExp(`(${promptHead}[^,，\\n]*)\\s*[,，]\\s*(?=(?:${posLabel}|${negLabel})\\s*[,，])`,'gi'),'$1\n')
+    .replace(new RegExp(`(${promptHead}[^,，\\n]*)\\s*[,，]\\s*(?=\\S)`,'gi'),'$1\n')
+    .replace(new RegExp(`(^|\\n)\\s*(${posLabel})\\s*[,，]\\s*`,'gi'),'$1$2: ')
+    .replace(new RegExp(`(^|\\n)\\s*(${negLabel})\\s*[,，]\\s*`,'gi'),'$1$2: ')
+    .replace(/\n[ \t]*\n[ \t]*\n+(?=[\s\S])/g,'\n---\n');
+  const lines=normalized
+    .split('\n');
+  const items=[];
+  let cur=null, mode='positive';
+  const headingRe=/^(?:#{1,6}\s*)?(?:Prompt|プロンプト|Scene|シーン|Cut|カット)\s*[\d０-９]+|^[\d０-９]+\s*[.)．、:：-]\s*\S+|^#{1,6}\s*\S+/i;
+  const manualSepRe=/^\s*(?:---+|===+|\*\*\*+|ーーー+)\s*$/;
+  const positiveLabelRe=/^(?:Positive(?:\s*Prompt)?|ポジティブ(?:プロンプト)?|正プロンプト|Prompt)\s*[:：]?\s*$/i;
+  const negativeLabelRe=/^(?:Negative(?:\s*Prompt)?|ネガティブ(?:プロンプト)?|負プロンプト)\s*[:：]?\s*$/i;
+  const inlinePositiveRe=/^(?:Positive(?:\s*Prompt)?|ポジティブ(?:プロンプト)?|正プロンプト|Prompt)(?:\s*[:：]\s*|\s{2,})(.+)$/i;
+  const inlineNegativeRe=/^(?:Negative(?:\s*Prompt)?|ネガティブ(?:プロンプト)?|負プロンプト)(?:\s*[:：]\s*|\s{2,})(.+)$/i;
+  function ensure(){
+    if(!cur) cur={title:'',positive:[],negative:[]};
+    return cur;
+  }
+  function push(){
+    if(!cur) return;
+    const text=oneLinePromptBlock(cur.positive);
+    const negative=oneLinePromptBlock(cur.negative);
+    if(text) items.push({title:cur.title,text,negative});
+    cur=null; mode='positive';
+  }
+  function looksLikeTitle(s,next){
+    const n=String(next||'').trim();
+    if(!s||s.length>70) return false;
+    if(/[,.，、]/.test(s)) return false;
+    if(positiveLabelRe.test(n)||inlinePositiveRe.test(n)) return true;
+    if(n&&/[,.，、]/.test(n)) return true;
+    return false;
+  }
+  lines.forEach((line,idx)=>{
+    const s=String(line||'').trim();
+    if(!s) return;
+    if(manualSepRe.test(s)){ push(); return; }
+    if(headingRe.test(s)){
+      push();
+      cur={title:extractPromptTitle(s),positive:[],negative:[]};
+      mode='positive';
+      return;
+    }
+    if(positiveLabelRe.test(s)){
+      if(cur&&cur.positive.length&&!cur.negative.length&&idx>0) push();
+      ensure(); mode='positive'; return;
+    }
+    if(negativeLabelRe.test(s)){ ensure(); mode='negative'; return; }
+    const inlinePos=s.match(inlinePositiveRe);
+    if(inlinePos&&cur&&cur.positive.length&&!cur.negative.length){ push(); }
+    if(inlinePos){ ensure(); mode='positive'; cur.positive.push(inlinePos[1]); return; }
+    const inlineNeg=s.match(inlineNegativeRe);
+    if(inlineNeg){ ensure(); mode='negative'; cur.negative.push(inlineNeg[1]); return; }
+    if((!cur||(!cur.positive.length&&!cur.negative.length&&!cur.title)) && looksLikeTitle(s,lines[idx+1])){
+      cur={title:extractPromptTitle(s),positive:[],negative:[]};
+      mode='positive';
+      return;
+    }
+    ensure();
+    cur[mode==='negative'?'negative':'positive'].push(s);
+  });
+  push();
+  if(!items.length){
+    splitPromptText(raw).forEach((text,i)=>items.push({title:`Prompt ${i+1}`,text,negative:''}));
+  }
+  return items;
+}
+function getImportSizePreset(){
+  const v=document.getElementById('ai-import-size-preset')?.value||'';
+  const m=String(v).match(/^(\d+)x(\d+)$/);
+  return m?{width:Number(m[1]),height:Number(m[2])}:{width:null,height:null};
+}
+function renderAIPromptImportPreview(items){
+  const result=document.getElementById('ai-import-result');
+  if(!result) return;
+  if(!items.length){result.innerHTML='<div class="group-empty">取り込めるPromptが見つからないのだ</div>';return;}
+  const batch=items.map(x=>x.text).join('\n');
+  const batchArg=escA(JSON.stringify(batch));
+  result.innerHTML=
+    `<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px">${items.length}件を検出したのだ</div>`
+    +`<div class="out-box" style="max-height:260px;overflow:auto">${items.map((x,i)=>`
+      <div style="padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--accent2)">#${i+1}${x.title?` / ${escH(x.title)}`:''}</div>
+        <div style="font-family:var(--sans);font-size:12px;line-height:1.6;word-break:break-word">${escH(x.text)}</div>
+        ${x.negative?`<div class="group-meta">NEG: ${escH(x.negative)}</div>`:''}
+      </div>`).join('')}</div>`
+    +`<div class="row"><button class="btn primary" onclick="addAIPromptImportToGroup()" style="flex:1">この内容をGroupへ一括登録</button>`
+    +`<button class="btn" onclick="navigator.clipboard.writeText(${batchArg}).then(()=>toast('取り込み結果をコピーしたのだ！'))">Copy</button></div>`;
+}
+function previewAIPromptImport(){
+  const items=parseAIPromptImport(document.getElementById('ai-import-input')?.value||'');
+  renderAIPromptImportPreview(items);
+}
+function addAIPromptImportToGroup(){
+  const raw=document.getElementById('ai-import-input')?.value||'';
+  const items=parseAIPromptImport(raw);
+  if(!items.length){toast('取り込むPromptを貼ってほしいのだ');return;}
+  const groupId=document.getElementById('assist-group-select')?.value||activeGroup()?.id||ensureGroup().id;
+  const preset=getImportSizePreset();
+  items.forEach(item=>{
+    const parsed=parseBatchLine(item.text);
+    addPromptToGroup(groupId,{
+      ...parsed,
+      negative:item.negative||'',
+      width:parsed.width||preset.width,
+      height:parsed.height||preset.height,
+      memo:item.title||'',
+      source:'ai-import'
+    },{silent:true});
+  });
+  saveGroups(); renderGroups(); renderGroupSelectors(); renderAIPromptImportPreview(items);
+  toast(`${items.length}件をAI生成PromptとしてGroupへ登録したのだ！`);
+}
+async function compressSplitPromptsAI(){
+  const items=splitPromptText(document.getElementById('split-input').value).map(parseBatchLine).filter(x=>x.text);
+  const result=document.getElementById('split-result');
+  if(!items.length){toast('先にプロンプト群を分割してほしいのだ');return;}
+  result.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:8px 0"><span class="spinner"></span>分割結果をAIで圧縮中…</div>`;
+  const prompt=`Compress these image-generation prompts into concise tag-style prompts.
+
+Rules:
+- Keep the core meaning, subject, scene, mood, composition, clothing, and important details.
+- Remove prose-like filler such as "a photo of", "showing", "featuring", "there is", "while" when not needed.
+- Output exactly ONE compressed prompt per input item.
+- Keep the same order.
+- Do not number the lines.
+- Output only the compressed prompt lines.
+
+Prompts:
+${items.map((x,i)=>`${i+1}. ${x.text}`).join('\n')}`;
+  try{
+    const out=await callAI(prompt);
+    const lines=out.split(/\r?\n/).map(s=>s.replace(/^\s*\d+[\).\-\:]\s*/,'').trim()).filter(Boolean);
+    const compressed=items.map((item,i)=>{
+      const text=tidyPromptText(lines[i]||cleanPromptText(item.text)||item.text);
+      return item.width&&item.height ? `${item.width}x${item.height} | ${text}` : text;
+    });
+    renderCompressedSplitResult(compressed);
+  }catch(e){
+    result.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:8px 10px;background:var(--surface2);border:1px solid var(--danger);border-radius:var(--r2)">AI圧縮エラー: ${escH(e.message.split('\n')[0])}</div>`;
+  }
+}
+function renderCompressedSplitResult(lines){
+  const batch=lines.join('\n');
+  const arg=escA(JSON.stringify(batch));
+  document.getElementById('split-result').innerHTML=
+    `<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px">${lines.length}件をAI圧縮したのだ</div>`
+    +`<div class="out-box" style="max-height:240px;overflow:auto">${escH(batch)}</div>`
+    +`<div class="row"><button class="btn primary" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('AI圧縮結果をコピーしたのだ！'))" style="flex:1">AI圧縮結果をコピー</button>`
+    +`<button class="btn secondary" onclick="addBatchTextToGroup(${arg},'ai-compressed-split')">Groupへ追加</button></div>`;
+}
+function addBatchTextToGroup(batchText,source){
+  const items=parsePromptsFromGroupText(batchText);
+  if(!items.length){toast('追加するプロンプトがないのだ');return;}
+  const groupId=document.getElementById('assist-group-select')?.value||activeGroup()?.id||ensureGroup().id;
+  items.forEach(item=>addPromptToGroup(groupId,{...item,source:source||'batch'},{silent:true}));
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${items.length}件をGroupへ追加したのだ！`);
+}
+function cleanPromptText(text){
+  let s=String(text||'').trim();
+  if(!s) return '';
+  const prefixRe=/^(?:an?\s+)?(?:beautiful|highly detailed|detailed|realistic|cinematic)?\s*(?:image|photo|photograph|picture|portrait|illustration|artwork|render|scene)\s+(?:of|featuring|depicting|showing)\s+/i;
+  s=s.replace(prefixRe,'');
+  const patterns=[
+    /\bthere (?:is|are)\b/gi,
+    /\b(?:this|the) (?:image|photo|scene|picture) (?:shows|features|depicts|captures)\b/gi,
+    /\b(?:showing|featuring|depicting|capturing)\b/gi,
+    /\bin which\b/gi,
+    /\bwho is\b/gi,
+    /\bthat is\b/gi,
+    /\bwhile\b/gi,
+    /\bwith a sense of\b/gi,
+    /\bbeautifully rendered\b/gi,
+    /\bhighly detailed scene of\b/gi,
+    /\bset against\b/gi,
+    /\bsurrounded by\b/gi
+  ];
+  patterns.forEach(re=>{s=s.replace(re,',');});
+  s=s.replace(/\band\s+/gi,', ');
+  s=s.replace(/\s+(?:in|on|at|inside|within|near)\s+(?:a|an|the)\s+/gi, ', ');
+  s=s.replace(/\s+(?:in|on|at|inside|within|near)\s+/gi, ', ');
+  s=s.replace(/[.;:]+/g, ',');
+  return tidyPromptText(s);
+}
+function runPromptCleaner(){
+  const raw=document.getElementById('cleaner-input').value;
+  const cleaned=splitPromptText(raw).map(cleanPromptText).filter(Boolean).join('\n');
+  const result=document.getElementById('cleaner-result');
+  if(!cleaned){toast('Cleanerに入れるテキストを入力してほしいのだ');return;}
+  const arg=escA(JSON.stringify(cleaned));
+  result.innerHTML=
+    `<div class="out-box" style="max-height:220px;overflow:auto">${escH(cleaned)}</div>`
+    +`<div class="row"><button class="btn primary" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('Cleaner結果をコピーしたのだ！'))" style="flex:1">Cleaner結果をコピー</button>`
+    +`<button class="btn secondary" onclick="addCleanerResultToGroup()">Groupへ追加</button></div>`;
+}
+function addCleanerResultToGroup(){
+  const cleaned=splitPromptText(document.getElementById('cleaner-input').value).map(cleanPromptText).filter(Boolean);
+  if(!cleaned.length){toast('追加するCleaner結果がないのだ');return;}
+  const groupId=document.getElementById('assist-group-select')?.value||activeGroup()?.id||ensureGroup().id;
+  cleaned.map(parseBatchLine).forEach(item=>addPromptToGroup(groupId,{...item,source:'cleaner'},{silent:true}));
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${cleaned.length}件をGroupへ追加したのだ！`);
+}
+function stockThis(text){
+  if(!stock.includes(text)){ stock.unshift(text); if(stock.length>200) stock.pop(); saveStock(); renderStock(); toast('ストックしたのだ！'); }
+  else { toast('既にストック済みなのだ'); }
+}
+function renderStock(){
+  const el=document.getElementById('ol-list');
+  const q=(document.getElementById('ol-search')?.value||'').toLowerCase();
+  const filtered=stock.map((s,idx)=>({s,idx})).filter(({s})=>!q||s.toLowerCase().includes(q));
+  document.getElementById('ol-count').textContent=stock.length;
+  if(!filtered.length){el.innerHTML=`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0">${stock.length?'検索結果なし':'ストックなし'}</div>`;return;}
+  el.innerHTML=filtered.map(({s,idx})=>{
+    const arg=escA(JSON.stringify(s));
+    return `
+    <div class="stock-item">
+      <div class="stock-text" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('コピーしたのだ！'))" title="クリックでコピー">${escH(s)}</div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="btn sm" onclick="navigator.clipboard.writeText(${arg}).then(()=>toast('コピーしたのだ！'))">Copy</button>
+        <button class="btn sm" onclick="loadToReg(${arg})">→Tags</button>
+        <button class="btn sm secondary" onclick="addTextToSelectedGroup(${arg})">→Group</button>
+        <button class="btn sm danger" onclick="deleteStock(${idx})">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function loadToReg(text){ document.getElementById('reg-input').value=text; switchTab('library'); previewReg(); }
+function deleteStock(idx){ stock.splice(idx,1); saveStock(); renderStock(); toast('削除したのだ'); }
+function clearStock(){ if(!confirm('全ストックを削除するのだ？')) return; stock=[]; saveStock(); renderStock(); toast('クリアしたのだ'); }
+
+// ═══════════════════════════════════════════════════════════
+//  PROMPT GROUPS
+// ═══════════════════════════════════════════════════════════
+function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+function activeGroup(){ return promptGroups.find(g=>g.id===activeGroupId)||promptGroups[0]||null; }
+function ensureGroup(){
+  let g=activeGroup();
+  if(g) return g;
+  g={id:uid('group'),name:'Default Group',memo:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),prompts:[]};
+  promptGroups.push(g); activeGroupId=g.id; saveGroups();
+  return g;
+}
+function createPromptGroup(){
+  const inp=document.getElementById('group-name-inp');
+  const name=(inp?.value||prompt('グループ名を入力してください','')||'').trim();
+  if(!name){toast('グループ名を入力してほしいのだ');return;}
+  createPromptGroupFromName(name);
+  if(inp) inp.value='';
+  toast('グループを作成したのだ！');
+}
+function createPromptGroupFromName(name){
+  const clean=String(name||'').trim();
+  if(!clean) return null;
+  const g={id:uid('group'),name:clean,memo:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),prompts:[]};
+  promptGroups.unshift(g); activeGroupId=g.id;
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  return g;
+}
+function createAssistGroup(){
+  const inp=document.getElementById('assist-new-group-name');
+  const name=(inp?.value||'').trim();
+  if(!name){toast('新規Group名を入力してほしいのだ');return;}
+  const g=createPromptGroupFromName(name);
+  if(inp) inp.value='';
+  const sel=document.getElementById('assist-group-select');
+  if(sel&&g) sel.value=g.id;
+  toast(`追加先Group「${name}」を作成したのだ`);
+}
+function setAssistTargetGroup(id){
+  if(!id) return;
+  activeGroupId=id;
+  renderGroupSelectors();
+}
+function setActiveGroup(id){
+  activeGroupId=id;
+  renderGroups(); renderGroupSelectors();
+}
+function renameActiveGroup(){
+  const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
+  const name=prompt('新しいグループ名',g.name);
+  if(!name||!name.trim()) return;
+  g.name=name.trim(); g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+}
+function deleteActiveGroup(){
+  const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
+  if(!confirm(`「${g.name}」を削除しますか？`)) return;
+  const deletedIds=(g.prompts||[]).map(p=>p.id);
+  groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!deletedIds.includes(id));
+  deletedIds.forEach(id=>delete groupPromptSendSizes[id]);
+  promptGroups=promptGroups.filter(x=>x.id!==g.id);
+  if(groupOrderEdit?.groupId===g.id) groupOrderEdit=null;
+  activeGroupId=promptGroups[0]?.id||null;
+  saveGroups(); renderGroups(); renderGroupSelectors(); toast('グループを削除したのだ');
+}
+function getSelectedGroupId(selectId){
+  const id=document.getElementById(selectId)?.value;
+  if(id) return id;
+  return ensureGroup().id;
+}
+function renderGroupSelectors(){
+  const html=promptGroups.length
+    ? promptGroups.map(g=>`<option value="${escA(g.id)}"${g.id===activeGroupId?' selected':''}>${escH(g.name)} (${(g.prompts||[]).length})</option>`).join('')
+    : '<option value="">Default Groupを作成して追加</option>';
+  ['compose-group-select','assist-group-select'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=html;});
+}
+function parseBatchLine(line){
+  const m=String(line||'').trim().match(/^(\d+)\s*[xX×]\s*(\d+)\s*\|\s*(.+)$/);
+  if(m) return {width:Math.floor(Number(m[1])),height:Math.floor(Number(m[2])),text:m[3].trim()};
+  return {width:null,height:null,text:String(line||'').trim()};
+}
+function addPromptToGroup(groupId,item,opts){
+  opts=opts||{};
+  const g=promptGroups.find(x=>x.id===groupId)||ensureGroup();
+  const text=String(item.text||'').trim();
+  if(!text){toast('追加するプロンプトが空なのだ');return;}
+  g.prompts=g.prompts||[];
+  g.prompts.unshift({
+    id:uid('prompt'),
+    text,
+    negative:item.negative||'',
+    width:item.width||null,
+    height:item.height||null,
+    memo:item.memo||'',
+    source:item.source||'manual',
+    createdAt:new Date().toISOString()
+  });
+  g.updatedAt=new Date().toISOString();
+  activeGroupId=g.id; saveGroups(); renderGroups(); renderGroupSelectors();
+  if(!opts.silent) toast(`「${g.name}」に追加したのだ！`);
+}
+function addTextToSelectedGroup(text){
+  const parsed=parseBatchLine(text);
+  const groupId=document.getElementById('assist-group-select')?.value||activeGroup()?.id||ensureGroup().id;
+  addPromptToGroup(groupId,{...parsed,source:'one-liner'});
+}
+function addBulkToActiveGroup(){
+  const g=ensureGroup();
+  const raw=document.getElementById('group-bulk-input').value;
+  const lines=parsePromptsFromGroupText(raw);
+  if(!lines.length){toast('追加するプロンプトを入力してほしいのだ');return;}
+  lines.forEach(item=>addPromptToGroup(g.id,{...item,source:'bulk'}));
+  document.getElementById('group-bulk-input').value='';
+}
+function parsePromptsFromGroupText(raw){
+  return String(raw||'').split(/\r?\n|;/).map(s=>s.trim()).filter(s=>s&&!s.startsWith('#')).map(parseBatchLine).filter(x=>x.text);
+}
+function formatGroupPrompt(p){
+  const text=String(p.text||'').replace(/,+\s*$/,'').trim();
+  if(p.width&&p.height) return `${p.width}x${p.height} | ${text}`;
+  return text;
+}
+function copyActiveGroupBatch(){
+  const g=activeGroup(); if(!g||!g.prompts?.length){toast('コピーするプロンプトがないのだ');return;}
+  const out=g.prompts.map(formatGroupPrompt).join('\n');
+  navigator.clipboard.writeText(out).then(()=>toast('Draw Things用Batchをコピーしたのだ！'));
+}
+function copyGroupPrompt(id){
+  const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
+  navigator.clipboard.writeText(formatGroupPrompt(p)).then(()=>toast('プロンプトをコピーしたのだ！'));
+}
+function loadGroupPromptToCompose(id){
+  const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
+  const sendSize=getPromptSendSizeOverride(id);
+  if(sendSize===null) return;
+  document.getElementById('b-pos').value=p.text||'';
+  document.getElementById('b-neg').value=p.negative||'';
+  document.getElementById('batch-width').value=sendSize?.width||p.width||'';
+  document.getElementById('batch-height').value=sendSize?.height||p.height||'';
+  switchTab('compose'); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary();
+}
+function deleteGroupPrompt(id){
+  const g=activeGroup(); if(!g) return;
+  g.prompts=(g.prompts||[]).filter(p=>p.id!==id); g.updatedAt=new Date().toISOString();
+  if(editingGroupPromptId===id) editingGroupPromptId=null;
+  groupPromptSelectionOrder=groupPromptSelectionOrder.filter(x=>x!==id);
+  delete groupPromptSendSizes[id];
+  saveGroups(); renderGroups(); renderGroupSelectors();
+}
+function startEditGroupPrompt(id){
+  const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
+  editingGroupPromptId=id;
+  renderGroups();
+  setTimeout(()=>document.getElementById(`group-edit-text-${id}`)?.focus(),0);
+}
+function cancelEditGroupPrompt(){
+  editingGroupPromptId=null;
+  renderGroups();
+}
+function saveGroupPromptEdit(id){
+  const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
+  const textEl=document.getElementById(`group-edit-text-${id}`);
+  const negEl=document.getElementById(`group-edit-neg-${id}`);
+  const widthEl=document.getElementById(`group-edit-width-${id}`);
+  const heightEl=document.getElementById(`group-edit-height-${id}`);
+  const text=String(textEl?.value||'').trim();
+  if(!text){toast('プロンプト本文は空にできないのだ');return;}
+  const widthRaw=String(widthEl?.value||'').trim();
+  const heightRaw=String(heightEl?.value||'').trim();
+  let width=null, height=null;
+  if(widthRaw||heightRaw){
+    width=Math.floor(Number(widthRaw));
+    height=Math.floor(Number(heightRaw));
+    if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0){
+      toast('サイズは width / height を両方とも正の数字で入れてほしいのだ');
+      return;
+    }
+  }
+  p.text=text;
+  p.negative=String(negEl?.value||'').trim();
+  p.width=width;
+  p.height=height;
+  p.updatedAt=new Date().toISOString();
+  g.updatedAt=new Date().toISOString();
+  editingGroupPromptId=null;
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast('プロンプトを更新したのだ');
+}
+function isActiveGroupOrderEditing(){
+  const g=activeGroup();
+  return !!(g&&groupOrderEdit&&groupOrderEdit.groupId===g.id);
+}
+function beginGroupOrderEdit(renderNow){
+  const g=activeGroup(); if(!g||!g.prompts?.length) return false;
+  if(isActiveGroupOrderEditing()) return true;
+  const originalIds=g.prompts.map(p=>p.id);
+  const originalNo={};
+  originalIds.forEach((id,i)=>{originalNo[id]=i+1;});
+  groupOrderEdit={groupId:g.id,originalIds,originalNo};
+  if(renderNow) renderGroups();
+  return true;
+}
+function startGroupOrderEdit(){
+  const g=activeGroup(); if(!g||!g.prompts?.length){toast('順番編集するプロンプトがないのだ');return;}
+  if(isActiveGroupOrderEditing()){toast('すでに順番編集中なのだ');return;}
+  beginGroupOrderEdit(true);
+  toast('順番編集モードを開始したのだ。番号は #n で固定表示されるのだ');
+}
+function ensureGroupOrderEdit(){
+  if(!isActiveGroupOrderEditing()) beginGroupOrderEdit(true);
+  return isActiveGroupOrderEditing();
+}
+function reverseActiveGroupOrder(){
+  const g=activeGroup(); if(!g||!g.prompts?.length){toast('逆順にするプロンプトがないのだ');return;}
+  if(!ensureGroupOrderEdit()) return;
+  g.prompts.reverse();
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast('Group全体を逆順にしたのだ。#番号は元の位置のまま見えるのだ');
+}
+function confirmGroupOrderEdit(){
+  if(!isActiveGroupOrderEditing()){toast('順番編集モードではないのだ');return;}
+  groupOrderEdit=null;
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast('順番を確定して番号を振り直したのだ');
+}
+function cancelGroupOrderEdit(){
+  if(!isActiveGroupOrderEditing()){toast('順番編集モードではないのだ');return;}
+  const g=activeGroup(); if(!g) return;
+  const byId=new Map((g.prompts||[]).map(p=>[p.id,p]));
+  const restored=groupOrderEdit.originalIds.map(id=>byId.get(id)).filter(Boolean);
+  const extras=(g.prompts||[]).filter(p=>!groupOrderEdit.originalIds.includes(p.id));
+  g.prompts=[...restored,...extras];
+  groupOrderEdit=null;
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast('順番編集をキャンセルして元の並びに戻したのだ');
+}
+function selectedGroupPromptIds(){
+  const visible=[...document.querySelectorAll('.group-prompt-check')].map(el=>el.value);
+  const checked=[...document.querySelectorAll('.group-prompt-check:checked')].map(el=>el.value);
+  const visibleSet=new Set(visible);
+  const checkedSet=new Set(checked);
+  groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!visibleSet.has(id)||checkedSet.has(id));
+  checked.forEach(id=>{ if(!groupPromptSelectionOrder.includes(id)) groupPromptSelectionOrder.push(id); });
+  return groupPromptSelectionOrder.slice();
+}
+function selectedActiveGroupPromptIds(){
+  const g=activeGroup(); if(!g) return [];
+  const activeIds=new Set((g.prompts||[]).map(p=>p.id));
+  return selectedGroupPromptIds().filter(id=>activeIds.has(id));
+}
+function findGroupPromptById(id){
+  for(const g of promptGroups){
+    const p=(g.prompts||[]).find(x=>x.id===id);
+    if(p) return {group:g,prompt:p};
+  }
+  return null;
+}
+function updateGroupCrossSelectStatus(){
+  const el=document.getElementById('group-cross-select-status');
+  if(!el) return;
+  const ids=selectedGroupPromptIds();
+  if(!ids.length){el.textContent='選択なし。Groupを跨いで選択すると、まとめてComposeへ送れます。';return;}
+  const groups=new Set(ids.map(id=>findGroupPromptById(id)?.group?.id).filter(Boolean));
+  el.textContent=`全Groupで ${ids.length}件 選択中 / ${groups.size} Group`;
+}
+function toggleGroupPromptSelection(id,on){
+  if(on){
+    if(!groupPromptSelectionOrder.includes(id)) groupPromptSelectionOrder.push(id);
+  }else{
+    groupPromptSelectionOrder=groupPromptSelectionOrder.filter(x=>x!==id);
+  }
+  updateGroupCrossSelectStatus();
+}
+function selectAllGroupPrompts(on){
+  const g=activeGroup();
+  if(on){
+    (g?.prompts||[]).forEach(p=>{if(!groupPromptSelectionOrder.includes(p.id)) groupPromptSelectionOrder.push(p.id);});
+    document.querySelectorAll('.group-prompt-check').forEach(el=>{el.checked=true;});
+  }else{
+    const activeIds=new Set((g?.prompts||[]).map(p=>p.id));
+    groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!activeIds.has(id));
+    document.querySelectorAll('.group-prompt-check').forEach(el=>{el.checked=false;});
+  }
+  updateGroupCrossSelectStatus();
+}
+function clearAllGroupPromptSelections(){
+  groupPromptSelectionOrder=[];
+  document.querySelectorAll('.group-prompt-check').forEach(el=>{el.checked=false;});
+  updateGroupCrossSelectStatus();
+  toast('全Groupの選択を解除したのだ');
+}
+function updateOrderBadgesForActiveEdit(){
+  if(!isActiveGroupOrderEditing()) return;
+  const g=activeGroup(); if(!g) return;
+  (g.prompts||[]).forEach((p,idx)=>{
+    const el=document.querySelector(`[data-order-badge-id="${CSS.escape(p.id)}"]`);
+    if(!el) return;
+    el.textContent=`#${groupOrderEdit.originalNo[p.id]||idx+1}`;
+    el.classList.add('order-edit');
+  });
+  const status=document.getElementById('group-order-edit-status');
+  if(status) status.textContent='順番編集中: #番号は編集開始時の元番号です。確定すると上から 01, 02... に振り直します。';
+}
+function startGroupPromptDrag(e,id){
+  if(!isActiveGroupOrderEditing()){
+    beginGroupOrderEdit(false);
+    updateOrderBadgesForActiveEdit();
+  }
+  draggingGroupPromptId=id;
+  e.currentTarget.closest('.prompt-item')?.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',id);
+}
+function overGroupPromptDrag(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('drag-over');
+}
+function leaveGroupPromptDrag(e){
+  e.currentTarget.classList.remove('drag-over');
+}
+function endGroupPromptDrag(e){
+  e.currentTarget.classList.remove('dragging','drag-over');
+  document.querySelectorAll('.prompt-item.drag-over').forEach(el=>el.classList.remove('drag-over'));
+}
+function dropGroupPrompt(e,targetId){
+  e.preventDefault();
+  const dragId=draggingGroupPromptId||e.dataTransfer.getData('text/plain');
+  draggingGroupPromptId=null;
+  document.querySelectorAll('.prompt-item.dragging,.prompt-item.drag-over').forEach(el=>el.classList.remove('dragging','drag-over'));
+  if(!dragId||dragId===targetId) return;
+  const g=activeGroup(); if(!g||!g.prompts) return;
+  ensureGroupOrderEdit();
+  const moving=g.prompts.find(p=>p.id===dragId);
+  if(!moving) return;
+  g.prompts=g.prompts.filter(p=>p.id!==dragId);
+  const rect=e.currentTarget.getBoundingClientRect();
+  const insertAfter=e.clientY>rect.top+rect.height/2;
+  let targetIndex=g.prompts.findIndex(p=>p.id===targetId);
+  if(targetIndex<0) targetIndex=g.prompts.length;
+  g.prompts.splice(targetIndex+(insertAfter?1:0),0,moving);
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast('プロンプト順を変更したのだ');
+}
+function setPromptSendSize(id){
+  const wRaw=String(document.getElementById(`send-size-w-${id}`)?.value||'').trim();
+  const hRaw=String(document.getElementById(`send-size-h-${id}`)?.value||'').trim();
+  if(!wRaw&&!hRaw){delete groupPromptSendSizes[id];return;}
+  groupPromptSendSizes[id]={width:wRaw,height:hRaw};
+}
+function applyPromptSendSizePreset(id,value){
+  applySizePresetToInputs(value,`send-size-w-${id}`,`send-size-h-${id}`);
+  setPromptSendSize(id);
+}
+function clearPromptSendSize(id){
+  const w=document.getElementById(`send-size-w-${id}`);
+  const h=document.getElementById(`send-size-h-${id}`);
+  const s=document.getElementById(`send-size-preset-${id}`);
+  if(w) w.value='';
+  if(h) h.value='';
+  if(s) s.value='';
+  delete groupPromptSendSizes[id];
+  toast('このプロンプトの今回送信用サイズをクリアしたのだ');
+}
+function getPromptSendSizeOverride(id){
+  const raw=groupPromptSendSizes[id];
+  if(!raw||(!raw.width&&!raw.height)) return {enabled:false,width:null,height:null};
+  const width=Math.floor(Number(raw.width));
+  const height=Math.floor(Number(raw.height));
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0){
+    toast('個別送信サイズは W/H を両方とも正の数字で入れてほしいのだ');
+    return null;
+  }
+  return {enabled:true,width,height};
+}
+function getGroupSendSizeOverride(){
+  const wRaw=String(document.getElementById('group-send-width')?.value||'').trim();
+  const hRaw=String(document.getElementById('group-send-height')?.value||'').trim();
+  if(!wRaw&&!hRaw) return {width:null,height:null,enabled:false};
+  const width=Math.floor(Number(wRaw));
+  const height=Math.floor(Number(hRaw));
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0){
+    toast('送信サイズは W/H を両方とも正の数字で入れてほしいのだ');
+    return null;
+  }
+  return {width,height,enabled:true};
+}
+function formatGroupPromptForComposeSend(p,sizeOverride){
+  const text=String(p.text||'').replace(/,+\s*$/,'').trim();
+  if(sizeOverride?.enabled) return `${sizeOverride.width}x${sizeOverride.height} | ${text}`;
+  return formatGroupPrompt(p);
+}
+function formatGroupPromptForComposeSendWithIndividual(p,globalSize){
+  const individual=getPromptSendSizeOverride(p.id);
+  if(individual===null) return null;
+  if(individual.enabled) return formatGroupPromptForComposeSend(p,individual);
+  if(globalSize?.enabled) return formatGroupPromptForComposeSend(p,globalSize);
+  return formatGroupPrompt(p);
+}
+function clearGroupSendSize(){
+  const w=document.getElementById('group-send-width');
+  const h=document.getElementById('group-send-height');
+  const s=document.getElementById('group-send-size-preset');
+  if(w) w.value='';
+  if(h) h.value='';
+  if(s) s.value='';
+  toast('今回送信用サイズをクリアしたのだ');
+}
+function sendSelectedGroupPromptsToCompose(){
+  const ids=selectedGroupPromptIds();
+  if(!ids.length){toast('Composeへ送るプロンプトを選んでほしいのだ');return;}
+  const entries=ids.map(findGroupPromptById).filter(Boolean);
+  const selected=entries.map(x=>x.prompt);
+  if(!selected.length){toast('選択したプロンプトが見つからないのだ');return;}
+  const sizeOverride=getGroupSendSizeOverride();
+  if(sizeOverride===null) return;
+  const lines=[];
+  for(const p of selected){
+    const line=formatGroupPromptForComposeSendWithIndividual(p,sizeOverride);
+    if(line===null) return;
+    lines.push(line);
+  }
+  const batch=lines.join('\n');
+  document.getElementById('b-pos').value=batch;
+  const negatives=[...new Set(selected.map(p=>String(p.negative||'').trim()).filter(Boolean))];
+  document.getElementById('b-neg').value=negatives.length===1?negatives[0]:'';
+  document.getElementById('batch-width').value='';
+  document.getElementById('batch-height').value='';
+  switchTab('compose');
+  buildCode(); updateComposeSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+  const groupCount=new Set(entries.map(x=>x.group.id)).size;
+  const individualCount=selected.filter(p=>getPromptSendSizeOverride(p.id)?.enabled).length;
+  const sizeMsg=individualCount?` / 個別サイズ${individualCount}件`:sizeOverride.enabled?` / ${sizeOverride.width}x${sizeOverride.height}指定`:'';
+  toast(`${selected.length}件 / ${groupCount} Group を改行結合してComposeへ送ったのだ${sizeMsg}`);
+}
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function tidyPromptText(s){
+  return String(s||'')
+    .replace(/\s*,\s*/g,', ')
+    .replace(/,\s*,+/g,', ')
+    .replace(/^\s*,\s*|\s*,\s*$/g,'')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+}
+function bulkReplaceGroupPrompts(){
+  const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
+  const ids=selectedActiveGroupPromptIds();
+  if(!ids.length){toast('編集するプロンプトを選んでほしいのだ');return;}
+  const find=document.getElementById('group-find').value;
+  const repl=document.getElementById('group-replace').value;
+  if(!find){toast('検索する文字を入力してほしいのだ');return;}
+  const re=new RegExp(escapeRegExp(find),'gi');
+  let changed=0;
+  g.prompts.forEach(p=>{
+    if(!ids.includes(p.id)) return;
+    const before=p.text||'';
+    const after=tidyPromptText(before.replace(re,repl));
+    if(after!==before){p.text=after;changed++;}
+  });
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${changed}件を一括編集したのだ`);
+}
+function cleanSelectedGroupPrompts(){
+  const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
+  const ids=selectedActiveGroupPromptIds();
+  if(!ids.length){toast('Cleanerをかけるプロンプトを選んでほしいのだ');return;}
+  let changed=0;
+  g.prompts.forEach(p=>{
+    if(!ids.includes(p.id)) return;
+    const before=p.text||'';
+    const after=cleanPromptText(before);
+    if(after&&after!==before){p.text=after;changed++;}
+  });
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${changed}件をCleanerで圧縮したのだ`);
+}
+function highlightPromptText(text, query){
+  const raw=String(text||'');
+  const q=String(query||'').trim();
+  if(!q) return escH(raw);
+  const re=new RegExp(escapeRegExp(q),'gi');
+  let out='', last=0, m;
+  while((m=re.exec(raw))){
+    out+=escH(raw.slice(last,m.index));
+    out+=`<mark class="prompt-hit">${escH(m[0])}</mark>`;
+    last=m.index+m[0].length;
+    if(m[0].length===0) re.lastIndex++;
+  }
+  out+=escH(raw.slice(last));
+  return out;
+}
+function refreshGroupPromptHighlights(resetCursor){
+  const g=activeGroup(); if(!g) return;
+  const q=document.getElementById('group-find')?.value||'';
+  if(resetCursor) groupFindCursor=-1;
+  (g.prompts||[]).forEach(p=>{
+    const el=document.getElementById(`group-prompt-text-${p.id}`);
+    if(el) el.innerHTML=highlightPromptText(p.text,q);
+  });
+  document.querySelectorAll('.prompt-item.hit-current').forEach(el=>el.classList.remove('hit-current'));
+}
+function clearGroupFind(){
+  const el=document.getElementById('group-find');
+  if(el) el.value='';
+  groupFindCursor=-1;
+  refreshGroupPromptHighlights(true);
+  toast('検索欄をクリアしたのだ');
+}
+function clearGroupReplace(){
+  const el=document.getElementById('group-replace');
+  if(el) el.value='';
+  toast('置換欄をクリアしたのだ');
+}
+function getGroupFindHitItems(){
+  const q=String(document.getElementById('group-find')?.value||'').trim();
+  if(!q) return [];
+  return [...document.querySelectorAll('#group-prompt-list .prompt-item')]
+    .filter(item=>item.querySelector('.prompt-hit'));
+}
+function jumpGroupFindHit(dir){
+  refreshGroupPromptHighlights(false);
+  const hits=getGroupFindHitItems();
+  if(!hits.length){toast('検索ヒットがないのだ');return;}
+  groupFindCursor=(groupFindCursor+dir+hits.length)%hits.length;
+  document.querySelectorAll('.prompt-item.hit-current').forEach(el=>el.classList.remove('hit-current'));
+  const target=hits[groupFindCursor];
+  target.classList.add('hit-current');
+  target.scrollIntoView({behavior:'smooth',block:'center'});
+  toast(`${groupFindCursor+1}/${hits.length} 件目へ移動したのだ`);
+}
+function renderGroups(){
+  const list=document.getElementById('group-list');
+  const promptList=document.getElementById('group-prompt-list');
+  const title=document.getElementById('group-detail-title');
+  if(!list||!promptList) return;
+  if(!promptGroups.length){
+    list.innerHTML='<div class="group-empty">まだグループがありません。まずグループを作成してください。</div>';
+    promptList.innerHTML='<div class="group-empty">グループを作ると、ここにプロンプトを束ねられます。</div>';
+    if(title) title.textContent='グループを選択してください';
+    return;
+  }
+  if(!activeGroupId||!promptGroups.find(g=>g.id===activeGroupId)) activeGroupId=promptGroups[0].id;
+  list.innerHTML=promptGroups.map(g=>`
+    <div class="group-card${g.id===activeGroupId?' active':''}" onclick="setActiveGroup('${escA(g.id)}')">
+      <div class="group-name">${escH(g.name)}</div>
+      <div class="group-meta">${(g.prompts||[]).length} prompts</div>
+    </div>`).join('');
+  const g=activeGroup();
+  if(title) title.textContent=`${g.name} / ${(g.prompts||[]).length} prompts`;
+  const status=document.getElementById('group-order-edit-status');
+  if(status) status.textContent=isActiveGroupOrderEditing()
+    ? '順番編集中: #番号は編集開始時の元番号です。確定すると上から 01, 02... に振り直します。'
+    : '通常表示: 番号は現在の上から順です。';
+  if(!g.prompts?.length){promptList.innerHTML='<div class="group-empty">このグループにはまだプロンプトがありません。</div>';return;}
+  const findQuery=document.getElementById('group-find')?.value||'';
+  const selectedSet=new Set(groupPromptSelectionOrder);
+  const orderEditing=isActiveGroupOrderEditing();
+  promptList.innerHTML=g.prompts.map((p,idx)=>{
+    const isEditing=editingGroupPromptId===p.id;
+    const badgeText=orderEditing ? `#${groupOrderEdit.originalNo[p.id]||idx+1}` : String(idx+1).padStart(2,'0');
+    const sendSize=groupPromptSendSizes[p.id]||{};
+    return `
+    <div class="prompt-item" ondragover="overGroupPromptDrag(event)" ondragleave="leaveGroupPromptDrag(event)" ondrop="dropGroupPrompt(event,'${escA(p.id)}')" ondragend="endGroupPromptDrag(event)">
+      <label style="display:flex;gap:8px;align-items:flex-start">
+        <input class="group-prompt-check" type="checkbox" value="${escA(p.id)}" style="margin-top:4px" ${selectedSet.has(p.id)?'checked':''} onchange="toggleGroupPromptSelection('${escA(p.id)}',this.checked)">
+        <span class="prompt-order-badge${orderEditing?' order-edit':''}" data-order-badge-id="${escV(p.id)}" draggable="true" title="ここをドラッグして順番変更" ondragstart="startGroupPromptDrag(event,'${escA(p.id)}')" ondragend="endGroupPromptDrag(event)">${escH(badgeText)}</span>
+        <span class="prompt-item-text">${p.width&&p.height?`<span class="prompt-size-badge">${p.width}x${p.height}</span>`:''}<span id="group-prompt-text-${escA(p.id)}">${highlightPromptText(p.text,findQuery)}</span></span>
+      </label>
+      ${p.memo?`<div class="group-meta">TITLE: ${escH(p.memo)}</div>`:''}
+      ${p.negative?`<div class="group-meta">NEG: ${escH(p.negative)}</div>`:''}
+      ${isEditing?`
+      <div class="group-prompt-editor">
+        <div class="sl" style="margin-top:0">このプロンプトを編集</div>
+        <textarea id="group-edit-text-${escA(p.id)}" rows="4">${escH(p.text||'')}</textarea>
+        <div class="group-prompt-editor-grid">
+          <select class="inp size-preset" onchange="applySizePresetToInputs(this.value,'group-edit-width-${escA(p.id)}','group-edit-height-${escA(p.id)}')">${sizePresetOptions(p.width,p.height)}</select>
+          <input class="inp" id="group-edit-width-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="W" value="${p.width||''}">
+          <input class="inp" id="group-edit-height-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="H" value="${p.height||''}">
+          <input class="inp neg-field" id="group-edit-neg-${escA(p.id)}" placeholder="Negative prompt" value="${escV(p.negative||'')}">
+        </div>
+        <div class="prompt-actions">
+          <button class="btn sm primary" onclick="saveGroupPromptEdit('${escA(p.id)}')">保存</button>
+          <button class="btn sm" onclick="cancelEditGroupPrompt()">Cancel</button>
+        </div>
+      </div>`:''}
+      <div class="prompt-actions">
+        <button class="btn sm primary" onclick="startEditGroupPrompt('${escA(p.id)}')">${isEditing?'編集中':'Edit'}</button>
+        <button class="btn sm" onclick="copyGroupPrompt('${escA(p.id)}')">Copy</button>
+        <button class="btn sm secondary" onclick="loadGroupPromptToCompose('${escA(p.id)}')">Composeへ</button>
+        <span class="prompt-send-size" title="今回Composeへ送る時だけ使う個別サイズ。保存サイズは変更しません。">
+          <select class="inp" id="send-size-preset-${escA(p.id)}" onchange="applyPromptSendSizePreset('${escA(p.id)}',this.value)">${sizePresetOptions(sendSize.width,sendSize.height)}</select>
+          <input class="inp" id="send-size-w-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="W" value="${escV(sendSize.width||'')}" oninput="setPromptSendSize('${escA(p.id)}')">
+          <input class="inp" id="send-size-h-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="H" value="${escV(sendSize.height||'')}" oninput="setPromptSendSize('${escA(p.id)}')">
+          <button class="btn sm" onclick="clearPromptSendSize('${escA(p.id)}')">Size Clear</button>
+        </span>
+        <button class="btn sm danger" onclick="deleteGroupPrompt('${escA(p.id)}')">×</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateGroupCrossSelectStatus();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTO-IMPORT (IndexedDB)
+// ═══════════════════════════════════════════════════════════
+async function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('prompt_tags_db',1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore('config');
+    r.onsuccess=e=>res(e.target.result); r.onerror=rej;
+  });
+}
+async function idbGet(key){ const db=await openDB(); return new Promise((res,rej)=>{const r=db.transaction('config','readonly').objectStore('config').get(key);r.onsuccess=e=>res(e.target.result);r.onerror=rej;}); }
+async function idbSet(key,val){ const db=await openDB(); return new Promise((res,rej)=>{const r=db.transaction('config','readwrite').objectStore('config').put(val,key);r.onsuccess=res;r.onerror=rej;}); }
+async function idbDel(key){ const db=await openDB(); return new Promise((res,rej)=>{const r=db.transaction('config','readwrite').objectStore('config').delete(key);r.onsuccess=res;r.onerror=rej;}); }
+function setAIStatus(text,color,showClear){
+  document.getElementById('ai-status').innerHTML=`<span style="color:${color||'var(--muted)'}">${text}</span>`;
+  document.getElementById('ai-clear-btn').style.display=showClear?'':'none';
+}
+async function readAndImportHandle(handle){
+  const file=await handle.getFile();
+  const data=JSON.parse(await file.text());
+  if(!Array.isArray(data.tags)) throw new Error('不正なフォーマットなのだ');
+  let added=0;
+  data.tags.forEach(t=>{if(typeof t==='string'&&!tags.includes(t)){tags.push(t);added++;}});
+  if(data.meta&&typeof data.meta==='object') Object.entries(data.meta).forEach(([k,v])=>{if(typeof v?.ja==='string') tagMeta[k]={...(tagMeta[k]||{}),ja:v.ja};});
+  if(data.cats&&typeof data.cats==='object') Object.assign(tagCats,data.cats);
+  saveTags();saveMeta();saveCats();
+  return {added,name:handle.name};
+}
+async function autoImportOnStartup(){
+  try{
+    const handle=await idbGet('auto_import_handle');
+    if(!handle){setAIStatus('未設定','var(--muted)',false);return;}
+    const perm=await handle.queryPermission({mode:'read'});
+    if(perm==='granted'){
+      const r=await readAndImportHandle(handle);
+      renderTags();
+      setAIStatus(`✓ ${r.name}　+${r.added} tags`,'var(--accent)',true);
+    } else {
+      setAIStatus(`<span style="cursor:pointer;text-decoration:underline" onclick="requestAutoImport()">▶ ${handle.name}（クリックで読み込み許可）</span>`,'var(--accent2)',true);
+    }
+  }catch(e){setAIStatus('読み込みエラー: '+e.message,'var(--danger)',true);}
+}
+async function requestAutoImport(){
+  try{
+    const handle=await idbGet('auto_import_handle');
+    if(!handle) return;
+    const perm=await handle.requestPermission({mode:'read'});
+    if(perm==='granted'){const r=await readAndImportHandle(handle);renderTags();setAIStatus(`✓ ${r.name}　+${r.added} tags`,'var(--accent)',true);toast(`${r.added}タグをインポートしたのだ！`);}
+  }catch(e){toast('エラー: '+e.message);}
+}
+async function setAutoImport(){
+  if(!window.showOpenFilePicker){toast('Chromeを使ってほしいのだ');return;}
+  try{
+    const [handle]=await window.showOpenFilePicker({types:[{description:'JSON',accept:{'application/json':['.json']}}]});
+    await idbSet('auto_import_handle',handle);
+    const r=await readAndImportHandle(handle);
+    renderTags(); setAIStatus(`✓ ${r.name}　+${r.added} tags`,'var(--accent)',true);
+    toast('自動インポートを設定したのだ！');
+  }catch(e){if(e.name!=='AbortError') toast('エラー: '+e.message);}
+}
+async function clearAutoImport(){ await idbDel('auto_import_handle'); setAIStatus('未設定','var(--muted)',false); toast('自動インポートを解除したのだ'); }
+
+// ═══════════════════════════════════════════════════════════
+//  LIBRARY AI CATEGORIZE
+// ═══════════════════════════════════════════════════════════
+let catMode = 'select';
+let catSelTags = new Set();
+let catSelSort = 'reg';
+let catSelFilter = 'all';
+
+function setCatMode(m){
+  catMode = m;
+  document.getElementById('catmode-sel').classList.toggle('active', m==='select');
+  document.getElementById('catmode-all').classList.toggle('active', m==='all');
+  document.getElementById('catmode-pose-select')?.classList.toggle('active', m==='pose-select');
+  document.getElementById('catmode-pose-all')?.classList.toggle('active', m==='pose-all');
+  document.getElementById('catmode-desc').textContent = m==='select'
+    ? 'タグをクリックして選択 → 仕分け実行'
+    : m==='pose-select'
+      ? 'pose/expressionタグだけを表示。必要なものを選んで再仕分けします'
+      : m==='pose-all'
+        ? 'pose/expressionタグを全件まとめて再仕分けします'
+      : 'uncategorizedタグを全件まとめて仕分け実行';
+  document.getElementById('catsel-area').style.display = (m==='select'||m==='pose-select') ? '' : 'none';
+  renderCatSelTags();
+}
+
+function setCatSelSort(s){
+  catSelSort = s;
+  ['reg','alpha','cat'].forEach(k=>document.getElementById('catsel-sort-'+k)?.classList.toggle('active',k===s));
+  renderCatSelTags();
+}
+
+function renderCatSelTags(){
+  const area = document.getElementById('catsel-tags');
+  if(catMode !== 'select' && catMode !== 'pose-select'){ area.innerHTML=''; return; }
+  const q = (document.getElementById('catsel-search')?.value||'').toLowerCase();
+  let all = [...tags];
+  if(catMode==='pose-select') all = all.filter(t=>getTagCat(t)==='pose/expression');
+  if(catSelFilter==='uncategorized') all = all.filter(t=>getTagCat(t)==='uncategorized');
+  if(q) all = all.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  if(catSelSort==='alpha') all = [...all].sort((a,b)=>a.localeCompare(b,'en'));
+  if(catSelSort==='cat')   all = [...all].sort((a,b)=>getTagCat(a).localeCompare(getTagCat(b)));
+  if(!all.length){ area.innerHTML='<span class="tag-empty">'+(tags.length?'検索結果なし':'タグがないのだ')+'</span>'; return; }
+  area.innerHTML = all.map(t=>{
+    const on = catSelTags.has(t);
+    const cat = getTagCat(t);
+    const ja = tagMeta[t]?.ja;
+    return `<span class="tag${on?' selected':''}" onclick="toggleCatSel('${escA(t)}')">`
+      +`${escH(t)}`
+      +(ja?`<span class="tag-ja">（${escH(ja)}）</span>`:'')
+      +`<span class="badge" style="margin-left:4px;font-size:9px;opacity:.7">${escH(cat)}</span>`
+      +`</span>`;
+  }).join('');
+  document.getElementById('catsel-count').textContent = `${catSelTags.size} 件選択中`;
+}
+
+function toggleCatSel(tag){
+  if(catSelTags.has(tag)) catSelTags.delete(tag); else catSelTags.add(tag);
+  renderCatSelTags();
+}
+function catSelClear(){ catSelTags.clear(); renderCatSelTags(); }
+function filterCatSelUncategorized(){
+  document.getElementById('catsel-search').value='';
+  catSelFilter = catSelFilter==='uncategorized' ? 'all' : 'uncategorized';
+  document.getElementById('catsel-filter-uncat')?.classList.toggle('secondary',catSelFilter==='uncategorized');
+  if(catSelFilter==='uncategorized' && catMode==='pose-select') setCatMode('select');
+  renderCatSelTags();
+  toast(catSelFilter==='uncategorized'?'未分類タグだけ表示したのだ':'全タグ表示に戻したのだ');
+}
+
+async function runLibCategorize(){
+  let targets = [];
+  const preview = document.getElementById('lib-cat-preview');
+  if(catMode === 'select'){
+    targets = [...catSelTags];
+    if(!targets.length){
+      const msg='タグを選んでほしいのだ';
+      toast(msg);
+      if(preview) preview.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:6px 0">${escH(msg)}</div>`;
+      return;
+    }
+  } else if(catMode === 'pose-select') {
+    targets = [...catSelTags].filter(t=>getTagCat(t)==='pose/expression');
+    if(!targets.length){
+      const msg='再仕分けするpose/expressionタグを選んでほしいのだ';
+      toast(msg);
+      if(preview) preview.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:6px 0">${escH(msg)}</div>`;
+      return;
+    }
+  } else if(catMode === 'pose-all') {
+    targets = tags.filter(t => getTagCat(t) === 'pose/expression');
+    if(!targets.length){
+      const msg='pose/expressionタグがないのだ';
+      toast(msg);
+      if(preview) preview.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:6px 0">${escH(msg)}</div>`;
+      return;
+    }
+  } else {
+    targets = tags.filter(t => getTagCat(t) === 'uncategorized');
+    if(!targets.length){
+      const msg='未分類タグがないのだ';
+      toast(msg);
+      if(preview) preview.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:6px 0">${escH(msg)}</div>`;
+      return;
+    }
+  }
+
+  const btn = document.getElementById('lib-cat-btn');
+  btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>仕分け中… (${targets.length}件)`;
+  if(preview) preview.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:6px 0"><span class="spinner"></span>AIで仕分け中…</div>`;
+
+  const cats = getCategoryList();
+
+  // 50件ずつ分割して処理するのだ
+  const CHUNK = 50;
+  const results = {};
+  try{
+    for(let i=0; i<targets.length; i+=CHUNK){
+      const chunk = targets.slice(i, i+CHUNK);
+      btn.innerHTML = `<span class="spinner"></span>仕分け中… (${i+1}–${Math.min(i+CHUNK,targets.length)} / ${targets.length}件)`;
+      const prompt = `Categorize these Stable Diffusion prompt tags into ONE of these categories: ${cats.join(', ')}
+
+For each tag, output ONE line: TAG|category
+
+Tags:
+${chunk.map(t=>{ const ja=tagMeta[t]?.ja; return ja?`${t} (${ja})`:t; }).join('\n')}
+
+Category rules:
+- quality: masterpiece, best quality, score, rating, detailed
+- character: hair, eyes, body, age, gender, skin, face features
+- clothes: garment type, clothing item, outfit, uniform, shoes, hat, accessories, fabric type, clothing style, silhouette, fit, oversized clothes, loose shirt, tight dress, long sleeves, short skirt
+- clothes/expression: temporary or expressive clothing states, disorder or transformation of clothes, wet clothes, torn clothes, disheveled clothes, unbuttoned shirt, soaked shirt, stained uniform, wrinkled clothes, clothes slipping, open jacket
+- emotion: emotional states and facial feelings, happy, sad, angry, embarrassed, nervous, tired, crying, confident, shy
+- pose/expression: body pose, action, gesture, gaze or looking direction, sitting, standing, arms crossed, looking at viewer
+- style/technique: art style, medium, anime, pixel art, watercolor, rendering
+- background: scenery, location, environment, weather, season
+- camera/angle: shot type, angle, depth of field, close-up, wide shot
+- effect: lighting, particle, blur, glow, bokeh, shadow, sparkle
+- other: anything else
+
+Output ONLY tag|category lines, no explanation.`;
+      const out = await callAI(prompt);
+      out.trim().split('\n').forEach(line=>{
+        const parts = line.split('|');
+        if(parts.length < 2) return;
+        const tagRaw = parts[0].replace(/\s*\(.*\)$/,'').trim();
+        const cat = parts[1].trim();
+        const matched = chunk.find(t=>t===tagRaw||t.toLowerCase()===tagRaw.toLowerCase());
+        if(matched && cats.includes(cat)) results[matched] = cat;
+      });
+    }
+  }catch(e){
+    const msg=e.message.split('\n')[0];
+    toast('エラー: '+msg);
+    if(preview) preview.innerHTML=`<div style="color:var(--danger);font-size:12px;padding:8px 10px;background:var(--surface2);border:1px solid var(--danger);border-radius:var(--r2)">AI仕分けエラー: ${escH(msg)}</div>`;
+    btn.disabled=false; btn.innerHTML='AIで仕分け実行'; return;
+  }
+
+  btn.disabled=false; btn.innerHTML='AIで仕分け実行';
+  renderLibCatPreview(results, targets);
+}
+
+// プレビュー用状態
+let previewResults = {};
+let previewTargets = [];
+let previewDone = new Set();   // 手動変更済みタグ
+let previewSearch = '';
+let previewSort = 'default';   // 'default' | 'cat' | 'done' | 'undone'
+
+function renderLibCatPreview(results, targets){
+  previewResults = results;
+  previewTargets = targets;
+  previewDone.clear();
+  previewSearch = '';
+  previewSort = 'default';
+  _renderPreviewUI();
+}
+
+function _renderPreviewUI(){
+  const preview = document.getElementById('lib-cat-preview');
+  if(!Object.keys(previewResults).length){ preview.innerHTML='<div style="color:var(--danger);font-size:12px">仕分け結果が取得できなかったのだ</div>'; return; }
+
+  const cats = getCategoryList();
+
+  const total = previewTargets.filter(t=>previewResults[t]).length;
+  const doneCount = previewDone.size;
+
+  // フィルタ・ソート適用
+  let filtered = previewTargets.filter(t=>previewResults[t]);
+  if(previewSearch){
+    const q = previewSearch.toLowerCase();
+    filtered = filtered.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  }
+  if(previewSort==='cat')    filtered = [...filtered].sort((a,b)=>previewResults[a].localeCompare(previewResults[b]));
+  if(previewSort==='done')   filtered = [...filtered].sort((a,b)=> previewDone.has(b)?1:previewDone.has(a)?-1:0);
+  if(previewSort==='undone') filtered = [...filtered].sort((a,b)=> previewDone.has(a)?1:previewDone.has(b)?-1:0);
+
+  let html = `
+    <div id="preview-summary" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted)">全 ${total} 件</span>
+      <span style="font-size:12px;color:var(--accent)">✓ 確認済 ${doneCount} 件</span>
+      <span style="font-size:12px;color:var(--muted2)">未確認 ${total-doneCount} 件</span>
+      <span style="font-size:12px;color:var(--accent2)">未確認も提案どおり適用されます</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+      <input class="inp" id="preview-search" placeholder="タグ検索..." value="${escA(previewSearch)}"
+        style="flex:1;min-width:120px;font-size:12px"
+        oninput="previewSearch=this.value;_renderPreviewList()">
+      <div class="fmt-toggle">
+        <button class="fmt-btn${previewSort==='default'?' active':''}" onclick="previewSort='default';_renderPreviewList()">登録順</button>
+        <button class="fmt-btn${previewSort==='cat'?' active':''}" onclick="previewSort='cat';_renderPreviewList()">カテゴリ</button>
+        <button class="fmt-btn${previewSort==='undone'?' active':''}" onclick="previewSort='undone';_renderPreviewList()">未確認優先</button>
+        <button class="fmt-btn${previewSort==='done'?' active':''}" onclick="previewSort='done';_renderPreviewList()">確認済優先</button>
+      </div>
+    </div>
+    <div id="preview-list" style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px"></div>
+    <div class="row" style="margin-top:0">
+      <button class="btn primary" onclick="applyLibCat()" style="flex:1">この内容で適用</button>
+      <button class="btn" onclick="document.getElementById('lib-cat-preview').innerHTML=''">キャンセル</button>
+    </div>`;
+  preview.innerHTML = html;
+  _renderPreviewList();
+}
+
+function _renderPreviewList(){
+  const list = document.getElementById('preview-list');
+  if(!list) return;
+  const q = (document.getElementById('preview-search')?.value||'').toLowerCase();
+  previewSearch = q;
+
+  const cats = getCategoryList();
+
+  let filtered = previewTargets.filter(t=>previewResults[t]);
+  if(q) filtered = filtered.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  if(previewSort==='cat')    filtered = [...filtered].sort((a,b)=>previewResults[a].localeCompare(previewResults[b]));
+  if(previewSort==='done')   filtered = [...filtered].sort((a,b)=>previewDone.has(b)?1:previewDone.has(a)?-1:0);
+  if(previewSort==='undone') filtered = [...filtered].sort((a,b)=>previewDone.has(a)?1:previewDone.has(b)?-1:0);
+
+  // 件数バッジ更新
+  const total = previewTargets.filter(t=>previewResults[t]).length;
+  const doneCount = previewDone.size;
+  const summary = document.getElementById('preview-summary');
+  if(summary) summary.innerHTML=`<span style="font-size:12px;color:var(--muted)">全 ${total} 件</span> <span style="font-size:12px;color:var(--accent)">✓ 確認済 ${doneCount} 件</span> <span style="font-size:12px;color:var(--muted2)">未確認 ${total-doneCount} 件</span> <span style="font-size:12px;color:var(--accent2)">未確認も提案どおり適用されます</span>`;
+
+  if(!filtered.length){ list.innerHTML='<div style="padding:12px;font-size:12px;color:var(--muted)">該当なし</div>'; return; }
+
+  list.innerHTML = filtered.map(t=>{
+    const ja = tagMeta[t]?.ja;
+    const sugCat = previewResults[t];
+    const curCat = getTagCat(t);
+    const done = previewDone.has(t);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:${done?'var(--tag-sel)':'transparent'};transition:background .12s">
+      <button class="btn sm" style="padding:2px 6px;min-width:28px;color:${done?'var(--accent)':'var(--muted)'}" onclick="togglePreviewDone('${escA(t)}')" title="${done?'確認済みを解除':'確認済みにする'}">${done?'✓':'○'}</button>
+      <span style="font-family:var(--mono);font-size:12px;color:${done?'var(--accent)':'var(--text)'};flex:1;min-width:80px">${escH(t)}${ja?`<span style="font-size:10px;color:var(--muted);font-family:var(--sans)"> （${escH(ja)}）</span>`:''}</span>
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${escH(curCat)} →</span>
+      <select class="inp" data-result-tag="${escA(t)}" style="flex:1;min-width:130px;font-size:11px;padding:3px 6px"
+        onchange="updatePreviewResult('${escA(t)}',this.value)">
+        ${cats.map(c=>`<option value="${escA(c)}"${c===sugCat?' selected':''}>${escH(c)}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function updatePreviewResult(tag,cat){
+  previewResults[tag]=cat;
+  previewDone.add(tag);
+  _renderPreviewList();
+}
+function togglePreviewDone(tag){
+  if(previewDone.has(tag)) previewDone.delete(tag); else previewDone.add(tag);
+  _renderPreviewList();
+}
+
+function applyLibCat(){
+  let count = 0;
+  previewTargets.filter(t=>previewResults[t]).forEach(tag=>{
+    const cat = previewResults[tag];
+    if(cat === 'uncategorized') delete tagCats[tag];
+    else tagCats[tag] = cat;
+    count++;
+  });
+  saveCats(); renderTags(); renderCatBar();
+  document.getElementById('lib-cat-preview').innerHTML = `<div style="color:var(--accent);font-size:12px;padding:6px 0">✓ ${count}件のカテゴリを適用したのだ！</div>`;
+  catSelTags.clear(); renderCatSelTags();
+  toast(`${count}件適用したのだ！`);
+}
+
+
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escA(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function escV(s){return escH(s).replace(/"/g,'&quot;');}
+function toast(msg){
+  let el=document.getElementById('toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='toast';
+    el.className='toast';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+load();
+loadTheme();
+setupTabShortcuts();
+renderCatBar();
+renderTags();
+renderLoras();
+renderLoraSets();
+renderStock();
+renderGroups();
+renderGroupSelectors();
+renderBuilderLoras();
+renderBuilderCatBar();
+renderBuilderTags();
+renderSizePresetSelects();
+buildCode();
+updateComposeSummary();
+autoImportOnStartup();
+</script>
+</body>
+</html>
