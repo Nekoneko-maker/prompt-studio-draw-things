@@ -162,6 +162,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-card.active{background:var(--tag-sel);border-color:var(--tag-sel-b)}
 .group-name{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text)}
 .group-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+.group-select-badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:999px;background:var(--accent);color:#071014;font-family:var(--mono);font-size:10px;font-weight:700}
 .prompt-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;margin-bottom:7px}
 .prompt-item.dragging{opacity:.55;border-color:var(--accent2)}
 .prompt-item.drag-over{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -178,6 +179,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 @media(max-width:720px){.prompt-send-size{grid-template-columns:1fr 1fr 1fr auto;width:100%}}
 .group-prompt-editor{margin-top:8px;padding:8px;border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface2)}
 .group-prompt-editor textarea{min-height:92px}
+.group-edit-find-tools{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.group-edit-find-status{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .group-prompt-editor-grid{display:grid;grid-template-columns:150px 80px 80px 1fr;gap:6px;margin-top:6px}
 @media(max-width:720px){.group-prompt-editor-grid{grid-template-columns:1fr 1fr}.group-prompt-editor-grid .size-preset,.group-prompt-editor-grid .neg-field{grid-column:1/-1}}
 .group-empty{font-size:12px;color:var(--muted);font-style:italic;padding:10px 0}
@@ -775,6 +778,7 @@ let groupFindCursor = -1;
 let draggingGroupPromptId = null;
 let groupOrderEdit = null;
 let groupPromptSendSizes = {}; // {promptId:{width,height}} temporary compose-send overrides
+let groupEditFindCursor = {}; // {promptId:index}
 
 // ═══════════════════════════════════════════════════════════
 //  LOAD / SAVE
@@ -2046,7 +2050,10 @@ function startEditGroupPrompt(id){
   const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
   editingGroupPromptId=id;
   renderGroups();
-  setTimeout(()=>document.getElementById(`group-edit-text-${id}`)?.focus(),0);
+  setTimeout(()=>{
+    document.getElementById(`group-edit-text-${id}`)?.focus();
+    selectGroupEditSearchHit(id,0);
+  },0);
 }
 function cancelEditGroupPrompt(){
   editingGroupPromptId=null;
@@ -2152,6 +2159,19 @@ function findGroupPromptById(id){
   }
   return null;
 }
+function selectedCountForGroup(g){
+  const ids=new Set((g?.prompts||[]).map(p=>p.id));
+  return groupPromptSelectionOrder.filter(id=>ids.has(id)).length;
+}
+function updateGroupSelectionBadges(){
+  promptGroups.forEach(g=>{
+    const el=document.getElementById(`group-select-badge-${g.id}`);
+    if(!el) return;
+    const count=selectedCountForGroup(g);
+    el.textContent=count?`${count}件選択中`:'';
+    el.style.display=count?'inline-block':'none';
+  });
+}
 function updateGroupCrossSelectStatus(){
   const el=document.getElementById('group-cross-select-status');
   if(!el) return;
@@ -2166,7 +2186,7 @@ function toggleGroupPromptSelection(id,on){
   }else{
     groupPromptSelectionOrder=groupPromptSelectionOrder.filter(x=>x!==id);
   }
-  updateGroupCrossSelectStatus();
+  updateGroupCrossSelectStatus(); updateGroupSelectionBadges();
 }
 function selectAllGroupPrompts(on){
   const g=activeGroup();
@@ -2178,12 +2198,12 @@ function selectAllGroupPrompts(on){
     groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!activeIds.has(id));
     document.querySelectorAll('.group-prompt-check').forEach(el=>{el.checked=false;});
   }
-  updateGroupCrossSelectStatus();
+  updateGroupCrossSelectStatus(); updateGroupSelectionBadges();
 }
 function clearAllGroupPromptSelections(){
   groupPromptSelectionOrder=[];
   document.querySelectorAll('.group-prompt-check').forEach(el=>{el.checked=false;});
-  updateGroupCrossSelectStatus();
+  updateGroupCrossSelectStatus(); updateGroupSelectionBadges();
   toast('全Groupの選択を解除したのだ');
 }
 function updateOrderBadgesForActiveEdit(){
@@ -2393,12 +2413,64 @@ function highlightPromptText(text, query){
 function refreshGroupPromptHighlights(resetCursor){
   const g=activeGroup(); if(!g) return;
   const q=document.getElementById('group-find')?.value||'';
-  if(resetCursor) groupFindCursor=-1;
+  if(resetCursor){
+    groupFindCursor=-1;
+    groupEditFindCursor={};
+  }
   (g.prompts||[]).forEach(p=>{
     const el=document.getElementById(`group-prompt-text-${p.id}`);
     if(el) el.innerHTML=highlightPromptText(p.text,q);
+    updateGroupEditFindStatus(p.id);
   });
+  if(resetCursor&&editingGroupPromptId&&q.trim()){
+    setTimeout(()=>selectGroupEditSearchHit(editingGroupPromptId,1,false),0);
+  }
   document.querySelectorAll('.prompt-item.hit-current').forEach(el=>el.classList.remove('hit-current'));
+}
+function groupEditSearchMatches(id){
+  const q=document.getElementById('group-find')?.value||'';
+  const text=document.getElementById(`group-edit-text-${id}`)?.value||'';
+  const needle=String(q||'').trim().toLowerCase();
+  if(!needle) return [];
+  const hay=String(text||'').toLowerCase();
+  const hits=[];
+  let pos=0;
+  while((pos=hay.indexOf(needle,pos))!==-1){
+    hits.push(pos);
+    pos+=needle.length||1;
+  }
+  return hits;
+}
+function updateGroupEditFindStatus(id){
+  const status=document.getElementById(`group-edit-find-status-${id}`);
+  if(!status) return;
+  const q=document.getElementById('group-find')?.value||'';
+  const hits=groupEditSearchMatches(id);
+  if(!q.trim()){status.textContent='検索欄に単語を入れると、編集欄内で直接選択できます。';return;}
+  if(!hits.length){status.textContent='編集欄内のヒットなし';return;}
+  const cur=Math.max(0,Math.min(groupEditFindCursor[id]||0,hits.length-1));
+  status.textContent=`編集欄内 ${cur+1}/${hits.length} 件`;
+}
+function selectGroupEditSearchHit(id,dir,notify){
+  notify=notify!==false;
+  const ta=document.getElementById(`group-edit-text-${id}`);
+  if(!ta) return;
+  const q=String(document.getElementById('group-find')?.value||'').trim();
+  if(!q){if(notify) toast('先にGroups検索欄へ単語を入力してほしいのだ');updateGroupEditFindStatus(id);return;}
+  const hits=groupEditSearchMatches(id);
+  if(!hits.length){if(notify) toast('編集欄内に検索ヒットがないのだ');updateGroupEditFindStatus(id);return;}
+  const prev=groupEditFindCursor[id] ?? (dir<0?0:-1);
+  const next=(prev+dir+hits.length)%hits.length;
+  groupEditFindCursor[id]=next;
+  const start=hits[next];
+  ta.focus();
+  ta.setSelectionRange(start,start+q.length);
+  const approxLine=textLineNumberAt(ta.value,start);
+  ta.scrollTop=Math.max(0,(approxLine-2)*parseFloat(getComputedStyle(ta).lineHeight||20));
+  updateGroupEditFindStatus(id);
+}
+function textLineNumberAt(text,index){
+  return String(text||'').slice(0,index).split('\n').length;
 }
 function clearGroupFind(){
   const el=document.getElementById('group-find');
@@ -2443,7 +2515,7 @@ function renderGroups(){
   if(!activeGroupId||!promptGroups.find(g=>g.id===activeGroupId)) activeGroupId=promptGroups[0].id;
   list.innerHTML=promptGroups.map(g=>`
     <div class="group-card${g.id===activeGroupId?' active':''}" onclick="setActiveGroup('${escA(g.id)}')">
-      <div class="group-name">${escH(g.name)}</div>
+      <div class="group-name">${escH(g.name)} <span class="group-select-badge" id="group-select-badge-${escA(g.id)}" style="${selectedCountForGroup(g)?'':'display:none'}">${selectedCountForGroup(g)?`${selectedCountForGroup(g)}件選択中`:''}</span></div>
       <div class="group-meta">${(g.prompts||[]).length} prompts</div>
     </div>`).join('');
   const g=activeGroup();
@@ -2472,7 +2544,12 @@ function renderGroups(){
       ${isEditing?`
       <div class="group-prompt-editor">
         <div class="sl" style="margin-top:0">このプロンプトを編集</div>
-        <textarea id="group-edit-text-${escA(p.id)}" rows="4">${escH(p.text||'')}</textarea>
+        <textarea id="group-edit-text-${escA(p.id)}" rows="4" oninput="groupEditFindCursor['${escA(p.id)}']=0;updateGroupEditFindStatus('${escA(p.id)}')">${escH(p.text||'')}</textarea>
+        <div class="group-edit-find-tools">
+          <button class="btn sm" onclick="selectGroupEditSearchHit('${escA(p.id)}',-1)">編集欄 前へ</button>
+          <button class="btn sm" onclick="selectGroupEditSearchHit('${escA(p.id)}',1)">編集欄 次へ</button>
+          <span class="group-edit-find-status" id="group-edit-find-status-${escA(p.id)}">${findQuery.trim()?'検索語を編集欄内で選択できます':'検索欄に単語を入れると、編集欄内で直接選択できます。'}</span>
+        </div>
         <div class="group-prompt-editor-grid">
           <select class="inp size-preset" onchange="applySizePresetToInputs(this.value,'group-edit-width-${escA(p.id)}','group-edit-height-${escA(p.id)}')">${sizePresetOptions(p.width,p.height)}</select>
           <input class="inp" id="group-edit-width-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="W" value="${p.width||''}">
