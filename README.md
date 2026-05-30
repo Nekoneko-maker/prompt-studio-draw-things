@@ -9,6 +9,7 @@ It is designed for workflows where you generate or edit many prompts, group them
 - `prompt_studio.html` — the browser-based Prompt Studio tool.
 - `scripts/draw-things-batch-prompt-runner-inpaint-size.js` — Draw Things batch runner script with inpaint support and optional per-prompt size syntax.
 - `docs/draw-things-script.md` — usage notes for the Draw Things script.
+- `docs/manual-ja.md` — Japanese user manual for Prompt Studio.
 
 ## Features
 

@@ -184,9 +184,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-prompt-editor-grid{display:grid;grid-template-columns:150px 80px 80px 1fr;gap:6px;margin-top:6px}
 @media(max-width:720px){.group-prompt-editor-grid{grid-template-columns:1fr 1fr}.group-prompt-editor-grid .size-preset,.group-prompt-editor-grid .neg-field{grid-column:1/-1}}
 .group-library-palette{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2)}
-.group-library-controls{display:grid;grid-template-columns:minmax(150px,1fr) minmax(120px,.7fr) auto auto;gap:6px;align-items:center}
+.group-library-controls{display:grid;grid-template-columns:minmax(150px,1fr) minmax(120px,.7fr) auto auto auto;gap:6px;align-items:center}
 .group-library-tags{max-height:180px;overflow:auto;margin-top:8px;padding:7px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface)}
-.groups-sticky-tools{position:sticky;top:48px;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin:10px 0 10px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.groups-sticky-tools{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin:10px 0 10px}
 .group-empty{font-size:12px;color:var(--muted);font-style:italic;padding:10px 0}
 
 
@@ -531,6 +531,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn sm" onclick="addCurrentGroupSearchTerm()">検索語を追加</button>
+        <button class="btn sm secondary" onclick="overwriteSelectedGroupSearchTerm()">選択検索語を上書き</button>
         <button class="btn sm danger" onclick="deleteSelectedGroupSearchTerm()">選択検索語を削除</button>
       </div>
       <div class="row">
@@ -549,6 +550,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
             <input class="inp" id="group-lib-search" placeholder="Library単語検索..." oninput="renderGroupLibraryPalette()">
             <select class="inp" id="group-lib-cat" onchange="setGroupLibraryCat(this.value)"></select>
             <button class="btn sm" onclick="insertGroupPaletteToEditingPrompt()">編集中へ挿入</button>
+            <button class="btn sm secondary" onclick="copyGroupLibraryVisibleTags()">表示語をコピー</button>
             <button class="btn sm secondary" onclick="addGroupPaletteAsPrompt()">Groupへ新規追加</button>
           </div>
           <div id="group-lib-selected" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">0 selected</div>
@@ -2623,6 +2625,22 @@ function addCurrentGroupSearchTerm(){
   saveGroupSearchTerms(); renderGroupSearchTerms();
   toast(`検索語「${term}」を追加したのだ`);
 }
+function overwriteSelectedGroupSearchTerm(){
+  const sel=document.getElementById('group-find-term-select');
+  const oldTerm=sel?.value||'';
+  const newTerm=String(document.getElementById('group-find')?.value||'').trim();
+  if(!oldTerm){toast('上書きする検索語をプルダウンで選んでほしいのだ');return;}
+  if(!newTerm){toast('新しい検索語を検索欄に入力してほしいのだ');return;}
+  const idx=groupSearchTerms.indexOf(oldTerm);
+  if(idx<0){toast('選択中の検索語が見つからないのだ');return;}
+  groupSearchTerms=groupSearchTerms.filter(t=>t!==newTerm || t===oldTerm);
+  const newIdx=groupSearchTerms.indexOf(oldTerm);
+  groupSearchTerms[newIdx>=0?newIdx:idx]=newTerm;
+  saveGroupSearchTerms();
+  renderGroupSearchTerms();
+  refreshGroupPromptHighlights(true);
+  toast(`検索語を「${newTerm}」に上書き保存したのだ`);
+}
 function deleteSelectedGroupSearchTerm(){
   const sel=document.getElementById('group-find-term-select');
   const term=sel?.value||'';
@@ -2644,6 +2662,12 @@ function renderGroupLibraryPaletteShell(){
   if(groupPaletteOpen) renderGroupLibraryPalette();
   else updateGroupPaletteSelectedLabel();
 }
+function getGroupLibraryVisibleTags(){
+  const q=(document.getElementById('group-lib-search')?.value||'').toLowerCase();
+  let filtered=groupPaletteCat==='ALL'?[...tags]:tags.filter(t=>getTagCat(t)===groupPaletteCat);
+  if(q) filtered=filtered.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
+  return filtered.slice(0,300);
+}
 function renderGroupLibraryPalette(){
   const catSel=document.getElementById('group-lib-cat');
   if(catSel){
@@ -2652,10 +2676,7 @@ function renderGroupLibraryPalette(){
   }
   const area=document.getElementById('group-lib-tags');
   if(!area) return;
-  const q=(document.getElementById('group-lib-search')?.value||'').toLowerCase();
-  let filtered=groupPaletteCat==='ALL'?[...tags]:tags.filter(t=>getTagCat(t)===groupPaletteCat);
-  if(q) filtered=filtered.filter(t=>t.toLowerCase().includes(q)||(tagMeta[t]?.ja||'').includes(q));
-  filtered=filtered.slice(0,300);
+  const filtered=getGroupLibraryVisibleTags();
   if(!filtered.length){area.innerHTML=`<span class="tag-empty">${tags.length?'検索結果なし':'タグがまだないのだ'}</span>`;}
   else{
     area.innerHTML=filtered.map(t=>{
@@ -2711,6 +2732,27 @@ function addGroupPaletteAsPrompt(){
   addPromptToGroup(g.id,{text:arr.join(', '),source:'library-palette'},{silent:true});
   saveGroups(); renderGroups(); renderGroupSelectors(); renderGroupLibraryPaletteShell();
   toast('Libraryタグから新規Promptを追加したのだ');
+}
+function copyTextToClipboard(text,done){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopyText(text,done));
+  }else fallbackCopyText(text,done);
+}
+function fallbackCopyText(text,done){
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.style.position='fixed';
+  ta.style.left='-9999px';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+  done&&done();
+}
+function copyGroupLibraryVisibleTags(){
+  const arr=getGroupLibraryVisibleTags();
+  if(!arr.length){toast('コピーする表示語がないのだ');return;}
+  copyTextToClipboard(arr.join(', '),()=>toast(`${arr.length}件の表示語をコピーしたのだ`));
 }
 function clearGroupReplace(){
   const el=document.getElementById('group-replace');
