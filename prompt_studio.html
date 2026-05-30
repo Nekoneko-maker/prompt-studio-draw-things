@@ -511,6 +511,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn sm" onclick="selectAllGroupPrompts(false)">選択解除</button>
         <button class="btn sm" onclick="clearAllGroupPromptSelections()">全Group選択解除</button>
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompose()">選択をComposeへ</button>
+        <button class="btn sm secondary" onclick="copyCombinedSelectedGroupPrompts()">選択を結合Copy</button>
+        <button class="btn sm secondary" onclick="sendCombinedSelectedGroupPromptsToCompose()">結合をComposeへ</button>
+        <button class="btn sm secondary" onclick="addCombinedSelectedGroupPromptsToGroup()">結合をGroupへ追加</button>
       </div>
       <div id="group-cross-select-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
       <div style="display:grid;grid-template-columns:minmax(150px,1.4fr) 80px 80px auto;gap:6px;margin-top:8px;align-items:center">
@@ -2443,6 +2446,41 @@ function sendSelectedGroupPromptsToCompose(){
   const individualCount=selected.filter(p=>getPromptSendSizeOverride(p.id)?.enabled).length;
   const sizeMsg=individualCount?` / 個別サイズ${individualCount}件`:sizeOverride.enabled?` / ${sizeOverride.width}x${sizeOverride.height}指定`:'';
   toast(`${selected.length}件 / ${groupCount} Group を改行結合してComposeへ送ったのだ${sizeMsg}`);
+}
+function getCombinedSelectedGroupPrompts(){
+  const ids=selectedGroupPromptIds();
+  if(!ids.length){toast('結合するプロンプトを選んでほしいのだ');return null;}
+  const entries=ids.map(findGroupPromptById).filter(Boolean);
+  const parts=entries.map(x=>String(x.prompt.text||'').replace(/,+\s*$/,'').trim()).filter(Boolean);
+  if(!parts.length){toast('結合できるプロンプトが見つからないのだ');return null;}
+  const text=parts.join(', ').replace(/\s*,\s*/g, ', ').replace(/,{2,}/g, ',').replace(/,+\s*$/,'').trim();
+  const negatives=[...new Set(entries.map(x=>String(x.prompt.negative||'').trim()).filter(Boolean))];
+  return {text,negative:negatives.join(', '),count:parts.length,groupCount:new Set(entries.map(x=>x.group.id)).size};
+}
+function copyCombinedSelectedGroupPrompts(){
+  const combined=getCombinedSelectedGroupPrompts();
+  if(!combined) return;
+  copyTextToClipboard(combined.text,()=>toast(`${combined.count}件を1本に結合してコピーしたのだ`));
+}
+function sendCombinedSelectedGroupPromptsToCompose(){
+  const combined=getCombinedSelectedGroupPrompts();
+  if(!combined) return;
+  document.getElementById('b-pos').value=combined.text;
+  document.getElementById('b-neg').value=combined.negative;
+  document.getElementById('batch-width').value='';
+  document.getElementById('batch-height').value='';
+  switchTab('compose');
+  buildCode(); updateComposeSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast(`${combined.count}件 / ${combined.groupCount} Group を1本に結合してComposeへ送ったのだ`);
+}
+function addCombinedSelectedGroupPromptsToGroup(){
+  const combined=getCombinedSelectedGroupPrompts();
+  if(!combined) return;
+  const g=activeGroup()||ensureGroup();
+  addPromptToGroup(g.id,{text:combined.text,negative:combined.negative,source:'combined'},{silent:true});
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${combined.count}件を1本に結合して「${g.name}」へ追加したのだ`);
 }
 function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function tidyPromptText(s){
