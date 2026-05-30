@@ -535,19 +535,25 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       </div>
       <div class="row">
         <button class="btn secondary" onclick="bulkReplaceGroupPrompts()" style="flex:1">選択中に適用</button>
+        <button class="btn secondary" onclick="bulkReplaceGroupPromptsAsDiff()">置換→差分保存</button>
         <button class="btn" onclick="cleanSelectedGroupPrompts()">AI文体Cleaner</button>
       </div>
       </div>
       <div class="group-library-palette">
-        <div class="sl" style="margin-top:0">Library Palette</div>
-        <div class="group-library-controls">
-          <input class="inp" id="group-lib-search" placeholder="Library単語検索..." oninput="renderGroupLibraryPalette()">
-          <select class="inp" id="group-lib-cat" onchange="setGroupLibraryCat(this.value)"></select>
-          <button class="btn sm" onclick="insertGroupPaletteToEditingPrompt()">編集中へ挿入</button>
-          <button class="btn sm secondary" onclick="addGroupPaletteAsPrompt()">Groupへ新規追加</button>
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <div class="sl" style="margin:0">Library Palette</div>
+          <button class="btn sm secondary" id="group-library-toggle" onclick="toggleGroupLibraryPalette()">展開</button>
         </div>
-        <div id="group-lib-selected" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">0 selected</div>
-        <div id="group-lib-tags" class="group-library-tags"><span class="tag-empty">Libraryタグがここに出ます</span></div>
+        <div id="group-library-body" style="display:none">
+          <div class="group-library-controls" style="margin-top:8px">
+            <input class="inp" id="group-lib-search" placeholder="Library単語検索..." oninput="renderGroupLibraryPalette()">
+            <select class="inp" id="group-lib-cat" onchange="setGroupLibraryCat(this.value)"></select>
+            <button class="btn sm" onclick="insertGroupPaletteToEditingPrompt()">編集中へ挿入</button>
+            <button class="btn sm secondary" onclick="addGroupPaletteAsPrompt()">Groupへ新規追加</button>
+          </div>
+          <div id="group-lib-selected" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">0 selected</div>
+          <div id="group-lib-tags" class="group-library-tags"><span class="tag-empty">Libraryタグがここに出ます</span></div>
+        </div>
       </div>
       <div class="divider"></div>
       <div id="group-prompt-list"></div>
@@ -762,6 +768,7 @@ const SK_CATDEF = 'prompt_studio_catdefs_v1';   // [catName, ...]
 const SK_STOCK  = 'prompt_studio_stock_v1';     // [string, ...]
 const SK_GROUPS = 'prompt_studio_prompt_groups_v1'; // [{id,name,prompts}]
 const SK_GROUP_SEARCH_TERMS = 'prompt_studio_group_search_terms_v1';
+const SK_GROUP_PALETTE_OPEN = 'prompt_studio_group_palette_open_v1';
 const DEFAULT_CATS = ['quality','character','clothes','clothes/expression','emotion','pose/expression','style/technique','background','camera/angle','effect','other'];
 const SIZE_PRESETS = [
   ['704x832','704×832 縦 / current'],
@@ -805,6 +812,7 @@ let groupPromptSendSizes = {}; // {promptId:{width,height}} temporary compose-se
 let groupEditFindCursor = {}; // {promptId:index}
 let groupSearchTerms = [];
 let groupPaletteCat = 'ALL', groupPaletteSelected = new Set();
+let groupPaletteOpen = false;
 
 // ═══════════════════════════════════════════════════════════
 //  LOAD / SAVE
@@ -827,6 +835,7 @@ function load(){
     if(!Array.isArray(groupSearchTerms)) groupSearchTerms=[];
   }catch(e){ groupSearchTerms=[]; }
   ['expression','smile','looking at viewer','sitting','standing','cel shading'].forEach(t=>{if(!groupSearchTerms.includes(t)) groupSearchTerms.push(t);});
+  groupPaletteOpen = localStorage.getItem(SK_GROUP_PALETTE_OPEN)==='true';
   if(promptGroups.length && !activeGroupId) activeGroupId = promptGroups[0].id;
 }
 function saveTags(){ localStorage.setItem(SK_TAGS, JSON.stringify(tags)); }
@@ -848,7 +857,7 @@ function switchTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='library'){ renderCatBar(); renderTags(); renderLoras(); renderLoraSets(); }
   if(name==='compose'){ renderBuilderLoras(); renderBuilderCatBar(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary(); renderGroupSelectors(); }
-  if(name==='groups'){ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); renderGroupSearchTerms(); renderGroupLibraryPalette(); }
+  if(name==='groups'){ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); renderGroupSearchTerms(); renderGroupLibraryPaletteShell(); }
   if(name==='assist'){ renderCatSelTags(); renderStock(); renderGroupSelectors(); renderSizePresetSelects(); }
   if(name==='settings'){ setBackend(currentBackend); }
 }
@@ -2461,6 +2470,40 @@ function bulkReplaceGroupPrompts(){
   saveGroups(); renderGroups(); renderGroupSelectors();
   toast(`${changed}件を一括編集したのだ`);
 }
+function bulkReplaceGroupPromptsAsDiff(){
+  const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
+  const ids=selectedActiveGroupPromptIds();
+  if(!ids.length){toast('差分保存するプロンプトを選んでほしいのだ');return;}
+  const find=document.getElementById('group-find').value;
+  const repl=document.getElementById('group-replace').value;
+  if(!find){toast('検索する文字を入力してほしいのだ');return;}
+  const re=new RegExp(escapeRegExp(find),'gi');
+  const originals=[...(g.prompts||[])];
+  let added=0;
+  originals.forEach(p=>{
+    if(!ids.includes(p.id)) return;
+    const before=p.text||'';
+    const after=tidyPromptText(before.replace(re,repl));
+    if(after===before) return;
+    const diff={
+      ...p,
+      id:uid('prompt'),
+      text:after,
+      memo:p.memo?`${p.memo} replace diff`:`replace diff`,
+      source:'replace-diff',
+      parentId:p.id,
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+    const idx=g.prompts.findIndex(x=>x.id===p.id);
+    if(idx>=0) g.prompts.splice(idx+1,0,diff); else g.prompts.push(diff);
+    added++;
+  });
+  if(!added){toast('置換で変化するプロンプトがなかったのだ');return;}
+  g.updatedAt=new Date().toISOString();
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`${added}件を置換差分として保存したのだ`);
+}
 function cleanSelectedGroupPrompts(){
   const g=activeGroup(); if(!g){toast('グループがないのだ');return;}
   const ids=selectedActiveGroupPromptIds();
@@ -2588,6 +2631,19 @@ function deleteSelectedGroupSearchTerm(){
   saveGroupSearchTerms(); renderGroupSearchTerms();
   toast(`検索語「${term}」を削除したのだ`);
 }
+function toggleGroupLibraryPalette(){
+  groupPaletteOpen=!groupPaletteOpen;
+  localStorage.setItem(SK_GROUP_PALETTE_OPEN, groupPaletteOpen?'true':'false');
+  renderGroupLibraryPaletteShell();
+}
+function renderGroupLibraryPaletteShell(){
+  const body=document.getElementById('group-library-body');
+  const btn=document.getElementById('group-library-toggle');
+  if(body) body.style.display=groupPaletteOpen?'block':'none';
+  if(btn) btn.textContent=groupPaletteOpen?'閉じる':'展開';
+  if(groupPaletteOpen) renderGroupLibraryPalette();
+  else updateGroupPaletteSelectedLabel();
+}
 function renderGroupLibraryPalette(){
   const catSel=document.getElementById('group-lib-cat');
   if(catSel){
@@ -2653,7 +2709,7 @@ function addGroupPaletteAsPrompt(){
   if(!arr.length){toast('Groupへ追加するLibraryタグを選んでほしいのだ');return;}
   const g=activeGroup()||ensureGroup();
   addPromptToGroup(g.id,{text:arr.join(', '),source:'library-palette'},{silent:true});
-  saveGroups(); renderGroups(); renderGroupSelectors(); renderGroupLibraryPalette();
+  saveGroups(); renderGroups(); renderGroupSelectors(); renderGroupLibraryPaletteShell();
   toast('Libraryタグから新規Promptを追加したのだ');
 }
 function clearGroupReplace(){
@@ -3136,7 +3192,7 @@ renderStock();
 renderGroups();
 renderGroupSelectors();
 renderGroupSearchTerms();
-renderGroupLibraryPalette();
+renderGroupLibraryPaletteShell();
 renderBuilderLoras();
 renderBuilderCatBar();
 renderBuilderTags();
