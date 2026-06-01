@@ -18,6 +18,17 @@ var OPTIONS = {
   filenamePrefix: "batch",
   negativePrompt: "",
   keepPromptAfterRun: true,
+
+  // Optional config overrides. Leave null / "" to keep current Draw Things settings.
+  // These make it possible to restore settings from PNG metadata when needed.
+  steps: null,
+  guidanceScale: null,
+  model: "",
+  sampler: null, // numeric Draw Things sampler id, not sampler name
+  loras: null,   // null = keep current LoRA, [] = clear LoRA, array = replace LoRA
+  mergeLoras: false,
+  clipSkip: null,
+  strength: null,
 };
 
 function parsePrompts(raw) {
@@ -70,6 +81,51 @@ function applySizeToConfig(cfg, width, height) {
 
   cfg.originalImageWidth = width;
   cfg.originalImageHeight = height;
+}
+
+function hasNumber(value) {
+  return value !== null && value !== undefined && value !== "" && isFinite(Number(value));
+}
+
+function normalizeLoraEntry(lora) {
+  if (!lora) return null;
+  var file = lora.file || lora.model || lora.name || "";
+  file = String(file || "").trim();
+  if (!file) return null;
+  var weight = hasNumber(lora.weight) ? Number(lora.weight) : 1;
+  var mode = String(lora.mode || "all");
+  return { mode: mode, file: file, weight: weight };
+}
+
+function normalizeLoras(loras) {
+  if (!loras || !loras.length) return [];
+  var out = [];
+  for (var i = 0; i < loras.length; i++) {
+    var item = normalizeLoraEntry(loras[i]);
+    if (item) out.push(item);
+  }
+  return out;
+}
+
+function applyOptionalOverridesToConfig(cfg) {
+  if (hasNumber(OPTIONS.steps)) cfg.steps = Math.floor(Number(OPTIONS.steps));
+  if (hasNumber(OPTIONS.guidanceScale)) cfg.guidanceScale = Number(OPTIONS.guidanceScale);
+  if (hasNumber(OPTIONS.sampler)) cfg.sampler = Math.floor(Number(OPTIONS.sampler));
+  if (hasNumber(OPTIONS.clipSkip)) cfg.clipSkip = Math.floor(Number(OPTIONS.clipSkip));
+  if (hasNumber(OPTIONS.strength)) cfg.strength = Number(OPTIONS.strength);
+
+  if (String(OPTIONS.model || "").trim().length > 0) {
+    cfg.model = String(OPTIONS.model).trim();
+  }
+
+  if (OPTIONS.loras !== null && OPTIONS.loras !== undefined) {
+    var overrideLoras = normalizeLoras(OPTIONS.loras);
+    if (OPTIONS.mergeLoras) {
+      cfg.loras = normalizeLoras(cfg.loras || []).concat(overrideLoras);
+    } else {
+      cfg.loras = overrideLoras;
+    }
+  }
 }
 
 if (!pipeline.prompts) { pipeline.prompts = {}; }
@@ -170,6 +226,7 @@ try {
       var prompt = item.prompt;
 
       var cfg = JSON.parse(JSON.stringify(originalConfiguration));
+      applyOptionalOverridesToConfig(cfg);
       cfg.seed = hasFixedSeed ? seed : -1;
 
       if (item.width && item.height) {

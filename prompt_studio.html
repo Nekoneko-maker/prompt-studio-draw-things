@@ -187,6 +187,24 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-library-controls{display:grid;grid-template-columns:minmax(150px,1fr) minmax(120px,.7fr) auto auto auto;gap:6px;align-items:center}
 .group-library-tags{max-height:180px;overflow:auto;margin-top:8px;padding:7px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface)}
 .groups-sticky-tools{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin:10px 0 10px}
+.clearable-input{position:relative;min-width:0}
+.clearable-input .inp{width:100%;padding-right:28px}
+.input-clear-x{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:16px;line-height:18px;cursor:pointer;padding:0}
+.input-clear-x:hover{background:var(--surface2);color:var(--accent)}
+.random-size-panel{margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface2)}
+.random-size-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.random-size-body{display:grid;grid-template-columns:minmax(180px,.7fr) auto auto;gap:6px;align-items:start;margin-top:7px}
+.random-size-chips{display:flex;flex-wrap:wrap;gap:5px;max-height:74px;overflow:auto;padding:5px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface)}
+.random-size-chip{border:1px solid var(--border2);background:var(--surface2);color:var(--text);border-radius:999px;padding:4px 8px;font-size:10px;cursor:pointer;user-select:none;white-space:nowrap}
+.random-size-chip:hover{border-color:var(--accent)}
+.random-size-chip.on{background:var(--accent);border-color:var(--accent);color:#071014;font-weight:700}
+@media(max-width:900px){.random-size-body{grid-template-columns:1fr}.random-size-chips{max-height:120px}}
+.compare-remix-panel{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2)}
+.compare-remix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:8px}
+.compare-remix-card{padding:8px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface)}
+.compare-remix-card textarea{min-height:130px;font-size:11px;line-height:1.55}
+.compare-remix-result{margin-top:8px}
+.compare-remix-result textarea{min-height:150px}
 .group-empty{font-size:12px;color:var(--muted);font-style:italic;padding:10px 0}
 
 
@@ -205,6 +223,24 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 @media (max-width:980px){.compose-grid{grid-template-columns:1fr}.compose-sidebar{position:static}}
 @media (max-width:820px){.workspace-grid,#tab-groups .workspace-grid{grid-template-columns:1fr}}
+
+
+/* ── Preview ── */
+.preview-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,.9fr);gap:12px;align-items:start}
+.preview-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.preview-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--preview-thumb-size,120px),1fr));gap:8px;max-height:70vh;overflow:auto;padding:4px}
+.preview-card{border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);padding:6px;cursor:pointer;transition:all .12s}
+.preview-card:hover{border-color:var(--accent)}
+.preview-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.preview-card img{width:100%;height:var(--preview-thumb-img-h,118px);object-fit:cover;border-radius:6px;background:var(--surface2)}
+.preview-card-name{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-detail-img{width:100%;max-height:340px;object-fit:contain;border-radius:var(--r2);background:var(--surface2);border:1px solid var(--border)}
+.preview-kv{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;font-size:11px;margin-top:8px}
+.preview-kv b{font-family:var(--mono);color:var(--muted);font-weight:600}
+.preview-kv span{word-break:break-word}
+.preview-meta-box{white-space:pre-wrap;word-break:break-word;max-height:180px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:8px;font-family:var(--mono);font-size:10px;line-height:1.45}
+.preview-prompt-box{width:100%;min-height:96px;font-size:11px;line-height:1.55}
+@media(max-width:980px){.preview-grid{grid-template-columns:1fr}.preview-thumbs{max-height:none}}
 
 /* ── Misc ── */
 .count-badge{font-family:var(--mono);font-size:10px;color:var(--muted);padding:3px 0}
@@ -234,7 +270,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <button class="tab" onclick="switchTab('compose')" title="Option + 2">Compose <span class="tab-kbd">⌥2</span></button>
   <button class="tab" onclick="switchTab('groups')" title="Option + 3">Groups <span class="tab-kbd">⌥3</span></button>
   <button class="tab" onclick="switchTab('assist')" title="Option + 4">Assist <span class="tab-kbd">⌥4</span></button>
-  <button class="tab" onclick="switchTab('settings')" title="Option + 5">Settings <span class="tab-kbd">⌥5</span></button>
+  <button class="tab" onclick="switchTab('preview')" title="Option + 5">Preview <span class="tab-kbd">⌥5</span></button>
+  <button class="tab" onclick="switchTab('settings')" title="Option + 6">Settings <span class="tab-kbd">⌥6</span></button>
 </div>
 
 
@@ -459,6 +496,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <div class="row">
     <button class="btn primary" onclick="copyCode()" style="flex:1">Copy Script OPTIONS</button>
     <button class="btn secondary" onclick="copyPromptOnly()" style="flex:1">Copy Prompt + ,</button>
+    <button class="btn secondary" onclick="shuffleComposePrompts()">Shuffle Prompts</button>
     <button class="btn" onclick="clearBuilder()">Clear</button>
   </div>
     </section>
@@ -511,6 +549,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn sm" onclick="selectAllGroupPrompts(false)">選択解除</button>
         <button class="btn sm" onclick="clearAllGroupPromptSelections()">全Group選択解除</button>
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompose()">選択をComposeへ</button>
+        <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompareRemix()">Compare & Remixへ</button>
         <button class="btn sm secondary" onclick="copyCombinedSelectedGroupPrompts()">選択を結合Copy</button>
         <button class="btn sm secondary" onclick="sendCombinedSelectedGroupPromptsToCompose()">結合をComposeへ</button>
         <button class="btn sm secondary" onclick="addCombinedSelectedGroupPromptsToGroup()">結合をGroupへ追加</button>
@@ -523,14 +562,32 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn sm" onclick="clearGroupSendSize()">送信サイズClear</button>
       </div>
       <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px">ここは全体用の一時サイズです。各プロンプト横の個別サイズがある場合は、そちらを優先します。Group保存内容は変わりません。</div>
-      <div style="display:grid;grid-template-columns:minmax(260px,2.2fr) minmax(130px,.8fr) auto auto auto minmax(150px,1fr) auto;gap:6px;margin-top:8px;align-items:center">
-        <input class="inp" id="group-find" placeholder="検索: realistic" oninput="refreshGroupPromptHighlights(true)">
+      <div class="random-size-panel">
+        <div class="random-size-head">
+          <div class="sl" style="margin:0">ランダムサイズ</div>
+          <button class="btn sm secondary" id="group-random-size-toggle" onclick="toggleGroupRandomSizePanel()">展開</button>
+        </div>
+        <div id="group-random-size-body" style="display:none">
+          <div class="random-size-body">
+            <div id="group-random-size-pool" class="random-size-chips"></div>
+            <button class="btn sm secondary" onclick="clearGroupRandomSizePool()">× 選択解除</button>
+            <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToComposeRandomSize()">ランダムサイズでCompose</button>
+          </div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px">候補サイズをクリックで複数選択。選択プロンプトごとにランダムで WIDTHxHEIGHT を付けて送ります。保存内容は変わりません。</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(320px,2.3fr) minmax(130px,.75fr) auto auto minmax(260px,1.5fr);gap:6px;margin-top:8px;align-items:center">
+        <div class="clearable-input">
+          <input class="inp" id="group-find" placeholder="検索: realistic" oninput="refreshGroupPromptHighlights(true)">
+          <button class="input-clear-x" onclick="clearGroupFind()" title="検索欄をクリア" aria-label="検索欄をクリア">×</button>
+        </div>
         <select class="inp" id="group-find-term-select" onchange="applyGroupSearchTerm(this.value)"></select>
         <button class="btn sm" onclick="jumpGroupFindHit(-1)">前へ</button>
         <button class="btn sm" onclick="jumpGroupFindHit(1)">次へ</button>
-        <button class="btn sm" onclick="clearGroupFind()">検索Clear</button>
-        <input class="inp" id="group-replace" placeholder="置換: best quality（空欄なら削除）">
-        <button class="btn sm" onclick="clearGroupReplace()">置換Clear</button>
+        <div class="clearable-input">
+          <input class="inp" id="group-replace" placeholder="置換: best quality（空欄なら削除）">
+          <button class="input-clear-x" onclick="clearGroupReplace()" title="置換欄をクリア" aria-label="置換欄をクリア">×</button>
+        </div>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn sm" onclick="addCurrentGroupSearchTerm()">検索語を追加</button>
@@ -543,6 +600,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn" onclick="cleanSelectedGroupPrompts()">AI文体Cleaner</button>
       </div>
       </div>
+      <div id="compare-remix-panel" class="compare-remix-panel" style="display:none"></div>
       <div class="group-library-palette">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
           <div class="sl" style="margin:0">Library Palette</div>
@@ -550,10 +608,13 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         </div>
         <div id="group-library-body" style="display:none">
           <div class="group-library-controls" style="margin-top:8px">
-            <input class="inp" id="group-lib-search" placeholder="Library単語検索..." oninput="renderGroupLibraryPalette()">
+            <div class="clearable-input">
+              <input class="inp" id="group-lib-search" placeholder="Library単語検索..." oninput="renderGroupLibraryPalette()">
+              <button class="input-clear-x" onclick="clearGroupLibrarySearch()" title="Library検索欄をクリア" aria-label="Library検索欄をクリア">×</button>
+            </div>
             <select class="inp" id="group-lib-cat" onchange="setGroupLibraryCat(this.value)"></select>
             <button class="btn sm" onclick="insertGroupPaletteToEditingPrompt()">編集中へ挿入</button>
-            <button class="btn sm secondary" onclick="copyGroupLibraryVisibleTags()">表示語をコピー</button>
+            <button class="btn sm secondary" onclick="copyGroupLibrarySelectedTags()">選択タグをコピー</button>
             <button class="btn sm secondary" onclick="addGroupPaletteAsPrompt()">Groupへ新規追加</button>
           </div>
           <div id="group-lib-selected" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px">0 selected</div>
@@ -689,6 +750,47 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════════ PREVIEW TAB ═══ -->
+<div id="tab-preview" class="panel">
+  <div class="panel-intro">生成済み画像をフォルダから読み込み、Draw ThingsのPNGメタデータを検索・確認する場所です。</div>
+  <div class="preview-toolbar">
+    <button class="btn primary" onclick="selectPreviewFolder()">画像フォルダを選択</button>
+    <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="loadPreviewFiles([...this.files])">
+    <div class="clearable-input" style="flex:1;min-width:220px">
+      <input class="inp" id="image-preview-search" placeholder="メタデータ検索: Barbu / ramen / seed / model..." oninput="renderPreviewImages()">
+      <button class="input-clear-x" onclick="clearImagePreviewSearch()" title="検索欄をクリア" aria-label="検索欄をクリア">×</button>
+    </div>
+    <select class="inp" id="image-preview-sort" style="max-width:190px" onchange="renderPreviewImages()">
+      <option value="modified-desc">更新日時 新しい順</option>
+      <option value="modified-asc">更新日時 古い順</option>
+      <option value="name-asc">ファイル名 A→Z</option>
+      <option value="name-desc">ファイル名 Z→A</option>
+      <option value="size-desc">ファイルサイズ 大きい順</option>
+      <option value="size-asc">ファイルサイズ 小さい順</option>
+      <option value="image-area-desc">画像サイズ 大きい順</option>
+      <option value="image-area-asc">画像サイズ 小さい順</option>
+    </select>
+    <button class="btn secondary" onclick="clearPreviewImages()">Clear</button>
+  </div>
+  <div class="preview-toolbar" style="margin-top:-2px">
+    <span class="count-badge">Thumb</span>
+    <input id="image-preview-thumb-size" type="range" min="80" max="220" step="10" value="120" oninput="setPreviewThumbSize(this.value)" style="width:180px">
+    <span class="count-badge" id="image-preview-thumb-label">120px</span>
+  </div>
+  <div id="image-preview-status" class="count-badge">画像フォルダを選択してください</div>
+  <div class="preview-grid">
+    <section class="workspace-card">
+      <div class="sl" style="margin-top:0">Images</div>
+      <div id="image-preview-list" class="preview-thumbs"><div class="group-empty">まだ画像が読み込まれていません。</div></div>
+    </section>
+    <section class="workspace-card">
+      <div class="sl" style="margin-top:0">File Info / Metadata</div>
+      <div id="image-preview-detail"><div class="group-empty">画像を選択すると情報を表示します。</div></div>
+    </section>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════ SETTINGS TAB ═══ -->
 <div id="tab-settings" class="panel">
   <div class="panel-intro">頻繁には触らない設定をここへ集約しました。</div>
@@ -774,6 +876,7 @@ const SK_STOCK  = 'prompt_studio_stock_v1';     // [string, ...]
 const SK_GROUPS = 'prompt_studio_prompt_groups_v1'; // [{id,name,prompts}]
 const SK_GROUP_SEARCH_TERMS = 'prompt_studio_group_search_terms_v1';
 const SK_GROUP_PALETTE_OPEN = 'prompt_studio_group_palette_open_v1';
+const SK_GROUP_RANDOM_SIZE_OPEN = 'prompt_studio_group_random_size_open_v1';
 const DEFAULT_CATS = ['quality','character','clothes','clothes/expression','emotion','pose/expression','style/technique','background','camera/angle','effect','other'];
 const SIZE_PRESETS = [
   ['704x832','704×832 縦 / current'],
@@ -818,6 +921,10 @@ let groupEditFindCursor = {}; // {promptId:index}
 let groupSearchTerms = [];
 let groupPaletteCat = 'ALL', groupPaletteSelected = new Set();
 let groupPaletteOpen = false;
+let groupRandomSizeOpen = false, groupRandomSizeSelected = new Set();
+let compareRemixEntries = [], compareRemixResult = '';
+let previewImages = [], activePreviewId = null;
+let imagePreviewThumbSize = 120;
 
 // ═══════════════════════════════════════════════════════════
 //  LOAD / SAVE
@@ -841,6 +948,7 @@ function load(){
   }catch(e){ groupSearchTerms=[]; }
   ['expression','smile','looking at viewer','sitting','standing','cel shading'].forEach(t=>{if(!groupSearchTerms.includes(t)) groupSearchTerms.push(t);});
   groupPaletteOpen = localStorage.getItem(SK_GROUP_PALETTE_OPEN)==='true';
+  groupRandomSizeOpen = localStorage.getItem(SK_GROUP_RANDOM_SIZE_OPEN)==='true';
   if(promptGroups.length && !activeGroupId) activeGroupId = promptGroups[0].id;
 }
 function saveTags(){ localStorage.setItem(SK_TAGS, JSON.stringify(tags)); }
@@ -855,7 +963,7 @@ function saveGroupSearchTerms(){ localStorage.setItem(SK_GROUP_SEARCH_TERMS, JSO
 // ═══════════════════════════════════════════════════════════
 //  TABS
 // ═══════════════════════════════════════════════════════════
-const TAB_NAMES = ['library','compose','groups','assist','settings'];
+const TAB_NAMES = ['library','compose','groups','assist','preview','settings'];
 function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',TAB_NAMES[i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -864,6 +972,7 @@ function switchTab(name){
   if(name==='compose'){ renderBuilderLoras(); renderBuilderCatBar(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary(); renderGroupSelectors(); }
   if(name==='groups'){ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); renderGroupSearchTerms(); renderGroupLibraryPaletteShell(); }
   if(name==='assist'){ renderCatSelTags(); renderStock(); renderGroupSelectors(); renderSizePresetSelects(); }
+  if(name==='preview'){ renderPreviewImages(); renderPreviewDetail(); }
   if(name==='settings'){ setBackend(currentBackend); }
 }
 function setupTabShortcuts(){
@@ -1467,8 +1576,9 @@ function buildCode(){
   const imgs=document.getElementById('b-imgs').value||1;
   const activeLoras=loraList.filter(l=>builderLoraOn.has(l.id));
 
-  let code=`var OPTIONS = {\n  imagesPerPrompt: ${imgs},\n  seedStart: -1,\n  seedStep: 1,\n  filenamePrefix: "batch",\n  negativePrompt: ${JSON.stringify(neg)},\n  keepPromptAfterRun: true,\n`;
+  let code=`var OPTIONS = {\n  imagesPerPrompt: ${imgs},\n  seedStart: -1,\n  seedStep: 1,\n  filenamePrefix: "batch",\n  negativePrompt: ${JSON.stringify(neg)},\n  keepPromptAfterRun: true,\n  steps: ${Number(steps)||20},\n  guidanceScale: ${Number(cfg)||7},\n  model: "",\n  sampler: null,\n  loras: null,\n  mergeLoras: false,\n`;
   if(activeLoras.length){
+    code=code.replace('  loras: null,\n','');
     code+=`  loras: [\n`;
     activeLoras.forEach(l=>{code+=`    { mode: "all", file: ${JSON.stringify(l.file)}, weight: ${l.weight.toFixed(2)} },\n`;});
     code+=`  ],\n`;
@@ -1493,6 +1603,19 @@ function copyPromptOnly(){
   text=text.replace(/,+\s*$/,'')+',';
   navigator.clipboard.writeText(text).then(()=>toast('プロンプトをコピーしたのだ！'));
 }
+function shuffleComposePrompts(){
+  const el=document.getElementById('b-pos');
+  if(!el){return;}
+  const lines=el.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(lines.length<2){toast('シャッフルするには2行以上のプロンプトが必要なのだ');return;}
+  for(let i=lines.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [lines[i],lines[j]]=[lines[j],lines[i]];
+  }
+  el.value=lines.join('\n');
+  buildCode(); updateComposeSummary();
+  toast(`${lines.length}件のプロンプト順をシャッフルしたのだ`);
+}
 function getComposeSize(){
   const w=Math.floor(Number(document.getElementById('batch-width')?.value||0));
   const h=Math.floor(Number(document.getElementById('batch-height')?.value||0));
@@ -1510,6 +1633,37 @@ function renderSizePresetSelects(){
   if(importEl) importEl.innerHTML=sizePresetOptions(null,null);
   const groupSendEl=document.getElementById('group-send-size-preset');
   if(groupSendEl) groupSendEl.innerHTML=sizePresetOptions(document.getElementById('group-send-width')?.value,document.getElementById('group-send-height')?.value);
+  renderGroupRandomSizePanel();
+}
+function renderGroupRandomSizePanel(){
+  const body=document.getElementById('group-random-size-body');
+  const btn=document.getElementById('group-random-size-toggle');
+  if(body) body.style.display=groupRandomSizeOpen?'block':'none';
+  if(btn) btn.textContent=groupRandomSizeOpen?'閉じる':'展開';
+  if(groupRandomSizeOpen) renderGroupRandomSizePool();
+}
+function toggleGroupRandomSizePanel(){
+  groupRandomSizeOpen=!groupRandomSizeOpen;
+  localStorage.setItem(SK_GROUP_RANDOM_SIZE_OPEN, groupRandomSizeOpen?'true':'false');
+  renderGroupRandomSizePanel();
+}
+function renderGroupRandomSizePool(){
+  const el=document.getElementById('group-random-size-pool');
+  if(!el) return;
+  el.innerHTML=SIZE_PRESETS.map(([value,label])=>{
+    const on=groupRandomSizeSelected.has(value);
+    return `<button type="button" class="random-size-chip${on?' on':''}" onclick="toggleGroupRandomSize('${escA(value)}')">${on?'✓ ':''}${escH(label)}</button>`;
+  }).join('');
+}
+function toggleGroupRandomSize(value){
+  if(groupRandomSizeSelected.has(value)) groupRandomSizeSelected.delete(value);
+  else groupRandomSizeSelected.add(value);
+  renderGroupRandomSizePool();
+}
+function clearGroupRandomSizePool(){
+  groupRandomSizeSelected.clear();
+  renderGroupRandomSizePool();
+  toast('ランダムサイズ候補の選択を解除したのだ');
 }
 function applySizePresetToInputs(value,widthId,heightId){
   const m=String(value||'').match(/^(\d+)x(\d+)$/);
@@ -2419,6 +2573,130 @@ function clearGroupSendSize(){
   if(s) s.value='';
   toast('今回送信用サイズをクリアしたのだ');
 }
+function saveCompareRemixDraft(){
+  const el=document.getElementById('compare-remix-result');
+  if(el) compareRemixResult=el.value;
+}
+function sendSelectedGroupPromptsToCompareRemix(){
+  const ids=selectedGroupPromptIds();
+  if(!ids.length){toast('Compare & Remixへ送るプロンプトを選んでほしいのだ');return;}
+  compareRemixEntries=ids.map(findGroupPromptById).filter(Boolean).map((entry,idx)=>({
+    id:entry.prompt.id,
+    groupName:entry.group.name,
+    title:entry.prompt.memo||`Prompt ${idx+1}`,
+    text:entry.prompt.text||'',
+    negative:entry.prompt.negative||''
+  }));
+  compareRemixResult=compareRemixEntries[0]?.text||'';
+  renderCompareRemixPanel();
+  document.getElementById('compare-remix-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+  toast(`${compareRemixEntries.length}件をCompare & Remixへ送ったのだ`);
+}
+function renderCompareRemixPanel(){
+  const panel=document.getElementById('compare-remix-panel');
+  if(!panel) return;
+  if(!compareRemixEntries.length){panel.style.display='none';panel.innerHTML='';return;}
+  panel.style.display='block';
+  panel.innerHTML=`
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <div class="sl" style="margin:0">Compare & Remix</div>
+      <button class="btn sm secondary" onclick="clearCompareRemix()">閉じる</button>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px">Groupを跨いだ比較編集用の作業台です。左の素材をResultへコピー/追加して、完成プロンプトを作れます。</div>
+    <div class="compare-remix-grid">${compareRemixEntries.map((e,idx)=>`
+      <div class="compare-remix-card">
+        <div class="group-meta">${escH(e.groupName)} / ${escH(e.title)}</div>
+        <textarea readonly>${escH(e.text)}</textarea>
+        <div class="row">
+          <button class="btn sm" onclick="setCompareRemixResult(${idx})">Resultへ置く</button>
+          <button class="btn sm secondary" onclick="appendCompareRemixResult(${idx})">Resultへ追加</button>
+        </div>
+      </div>`).join('')}</div>
+    <div class="compare-remix-result">
+      <div class="sl">Remix Result</div>
+      <textarea id="compare-remix-result" oninput="saveCompareRemixDraft()">${escH(compareRemixResult)}</textarea>
+      <div class="row">
+        <button class="btn primary" onclick="sendCompareRemixResultToCompose()">ResultをComposeへ</button>
+        <button class="btn secondary" onclick="addCompareRemixResultToGroup()">ResultをGroupへ追加</button>
+        <button class="btn" onclick="copyCompareRemixResult()">Copy Result</button>
+        <button class="btn danger" onclick="clearCompareRemixResult()">Result Clear</button>
+      </div>
+    </div>`;
+}
+function setCompareRemixResult(idx){
+  compareRemixResult=compareRemixEntries[idx]?.text||'';
+  renderCompareRemixPanel();
+}
+function appendCompareRemixResult(idx){
+  const text=String(compareRemixEntries[idx]?.text||'').replace(/,+\s*$/,'').trim();
+  saveCompareRemixDraft();
+  const base=String(compareRemixResult||'').replace(/,+\s*$/,'').trim();
+  compareRemixResult=base&&text?`${base}, ${text}`:(base||text);
+  renderCompareRemixPanel();
+}
+function clearCompareRemix(){compareRemixEntries=[];compareRemixResult='';renderCompareRemixPanel();}
+function clearCompareRemixResult(){compareRemixResult='';renderCompareRemixPanel();}
+function currentCompareRemixResult(){
+  const text=String(document.getElementById('compare-remix-result')?.value||compareRemixResult||'').trim();
+  compareRemixResult=text;
+  return text;
+}
+function sendCompareRemixResultToCompose(){
+  const text=currentCompareRemixResult();
+  if(!text){toast('Resultが空なのだ');return;}
+  document.getElementById('b-pos').value=text;
+  document.getElementById('b-neg').value='';
+  document.getElementById('batch-width').value='';
+  document.getElementById('batch-height').value='';
+  switchTab('compose');
+  buildCode(); updateComposeSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('Remix ResultをComposeへ送ったのだ');
+}
+function addCompareRemixResultToGroup(){
+  const text=currentCompareRemixResult();
+  if(!text){toast('Groupへ追加するResultが空なのだ');return;}
+  const g=activeGroup()||ensureGroup();
+  addPromptToGroup(g.id,{text,source:'compare-remix'},{silent:true});
+  saveGroups(); renderGroups(); renderGroupSelectors(); renderCompareRemixPanel();
+  toast(`Remix Resultを「${g.name}」へ追加したのだ`);
+}
+function copyCompareRemixResult(){
+  const text=currentCompareRemixResult();
+  if(!text){toast('コピーするResultが空なのだ');return;}
+  copyTextToClipboard(text,()=>toast('Remix Resultをコピーしたのだ'));
+}
+function selectedGroupRandomSizes(){
+  const sizes=[...groupRandomSizeSelected].map(v=>{
+    const m=String(v||'').match(/^(\d+)x(\d+)$/);
+    return m?{width:Math.floor(Number(m[1])),height:Math.floor(Number(m[2])),label:v}:null;
+  }).filter(Boolean);
+  return sizes;
+}
+function sendSelectedGroupPromptsToComposeRandomSize(){
+  const ids=selectedGroupPromptIds();
+  if(!ids.length){toast('Composeへ送るプロンプトを選んでほしいのだ');return;}
+  const sizes=selectedGroupRandomSizes();
+  if(sizes.length<2){toast('ランダム用サイズを2つ以上選んでほしいのだ');return;}
+  const entries=ids.map(findGroupPromptById).filter(Boolean);
+  const selected=entries.map(x=>x.prompt);
+  if(!selected.length){toast('選択したプロンプトが見つからないのだ');return;}
+  const lines=selected.map(p=>{
+    const size=sizes[Math.floor(Math.random()*sizes.length)];
+    const text=String(p.text||'').replace(/,+\s*$/,'').trim();
+    return `${size.width}x${size.height} | ${text}`;
+  });
+  document.getElementById('b-pos').value=lines.join('\n');
+  const negatives=[...new Set(selected.map(p=>String(p.negative||'').trim()).filter(Boolean))];
+  document.getElementById('b-neg').value=negatives.length===1?negatives[0]:'';
+  document.getElementById('batch-width').value='';
+  document.getElementById('batch-height').value='';
+  switchTab('compose');
+  buildCode(); updateComposeSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+  const groupCount=new Set(entries.map(x=>x.group.id)).size;
+  toast(`${selected.length}件 / ${groupCount} Group に ${sizes.length}候補からランダムサイズを付けてComposeへ送ったのだ`);
+}
 function sendSelectedGroupPromptsToCompose(){
   const ids=selectedGroupPromptIds();
   if(!ids.length){toast('Composeへ送るプロンプトを選んでほしいのだ');return;}
@@ -2726,6 +3004,12 @@ function renderGroupLibraryPalette(){
   updateGroupPaletteSelectedLabel();
 }
 function setGroupLibraryCat(cat){groupPaletteCat=cat;renderGroupLibraryPalette();}
+function clearGroupLibrarySearch(){
+  const el=document.getElementById('group-lib-search');
+  if(el) el.value='';
+  renderGroupLibraryPalette();
+  toast('Library検索欄をクリアしたのだ');
+}
 function toggleGroupPaletteTag(tag){
   if(groupPaletteSelected.has(tag)) groupPaletteSelected.delete(tag); else groupPaletteSelected.add(tag);
   renderGroupLibraryPalette();
@@ -2787,10 +3071,15 @@ function fallbackCopyText(text,done){
   document.body.removeChild(ta);
   done&&done();
 }
-function copyGroupLibraryVisibleTags(){
-  const arr=getGroupLibraryVisibleTags();
-  if(!arr.length){toast('コピーする表示語がないのだ');return;}
-  copyTextToClipboard(arr.join(', '),()=>toast(`${arr.length}件の表示語をコピーしたのだ`));
+function copyGroupLibrarySelectedTags(){
+  const visible=new Set(getGroupLibraryVisibleTags());
+  const arr=[...groupPaletteSelected].filter(t=>visible.has(t));
+  if(!arr.length){toast('コピーするLibraryタグを選んでほしいのだ');return;}
+  copyTextToClipboard(arr.join(', '),()=>{
+    arr.forEach(t=>groupPaletteSelected.delete(t));
+    renderGroupLibraryPalette();
+    toast(`${arr.length}件の選択タグをコピーしたのだ`);
+  });
 }
 function clearGroupReplace(){
   const el=document.getElementById('group-replace');
@@ -3241,6 +3530,412 @@ function applyLibCat(){
   toast(`${count}件適用したのだ！`);
 }
 
+
+
+// ═══════════════════════════════════════════════════════════
+//  IMAGE PREVIEW / DRAW THINGS METADATA
+// ═══════════════════════════════════════════════════════════
+async function selectPreviewFolder(){
+  if(window.showDirectoryPicker){
+    try{
+      const dir=await window.showDirectoryPicker();
+      const files=[];
+      await collectImageFilesFromDirectory(dir,files,'');
+      await loadPreviewFiles(files);
+      return;
+    }catch(e){
+      if(e?.name==='AbortError') return;
+      console.warn(e);
+      toast('フォルダ選択に失敗したのでファイル選択へ切り替えるのだ');
+    }
+  }
+  document.getElementById('image-preview-folder-input')?.click();
+}
+async function collectImageFilesFromDirectory(dir,files,prefix){
+  for await(const [name,handle] of dir.entries()){
+    if(handle.kind==='file'){
+      const file=await handle.getFile();
+      file._previewPath=prefix+name;
+      if(isPreviewImageFile(file)) files.push(file);
+    }else if(handle.kind==='directory'){
+      await collectImageFilesFromDirectory(handle,files,prefix+name+'/');
+    }
+  }
+}
+function isPreviewImageFile(file){
+  return /^image\//.test(file.type)||/\.(png|jpe?g|webp|gif)$/i.test(file.name||'');
+}
+async function loadPreviewFiles(files){
+  clearPreviewObjectUrls();
+  const imageFiles=(files||[]).filter(isPreviewImageFile).sort((a,b)=>(b.lastModified||0)-(a.lastModified||0));
+  previewImages=[]; activePreviewId=null;
+  const status=document.getElementById('image-preview-status');
+  if(status) status.textContent=`${imageFiles.length}件の画像を読み込み中...`;
+  for(let i=0;i<imageFiles.length;i++){
+    const file=imageFiles[i];
+    const item={
+      id:'img_'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,6),
+      file,
+      name:file.name,
+      path:file._previewPath||file.webkitRelativePath||file.name,
+      size:file.size,
+      modified:file.lastModified||0,
+      type:file.type||guessMime(file.name),
+      url:URL.createObjectURL(file),
+      width:null,height:null,
+      prompt:'',negative:'',meta:{},metadataRaw:'',searchText:''
+    };
+    try{Object.assign(item,await readPreviewImageDimensions(file));}catch(e){}
+    if(/\.png$/i.test(file.name)||file.type==='image/png'){
+      try{Object.assign(item,await readDrawThingsPngMetadata(file));}catch(e){item.metadataRaw='PNG metadata parse error: '+String(e.message||e);}
+    }
+    item.searchText=[item.name,item.path,item.type,item.width+'x'+item.height,item.prompt,item.negative,JSON.stringify(item.meta||{}),item.metadataRaw].join('\n').toLowerCase();
+    previewImages.push(item);
+    if(i===0) activePreviewId=item.id;
+    if(i%12===0) renderPreviewImages();
+  }
+  renderPreviewImages(); renderPreviewDetail();
+  toast(`${previewImages.length}件の画像を読み込んだのだ`);
+}
+function guessMime(name){
+  if(/\.png$/i.test(name)) return 'image/png';
+  if(/\.jpe?g$/i.test(name)) return 'image/jpeg';
+  if(/\.webp$/i.test(name)) return 'image/webp';
+  return '';
+}
+async function readPreviewImageDimensions(file){
+  if(window.createImageBitmap){
+    const bmp=await createImageBitmap(file);
+    const out={width:bmp.width,height:bmp.height};
+    bmp.close&&bmp.close();
+    return out;
+  }
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{const out={width:img.naturalWidth,height:img.naturalHeight};URL.revokeObjectURL(url);resolve(out);};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('image load failed'));};
+    img.src=url;
+  });
+}
+async function readDrawThingsPngMetadata(file){
+  const buf=await file.arrayBuffer();
+  const bytes=new Uint8Array(buf);
+  if(bytes.length<8||bytes[0]!==0x89||bytes[1]!==0x50||bytes[2]!==0x4e||bytes[3]!==0x47) return {};
+  const view=new DataView(buf);
+  const dec=new TextDecoder('utf-8');
+  let pos=8;
+  const texts=[];
+  while(pos+8<=bytes.length){
+    const len=view.getUint32(pos); pos+=4;
+    const type=String.fromCharCode(...bytes.slice(pos,pos+4)); pos+=4;
+    const data=bytes.slice(pos,pos+len); pos+=len+4;
+    if(type==='tEXt'){
+      const z=data.indexOf(0);
+      const key=z>=0?dec.decode(data.slice(0,z)):type;
+      const text=z>=0?dec.decode(data.slice(z+1)):dec.decode(data);
+      texts.push({type,key,text});
+    }else if(type==='iTXt'){
+      const parts=splitNullParts(data,5);
+      const key=dec.decode(parts[0]||new Uint8Array());
+      const compFlag=(parts[1]&&parts[1][0])||0;
+      const textBytes=parts[5]||new Uint8Array();
+      const text=compFlag?'[compressed iTXt is not supported in browser preview]':dec.decode(textBytes);
+      texts.push({type,key,text});
+    }else if(type==='zTXt'){
+      const z=data.indexOf(0);
+      const key=z>=0?dec.decode(data.slice(0,z)):type;
+      texts.push({type,key,text:'[compressed zTXt is not supported in browser preview]'});
+    }
+    if(type==='IEND') break;
+  }
+  const raw=texts.map(t=>`--- ${t.type} ${t.key} ---\n${t.text}`).join('\n\n');
+  const parsed=parseDrawThingsMetadataText(raw);
+  return {metadataRaw:raw,meta:parsed.meta,prompt:parsed.prompt,negative:parsed.negative};
+}
+function splitNullParts(data,maxSplits){
+  const parts=[]; let start=0;
+  for(let i=0;i<data.length&&parts.length<maxSplits;i++){
+    if(data[i]===0){parts.push(data.slice(start,i));start=i+1;}
+  }
+  parts.push(data.slice(start));
+  return parts;
+}
+function htmlDecodeText(s){
+  const ta=document.createElement('textarea');
+  ta.innerHTML=String(s||'');
+  return ta.value;
+}
+function parseDrawThingsMetadataText(raw){
+  const out={meta:{},prompt:'',negative:''};
+  const xmp=String(raw||'');
+  const userMatch=xmp.match(/<exif:UserComment>[\s\S]*?<rdf:li[^>]*>([\s\S]*?)<\/rdf:li>[\s\S]*?<\/exif:UserComment>/);
+  if(userMatch){
+    const jsonText=htmlDecodeText(userMatch[1]).trim();
+    try{
+      const obj=JSON.parse(jsonText);
+      out.meta=obj;
+      out.prompt=String(obj.c||obj.prompt||obj.positive_prompt||'');
+      out.negative=String(obj.uc||obj.negative_prompt||'');
+      return out;
+    }catch(e){out.meta.userComment=jsonText;}
+  }
+  const descMatch=xmp.match(/<dc:description>[\s\S]*?<rdf:li[^>]*>([\s\S]*?)<\/rdf:li>[\s\S]*?<\/dc:description>/);
+  if(descMatch){
+    const desc=htmlDecodeText(descMatch[1]).trim();
+    out.meta.description=desc;
+    const stepsIdx=desc.search(/\bSteps\s*:/i);
+    const main=stepsIdx>=0?desc.slice(0,stepsIdx).trim():desc;
+    out.prompt=main;
+    const seed=desc.match(/\bSeed\s*:\s*([^,\n]+)/i); if(seed) out.meta.seed=seed[1].trim();
+    const model=desc.match(/\bModel\s*:\s*([^,\n]+)/i); if(model) out.meta.model=model[1].trim();
+    const size=desc.match(/\bSize\s*:\s*([^,\n]+)/i); if(size) out.meta.size=size[1].trim();
+    const steps=desc.match(/\bSteps\s*:\s*([^,\n]+)/i); if(steps) out.meta.steps=steps[1].trim();
+    const sampler=desc.match(/\bSampler\s*:\s*([^,\n]+)/i); if(sampler) out.meta.sampler=sampler[1].trim();
+  }
+  return out;
+}
+function previewSortValue(){return document.getElementById('image-preview-sort')?.value||'modified-desc';}
+function sortedPreviewImages(items){
+  const arr=[...items];
+  const mode=previewSortValue();
+  const cmpText=(a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{numeric:true,sensitivity:'base'});
+  arr.sort((a,b)=>{
+    if(mode==='modified-asc') return (a.modified||0)-(b.modified||0);
+    if(mode==='modified-desc') return (b.modified||0)-(a.modified||0);
+    if(mode==='name-asc') return cmpText(a,b);
+    if(mode==='name-desc') return cmpText(b,a);
+    if(mode==='size-asc') return (a.size||0)-(b.size||0);
+    if(mode==='size-desc') return (b.size||0)-(a.size||0);
+    const areaA=(a.width||0)*(a.height||0), areaB=(b.width||0)*(b.height||0);
+    if(mode==='image-area-asc') return areaA-areaB;
+    if(mode==='image-area-desc') return areaB-areaA;
+    return 0;
+  });
+  return arr;
+}
+function setPreviewThumbSize(value){
+  imagePreviewThumbSize=Math.max(80,Math.min(220,Math.floor(Number(value)||120)));
+  const root=document.documentElement;
+  root.style.setProperty('--preview-thumb-size', imagePreviewThumbSize+'px');
+  root.style.setProperty('--preview-thumb-img-h', Math.round(imagePreviewThumbSize*.92)+'px');
+  const label=document.getElementById('image-preview-thumb-label');
+  if(label) label.textContent=imagePreviewThumbSize+'px';
+}
+function shortPreviewFileName(name){
+  const s=String(name||'');
+  if(s.length<=34) return s;
+  const dot=s.lastIndexOf('.');
+  const ext=dot>0?s.slice(dot):'';
+  return s.slice(0,22)+'…'+ext;
+}
+function previewFilteredImages(){
+  const q=String(document.getElementById('image-preview-search')?.value||'').trim().toLowerCase();
+  const base=!q?previewImages:previewImages.filter(item=>q.split(/\s+/).filter(Boolean).every(t=>item.searchText.includes(t)));
+  return sortedPreviewImages(base);
+}
+function renderPreviewImages(){
+  const list=document.getElementById('image-preview-list');
+  const status=document.getElementById('image-preview-status');
+  if(!list) return;
+  setPreviewThumbSize(imagePreviewThumbSize);
+  const filtered=previewFilteredImages();
+  if(status) status.textContent=`${filtered.length} / ${previewImages.length} images / ${document.getElementById('image-preview-sort')?.selectedOptions?.[0]?.textContent||''}`;
+  if(!previewImages.length){list.innerHTML='<div class="group-empty">まだ画像が読み込まれていません。</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="group-empty">検索に一致する画像がありません。</div>';return;}
+  list.innerHTML=filtered.map(item=>`<div class="preview-card${item.id===activePreviewId?' active':''}" onclick="selectPreviewImage('${escA(item.id)}')">
+    <img src="${escA(item.url)}" alt="${escA(item.name)}">
+    <div class="preview-card-name" title="${escA(item.name)}">${escH(shortPreviewFileName(item.name))}</div>
+    <div class="group-meta">${escH((item.meta?.size)||((item.width&&item.height)?`${item.width}x${item.height}`:''))} ${item.meta?.seed?`/ seed ${escH(item.meta.seed)}`:''}</div>
+  </div>`).join('');
+}
+function selectPreviewImage(id){activePreviewId=id;renderPreviewImages();renderPreviewDetail();}
+function activePreviewImage(){return previewImages.find(x=>x.id===activePreviewId)||previewImages[0]||null;}
+function renderPreviewDetail(){
+  const box=document.getElementById('image-preview-detail');
+  if(!box) return;
+  const item=activePreviewImage();
+  if(!item){box.innerHTML='<div class="group-empty">画像を選択すると情報を表示します。</div>';return;}
+  const meta=item.meta||{};
+  const lora=Array.isArray(meta.lora)?meta.lora.map(x=>`${x.model||''}${x.weight!=null?` (${x.weight})`:''}`).join(', '):'';
+  box.innerHTML=`<img class="preview-detail-img" src="${escA(item.url)}" alt="${escA(item.name)}">
+    <div class="preview-kv">
+      <b>File</b><span>${escH(item.name)}</span>
+      <b>Path</b><span>${escH(item.path)}</span>
+      <b>Size</b><span>${escH(formatBytes(item.size))}</span>
+      <b>Modified</b><span>${escH(formatDateTime(item.modified))}</span>
+      <b>Image</b><span>${escH(item.width&&item.height?`${item.width}x${item.height}`:'unknown')}</span>
+      <b>DT Size</b><span>${escH(meta.size||meta.target_size||'')}</span>
+      <b>Seed</b><span>${escH(meta.seed||'')}</span>
+      <b>Model</b><span>${escH(meta.model||'')}</span>
+      <b>Sampler</b><span>${escH(meta.sampler||'')}</span>
+      <b>Steps</b><span>${escH(meta.steps||'')}</span>
+      <b>Scale</b><span>${escH(meta.scale||meta.guidance_scale||'')}</span>
+      <b>LoRA</b><span>${escH(lora)}</span>
+    </div>
+    <div class="sl">Positive Prompt</div>
+    <textarea class="preview-prompt-box" id="image-preview-prompt-text" readonly>${escH(item.prompt||'')}</textarea>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:6px;align-items:center">
+      <div class="clearable-input">
+        <input class="inp" id="image-preview-snippet" placeholder="任意の検索部分。Prompt欄で文字選択して下のボタンも使えます">
+        <button class="input-clear-x" onclick="clearPreviewSnippet()" title="抽出検索欄をクリア" aria-label="抽出検索欄をクリア">×</button>
+      </div>
+      <button class="btn sm secondary" onclick="fillPreviewSnippetFromSelection()">選択部分を抽出</button>
+      <button class="btn sm" onclick="copyPreviewPrompt()">Prompt Copy</button>
+    </div>
+    <div class="row">
+      <button class="btn sm secondary" onclick="sendPreviewSnippetToImageSearch()">抽出部分で画像検索</button>
+      <button class="btn sm secondary" onclick="sendPreviewSnippetToGroupsSearch()">抽出部分でGroups検索</button>
+      <button class="btn sm secondary" onclick="registerPreviewSnippetToLibrary()">抽出部分をLibrary登録</button>
+      <button class="btn sm secondary" onclick="sendPreviewPromptToGroupsSearch()">全文をGroups検索へ</button>
+      <button class="btn sm secondary" onclick="sendPreviewPromptToCompose()">Composeへ</button>
+      <button class="btn sm secondary" onclick="sendPreviewPromptToCompareRemix()">Compare & Remixへ</button>
+      <button class="btn sm secondary" onclick="addPreviewPromptToNewGroup()">Promptを新規Groupへ</button>
+    </div>
+    <div class="sl">Negative Prompt</div>
+    <textarea class="preview-prompt-box" readonly>${escH(item.negative||'')}</textarea>
+    <div class="row"><button class="btn sm" onclick="copyPreviewNegative()">Negative Copy</button><button class="btn sm" onclick="copyPreviewSeed()">Seed Copy</button><button class="btn sm secondary" onclick="registerPreviewLorasToLibrary()">LoRAをLibrary登録</button><button class="btn sm secondary" onclick="copyPreviewMetadata()">Metadata Copy</button></div>
+    <div class="sl">Raw Metadata</div>
+    <div class="preview-meta-box">${escH(item.metadataRaw||'メタデータなし / PNG以外は現在ファイル情報のみ表示します。')}</div>`;
+}
+function clearImagePreviewSearch(){const el=document.getElementById('image-preview-search');if(el) el.value='';renderPreviewImages();}
+function clearPreviewSnippet(){const el=document.getElementById('image-preview-snippet');if(el) el.value='';}
+function normalizePreviewSearchText(s){return String(s||'').replace(/,+\s*/g,' ').replace(/\s+/g,' ').trim();}
+function selectedPreviewPromptText(){
+  const ta=document.getElementById('image-preview-prompt-text');
+  if(!ta) return '';
+  const start=ta.selectionStart??0;
+  const end=ta.selectionEnd??0;
+  return start!==end?ta.value.slice(start,end).trim():'';
+}
+function previewSnippetText(){
+  const manual=String(document.getElementById('image-preview-snippet')?.value||'').trim();
+  return manual || selectedPreviewPromptText();
+}
+function fillPreviewSnippetFromSelection(){
+  const text=selectedPreviewPromptText();
+  if(!text){toast('Prompt欄で検索したい部分を選択してほしいのだ');return;}
+  const el=document.getElementById('image-preview-snippet');
+  if(el) el.value=text.trim();
+  toast('選択部分を抽出検索欄へ入れたのだ');
+}
+function sendPreviewSnippetToImageSearch(){
+  const text=normalizePreviewSearchText(previewSnippetText());
+  if(!text){toast('画像検索に使う部分を選択、または入力してほしいのだ');return;}
+  const el=document.getElementById('image-preview-search');
+  if(el) el.value=text;
+  renderPreviewImages();
+  toast('抽出部分で画像を検索したのだ');
+}
+function sendPreviewSnippetToGroupsSearch(){
+  const text=normalizePreviewSearchText(previewSnippetText());
+  if(!text){toast('Groups検索に使う部分を選択、または入力してほしいのだ');return;}
+  switchTab('groups');
+  const el=document.getElementById('group-find');
+  if(el) el.value=text;
+  refreshGroupPromptHighlights(true); renderGroupSearchTerms();
+  toast('抽出部分をGroups検索欄へ送ったのだ');
+}
+function parsePreviewSnippetTags(text){
+  return String(text||'')
+    .split(/[\r\n,;]+/)
+    .map(t=>tidyPromptText(t))
+    .filter(Boolean);
+}
+function registerPreviewSnippetToLibrary(){
+  const raw=previewSnippetText();
+  const items=parsePreviewSnippetTags(raw);
+  if(!items.length){toast('Library登録する部分を選択、または入力してほしいのだ');return;}
+  let added=0;
+  items.forEach(t=>{if(!tags.includes(t)){tags.push(t);added++;}});
+  saveTags(); renderCatBar(); renderTags();
+  toast(added?`${added}件をLibraryへ登録したのだ`:'既に登録済みのタグなのだ');
+}
+function addPreviewPromptToNewGroup(){
+  const item=activePreviewImage();
+  if(!item?.prompt){toast('新規Groupへ送るPromptがないのだ');return;}
+  const baseName=String(item.name||'Preview Prompt').replace(/\.[^.]+$/,'');
+  const name=prompt('新規Group名',baseName.slice(0,60));
+  if(!name||!name.trim()) return;
+  const g=createPromptGroupFromName(name.trim());
+  if(!g) return;
+  addPromptToGroup(g.id,{text:item.prompt,negative:item.negative||'',memo:item.name,source:'preview-image'},{silent:true});
+  saveGroups(); renderGroups(); renderGroupSelectors();
+  toast(`画像Promptを新規Group「${g.name}」へ追加したのだ`);
+}
+function sendPreviewPromptToCompareRemix(){
+  const item=activePreviewImage();
+  if(!item?.prompt){toast('Compare & Remixへ送るPromptがないのだ');return;}
+  compareRemixEntries=[{
+    id:'preview_'+Date.now(),
+    groupName:'Preview Image',
+    title:item.name||'Preview Prompt',
+    text:item.prompt,
+    negative:item.negative||''
+  }];
+  compareRemixResult=item.prompt;
+  switchTab('groups');
+  renderCompareRemixPanel();
+  document.getElementById('compare-remix-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+  toast('画像PromptをCompare & Remixへ送ったのだ');
+}
+function clearPreviewObjectUrls(){previewImages.forEach(x=>{try{URL.revokeObjectURL(x.url);}catch(e){}});}
+function clearPreviewImages(){clearPreviewObjectUrls();previewImages=[];activePreviewId=null;renderPreviewImages();renderPreviewDetail();toast('Previewをクリアしたのだ');}
+function registerPreviewLorasToLibrary(){
+  const item=activePreviewImage();
+  const loras=Array.isArray(item?.meta?.lora)?item.meta.lora:[];
+  if(!loras.length){toast('この画像にLoRA情報が見つからないのだ');return;}
+  let added=0, updated=0;
+  loras.forEach(src=>{
+    const file=String(src.file||src.model||src.name||'').trim();
+    if(!file) return;
+    const weight=Number.isFinite(Number(src.weight))?Number(src.weight):1;
+    const existing=loraList.find(l=>String(l.file||'').toLowerCase()===file.toLowerCase());
+    if(existing){
+      existing.weight=weight;
+      if(!existing.memo) existing.memo='Imported from Draw Things metadata';
+      updated++;
+    }else{
+      loraList.push({
+        id:Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        name:file.replace(/\.[^.]+$/,''),
+        file,
+        weight,
+        memo:'Imported from Draw Things metadata'
+      });
+      added++;
+    }
+  });
+  saveLoras(); renderLoras(); renderBuilderLoras(); updateComposeSummary();
+  toast(`LoRAを登録/更新したのだ: +${added} / 更新${updated}`);
+}
+function copyPreviewPrompt(){const item=activePreviewImage();if(!item?.prompt){toast('Promptがないのだ');return;}copyTextToClipboard(item.prompt,()=>toast('Promptをコピーしたのだ'));}
+function copyPreviewNegative(){const item=activePreviewImage();if(!item?.negative){toast('Negativeがないのだ');return;}copyTextToClipboard(item.negative,()=>toast('Negativeをコピーしたのだ'));}
+function copyPreviewSeed(){const item=activePreviewImage();const seed=item?.meta?.seed;if(!seed){toast('Seedがないのだ');return;}copyTextToClipboard(String(seed),()=>toast('Seedをコピーしたのだ'));}
+function copyPreviewMetadata(){const item=activePreviewImage();if(!item?.metadataRaw){toast('Metadataがないのだ');return;}copyTextToClipboard(item.metadataRaw,()=>toast('Metadataをコピーしたのだ'));}
+function sendPreviewPromptToGroupsSearch(){
+  const item=activePreviewImage(); if(!item?.prompt){toast('Groups検索へ送るPromptがないのだ');return;}
+  switchTab('groups');
+  const el=document.getElementById('group-find');
+  if(el) el.value=item.prompt.replace(/\s+/g,' ').trim();
+  refreshGroupPromptHighlights(true); renderGroupSearchTerms();
+  toast('PromptをGroups検索欄へ送ったのだ');
+}
+function sendPreviewPromptToCompose(){
+  const item=activePreviewImage(); if(!item?.prompt){toast('Composeへ送るPromptがないのだ');return;}
+  document.getElementById('b-pos').value=item.prompt;
+  document.getElementById('b-neg').value=item.negative||'';
+  document.getElementById('batch-width').value=''; document.getElementById('batch-height').value='';
+  switchTab('compose'); buildCode(); updateComposeSummary();
+  toast('PromptをComposeへ送ったのだ');
+}
+function formatBytes(n){
+  n=Number(n)||0;
+  if(n<1024) return `${n} B`;
+  if(n<1024*1024) return `${(n/1024).toFixed(1)} KB`;
+  return `${(n/1024/1024).toFixed(2)} MB`;
+}
+function formatDateTime(ms){return ms?new Date(ms).toLocaleString():'';}
 
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escA(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}

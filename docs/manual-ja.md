@@ -42,6 +42,7 @@ Prompt Studio には主に5つの画面があります。
 | Compose | Library の単語を選んでプロンプトを組み立てます。Draw Things 用スクリプト形式へ出力できます。 |
 | Groups | 複数の完成プロンプトをグループ単位で管理します。ストーリー、紙芝居、連続生成向きです。 |
 | Assist | AIが作った長文プロンプト群の取り込み、自動分割、1行化、圧縮、Group登録を行います。 |
+| Preview | 生成済み画像をプレビューし、Draw ThingsのPNGメタデータを検索・確認します。 |
 | Settings | AIバックエンドなどの設定を行います。 |
 
 ショートカット:
@@ -52,7 +53,8 @@ Prompt Studio には主に5つの画面があります。
 | Composeへ移動 | Option + 2 |
 | Groupsへ移動 | Option + 3 |
 | Assistへ移動 | Option + 4 |
-| Settingsへ移動 | Option + 5 |
+| Previewへ移動 | Option + 5 |
+| Settingsへ移動 | Option + 6 |
 
 ---
 
@@ -152,6 +154,12 @@ Compose は、Library のタグを選んでプロンプトを組み立てる画�
 
 この場合、最後に `,` を付けた形式でコピーできます。
 
+### 5.3 プロンプト順をシャッフル
+
+Compose の Positive Prompt が複数行の場合、**Shuffle Prompts** で行順をランダムに並び替えられます。
+
+Draw Things のバッチ生成順を変えたい時や、紙芝居の順番を試したい時に使います。
+
 ---
 
 ## 6. Groups の使い方
@@ -211,6 +219,60 @@ Group内、または複数Groupをまたいでプロンプトを選択し、Comp
 これは Draw Things 用バッチスクリプトで、プロンプトごとにサイズを変えるための形式です。
 
 Groupに保存されている元プロンプトは変更されません。
+
+### 6.5 Compare & Remix
+
+Groupsでは、選択したプロンプトを **Compare & Remix** へ送って、Groupを跨いだ比較編集ができます。
+
+用途例:
+
+```text
+成功した人物描写を残して、別プロンプトの場所だけ参考にする
+品質タグ・画風タグ・背景タグを見比べながら1本にまとめる
+過去にうまく出たプロンプトをベースに手動で改変する
+```
+
+手順:
+
+1. Groupsで比較したいプロンプトを選択
+2. **Compare & Remixへ** を押す
+3. 各プロンプトを横並びで確認
+4. **Resultへ置く** または **Resultへ追加** で素材をResult欄へ送る
+5. Result欄を手動で編集
+6. **ResultをComposeへ** または **ResultをGroupへ追加**
+
+この機能はAIを使わない手動編集用です。元のGroup内プロンプトは変更されません。
+
+### 6.6 ランダムサイズでComposeへ送る
+
+Groupsでは、候補サイズを複数選んで、選択中プロンプトごとにランダムな画像サイズを付けてComposeへ送れます。
+
+用途例:
+
+```text
+同じ場面を縦長・横長・正方形で試す
+紙芝居の各カットに偶然性を入れる
+どの構図が合うか判断するために複数サイズを混ぜる
+```
+
+手順:
+
+1. Groupsでプロンプトを選択
+2. ランダムサイズ欄を展開
+3. サイズ候補をクリックして2つ以上選択
+4. **ランダムサイズでCompose** を押す
+
+出力例:
+
+```text
+1024x1536 | prompt A
+1536x1024 | prompt B
+1024x1024 | prompt C
+```
+
+選択中のサイズは青く反転します。`× 選択解除` で候補選択をまとめて解除できます。
+
+ランダムサイズ指定は一時的なもので、Groupに保存されている元プロンプトは変更されません。
 
 ---
 
@@ -367,7 +429,135 @@ Libraryタグ、カテゴリ、Groupsなどをバックアップできます。
 
 ---
 
-## 12. Draw Things 用スクリプトとの連携
+## 12. Preview の使い方
+
+Preview は、生成済み画像から Draw Things のPNGメタデータを読み取り、プロンプトや設定を確認する画面です。
+
+### 12.1 画像フォルダを読み込む
+
+1. **Preview** を開く
+2. **画像フォルダを選択** を押す
+3. 生成画像が入っているフォルダを選ぶ
+4. 左側にサムネイル一覧、右側に選択画像の情報が表示されます
+
+ブラウザの制約上、パス文字列を直接入力して読むのではなく、フォルダ選択ダイアログから選択します。
+
+### 12.2 一覧表示の調整
+
+Preview左側の画像一覧では、以下を調整できます。
+
+| 操作 | 内容 |
+|---|---|
+| Thumbスライダー | サムネイルサイズを変更 |
+| ソート | 更新日時、ファイル名、ファイルサイズ、画像サイズで並び替え |
+| ファイル名 | 一覧では短く省略表示。マウスを重ねると全文確認できます。 |
+
+ブラウザから取得できる日時は基本的に更新日時です。作成日は環境によって取得できないため、更新日時順として扱います。
+
+### 12.3 表示できる情報
+
+対応している主な情報:
+
+```text
+ファイル名
+ファイルサイズ
+更新日時
+画像サイズ
+Positive Prompt
+Negative Prompt
+Seed
+Model
+Sampler
+Steps
+Scale
+LoRA
+Raw Metadata
+```
+
+Draw Things のPNGでは、XMP内の `exif:UserComment` JSONから以下を読み取ります。
+
+```text
+c  = Positive Prompt
+uc = Negative Prompt
+seed
+steps
+sampler
+scale
+size
+model
+lora
+```
+
+PNG以外の画像は、まずファイル情報とプレビュー表示のみ対応です。
+
+### 12.4 メタデータ検索
+
+検索欄では、以下を横断検索できます。
+
+```text
+ファイル名
+Positive Prompt
+Negative Prompt
+Seed
+Model
+Sampler
+画像サイズ
+Raw Metadata
+```
+
+例:
+
+```text
+Barbu ramen
+438422534
+waiillustrious
+512x768
+```
+
+### 12.5 任意部分だけを抽出して検索する
+
+生成画像のメタデータPromptは、Groups内の保存プロンプトと完全一致しないことが多いため、Promptの一部だけを使って検索できます。
+
+手順:
+
+1. Previewで画像を選択
+2. Positive Prompt欄の中から検索したい部分をドラッグ選択
+3. **選択部分を抽出** を押す
+4. 必要なら抽出検索欄を手動編集
+5. **抽出部分で画像検索** または **抽出部分でGroups検索** を押す
+
+これにより、例えば以下のような部分だけで検索できます。
+
+```text
+ramen bowl, steaming hot ramen
+short black hair, lime green inner highlights
+matte anime style, cel shading
+```
+
+**抽出部分で画像検索** は、現在読み込んでいるフォルダ内の画像メタデータから、似たPromptを持つ画像を絞り込みます。
+
+### 12.6 Prompt Studio への戻し方
+
+選択画像から以下の操作ができます。
+
+| 操作 | 内容 |
+|---|---|
+| Prompt Copy | Positive Promptをコピー |
+| Negative Copy | Negative Promptをコピー |
+| Seed Copy | Seedをコピー |
+| Metadata Copy | メタデータ全文をコピー |
+| Groups検索へ | Positive PromptをGroups検索欄へ送る |
+| Composeへ | Positive/NegativeをComposeへ送る |
+| 抽出部分をLibrary登録 | Prompt欄で選択した一部、または抽出検索欄の内容をLibraryタグとして登録 |
+| Compare & Remixへ | 選択画像のPromptをCompare & Remixへ送る |
+| Promptを新規Groupへ | 選択画像のPromptから新規Groupを作成して保存 |
+| LoRAをLibrary登録 | PNGメタデータ内のLoRA名とweightをLoRA Libraryへ登録/更新 |
+
+これにより、過去にうまく出た画像からプロンプトへ戻って、再編集・再利用できます。
+
+---
+
+## 13. Draw Things 用スクリプトとの連携
 
 付属の Draw Things 用スクリプトは、複数プロンプトを連続実行できます。
 
@@ -404,7 +594,7 @@ Inpaint mode では、現在のキャンバス画像とマスクを使い回し�
 
 ---
 
-## 13. よくある使い方
+## 14. よくある使い方
 
 ### 13.1 AIが出した複数プロンプトを一括登録したい
 
@@ -444,7 +634,7 @@ Inpaint mode では、現在のキャンバス画像とマスクを使い回し�
 
 ---
 
-## 14. バックアップのすすめ
+## 15. バックアップのすすめ
 
 データは `localStorage` に保存されるため、ブラウザのデータ削除や別ブラウザへの移行で消える可能性があります。
 
@@ -460,7 +650,7 @@ GitHub公開用とは別に個人用バックアップを保存
 
 ---
 
-## 15. 注意事項
+## 16. 注意事項
 
 - このツールはローカルHTMLとして動作します。
 - データは主にブラウザの `localStorage` に保存されます。
@@ -470,7 +660,7 @@ GitHub公開用とは別に個人用バックアップを保存
 
 ---
 
-## 16. 推奨運用
+## 17. 推奨運用
 
 このツールは、完成済みプロンプトをただ保存するだけでなく、以下のように使うと強いです。
 

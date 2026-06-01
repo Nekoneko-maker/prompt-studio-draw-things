@@ -55,3 +55,46 @@ Example:
 ```text
 batch_1024x1536_masterpiece_best_quality_0001.png
 ```
+
+
+## Optional setting overrides
+
+The script keeps the current Draw Things configuration by default. If you want to restore settings from metadata or force a specific setup, edit `OPTIONS` near the top of the script.
+
+```js
+var OPTIONS = {
+  imagesPerPrompt: 1,
+  seedStart: -1,
+  seedStep: 1,
+  filenamePrefix: "batch",
+  negativePrompt: "",
+  keepPromptAfterRun: true,
+
+  // Leave null / "" to keep current Draw Things settings.
+  steps: null,
+  guidanceScale: null,
+  model: "",
+  sampler: null, // numeric Draw Things sampler id
+  loras: null,   // null = keep current LoRA, [] = clear LoRA, array = replace LoRA
+  mergeLoras: false,
+  clipSkip: null,
+  strength: null,
+};
+```
+
+Example LoRA override:
+
+```js
+loras: [
+  { mode: "all", file: "barbu_2500_lora_f32.ckpt", weight: 0.78 },
+  { mode: "all", file: "detialn_xl_lora_f16.ckpt", weight: 0.45 },
+],
+```
+
+Notes:
+
+- `model` should be a model file name available in Draw Things.
+- `sampler` currently expects the numeric Draw Things sampler id, not the display name.
+- `loras: null` keeps the current Draw Things LoRA settings.
+- `loras: []` clears LoRA settings for the run.
+- `mergeLoras: true` appends the listed LoRA entries to the current Draw Things LoRA configuration.
