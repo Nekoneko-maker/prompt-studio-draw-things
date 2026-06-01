@@ -758,7 +758,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     <button class="btn primary" onclick="selectPreviewFolder()">画像フォルダを選択</button>
     <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="loadPreviewFiles([...this.files])">
     <div class="clearable-input" style="flex:1;min-width:220px">
-      <input class="inp" id="image-preview-search" placeholder="メタデータ検索: Barbu / ramen / seed / model..." oninput="renderPreviewImages()">
+      <input class="inp" id="image-preview-search" placeholder="メタデータ検索: character / scene / seed / model..." oninput="renderPreviewImages()">
       <button class="input-clear-x" onclick="clearImagePreviewSearch()" title="検索欄をクリア" aria-label="検索欄をクリア">×</button>
     </div>
     <select class="inp" id="image-preview-sort" style="max-width:190px" onchange="renderPreviewImages()">

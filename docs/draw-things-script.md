@@ -86,8 +86,8 @@ Example LoRA override:
 
 ```js
 loras: [
-  { mode: "all", file: "barbu_2500_lora_f32.ckpt", weight: 0.78 },
-  { mode: "all", file: "detialn_xl_lora_f16.ckpt", weight: 0.45 },
+  { mode: "all", file: "character_lora_example_f32.ckpt", weight: 0.78 },
+  { mode: "all", file: "detail_enhancer_example_f16.ckpt", weight: 0.45 },
 ],
 ```
 

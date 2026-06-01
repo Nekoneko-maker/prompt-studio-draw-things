@@ -115,7 +115,7 @@ soft lighting
 | カテゴリ | 例 |
 |---|---|
 | quality | masterpiece, best quality |
-| character | 1girl, solo, tomboy |
+| character | 1girl, solo, casual outfit |
 | clothes | oversized shirt, school uniform |
 | clothes/expression | wet clothes, torn clothes, clothes slipping |
 | emotion | happy, embarrassed, serious |
@@ -180,7 +180,7 @@ Assist から登録するか、Groups 画面で新規Groupを作成します。
 例:
 
 ```text
-Barbu 日常編
+Sample Character Daily Scenes
 仕事中の様子
 プライベート
 ラーメン屋シーン集
@@ -508,9 +508,9 @@ Raw Metadata
 例:
 
 ```text
-Barbu ramen
+Sample ramen scene
 438422534
-waiillustrious
+example_sdxl_model
 512x768
 ```
 
@@ -529,8 +529,8 @@ waiillustrious
 これにより、例えば以下のような部分だけで検索できます。
 
 ```text
-ramen bowl, steaming hot ramen
-short black hair, lime green inner highlights
+cafe table, warm drink, soft interior light
+short dark hair, bright color accents
 matte anime style, cel shading
 ```
 
