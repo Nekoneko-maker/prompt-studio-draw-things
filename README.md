@@ -6,10 +6,19 @@ It is designed for workflows where you generate or edit many prompts, group them
 
 ## Contents
 
-- `prompt_studio.html` — the browser-based Prompt Studio tool.
+- `prompt_studio.html` — Japanese edition of Prompt Studio 10.5.
+- `prompt_studio_en.html` — English edition of Prompt Studio 10.5. Its browser data and backups are kept separate from the Japanese edition.
+- `prompt_studio_local_server.py` — optional local server for Draw Things API relay and Mac-side automatic backups.
+- `scripts/prompt-runner-unlimited.js` — current Draw Things batch runner with inpaint, per-prompt size, and per-prompt LoRA OFF support.
 - `scripts/draw-things-batch-prompt-runner-inpaint-size.js` — Draw Things batch runner script with inpaint support and optional per-prompt size syntax.
 - `docs/draw-things-script.md` — usage notes for the Draw Things script.
 - `docs/manual-ja.md` — Japanese user manual for Prompt Studio.
+- `docs/manual-en.md` — English user manual for Prompt Studio.
+
+## Manuals
+
+- [English manual](docs/manual-en.md)
+- [日本語マニュアル](docs/manual-ja.md)
 
 ## Features
 
@@ -24,8 +33,10 @@ It is designed for workflows where you generate or edit many prompts, group them
 - AI-generated prompt import with flexible auto-splitting
 - One-line prompt conversion
 - Prompt cleaner for prose-like AI output
-- Ollama / Claude-assisted translation and categorization helpers
-- Local-first storage using browser `localStorage`
+- Ollama-assisted translation, categorization, and prompt cleanup
+- Generated-image preview and metadata-based prompt search
+- Direct generation through the Draw Things API
+- Local-first browser storage with optional automatic backups
 
 ### Draw Things script
 
@@ -46,13 +57,20 @@ It is designed for workflows where you generate or edit many prompts, group them
 
 ### Prompt Studio
 
-Open `prompt_studio.html` directly in a browser:
+Open either edition directly in a browser:
 
 ```text
 file:///path/to/prompt_studio.html
+file:///path/to/prompt_studio_en.html
 ```
 
 No build step is required.
+
+For Draw Things API relay and Mac-side backups, start the optional local server:
+
+```bash
+python3 prompt_studio_local_server.py
+```
 
 ### Draw Things script
 
