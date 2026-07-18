@@ -283,6 +283,23 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .preview-image-stage{position:relative}
 .preview-image-zoom-btn{position:absolute;right:8px;bottom:8px;background:rgba(20,20,24,.82);color:#fff;border:1px solid rgba(255,255,255,.45);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .preview-image-zoom-btn:hover{background:rgba(20,20,24,.95);color:#fff}
+.preview-img2img-card{margin-top:10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2);overflow:hidden}
+.preview-img2img-card>summary{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px;cursor:pointer;list-style:none;user-select:none}
+.preview-img2img-card>summary::-webkit-details-marker{display:none}
+.preview-img2img-card>summary::before{content:'▶';flex:0 0 auto;color:var(--muted);font-size:11px;transition:transform .16s ease}
+.preview-img2img-card[open]>summary::before{transform:rotate(90deg)}
+.preview-img2img-card>summary:hover{background:var(--surface)}
+.preview-img2img-body{padding:0 10px 10px;border-top:1px solid var(--border2)}
+.preview-img2img-grid{display:grid;grid-template-columns:100px 100px 100px 1fr;gap:6px;align-items:center}
+.preview-img2img-result{display:none;margin-top:9px;padding-top:9px;border-top:1px solid var(--border2)}
+.preview-img2img-result img{display:block;width:100%;max-height:360px;object-fit:contain;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);cursor:zoom-in}
+.preview-prompt-box.editing{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 32%,transparent);background:var(--surface)}
+.preview-lora-card{margin-top:12px;padding:9px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface2)}
+.preview-lora-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--border2)}
+.preview-lora-row:first-of-type{border-top:0}
+.preview-lora-file{min-width:0;font-family:var(--mono);font-size:10px;overflow-wrap:anywhere}
+.preview-lora-value{font-family:var(--mono);font-size:10px;color:var(--accent);white-space:nowrap}
+@media(max-width:820px){.preview-img2img-grid{grid-template-columns:1fr 1fr}.preview-img2img-grid .wide{grid-column:1/-1}}
 .preview-lightbox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:54px 18px 18px;background:rgba(5,5,8,.91);backdrop-filter:blur(4px);overflow:auto}
 .preview-lightbox.open{display:flex}
 .preview-lightbox.actual-size-mode{align-items:flex-start;justify-content:flex-start}
@@ -290,6 +307,13 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .preview-lightbox img.actual-size{max-width:none;max-height:none;cursor:zoom-out;margin:auto}
 .preview-lightbox-toolbar{position:fixed;top:10px;right:14px;z-index:1001;display:flex;gap:6px;align-items:center}
 .preview-lightbox-name{position:fixed;top:15px;left:16px;right:190px;color:#fff;font-family:var(--mono);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}
+.preview-compare-lightbox{position:fixed;inset:0;z-index:1002;display:none;flex-direction:column;padding:52px 16px 16px;background:rgba(5,5,8,.94);backdrop-filter:blur(4px)}
+.preview-compare-lightbox.open{display:flex}
+.preview-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0;flex:1}
+.preview-compare-pane{display:flex;min-width:0;min-height:0;flex-direction:column;gap:7px;padding:9px;border:1px solid rgba(255,255,255,.2);border-radius:var(--r);background:rgba(255,255,255,.05)}
+.preview-compare-label{color:#fff;font-weight:700;text-align:center}
+.preview-compare-pane img{display:block;width:100%;height:100%;min-height:0;object-fit:contain;background:#111;border-radius:var(--r2)}
+@media(max-width:760px){.preview-compare-grid{grid-template-columns:1fr;overflow:auto}.preview-compare-pane{min-height:45vh}}
 .preview-kv{display:grid;grid-template-columns:90px minmax(0,1fr);gap:4px 8px;font-size:11px;margin-top:8px;min-width:0;max-width:100%;overflow:hidden}
 .preview-kv b{font-family:var(--mono);color:var(--muted);font-weight:600}
 .preview-kv span{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
@@ -609,7 +633,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     <section class="workspace-card">
       <div class="sl" style="margin-top:0">Prompt Groups</div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        <input class="inp" id="group-name-inp" placeholder="グループ名（例: 仕事中の様子）" autocomplete="off" data-1p-ignore="true" data-lpignore="true" style="flex:1">
+        <input class="inp" id="group-label-inp" name="ps_group_label" placeholder="グループ名（例: 仕事中の様子）" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other" style="flex:1">
         <button class="btn primary" onclick="createPromptGroup()">作成</button>
       </div>
       <div class="clearable-input" style="margin-bottom:8px">
@@ -617,7 +641,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="input-clear-x" onclick="clearGroupListSearch()" title="Group検索欄をクリア" aria-label="Group検索欄をクリア">×</button>
       </div>
       <div class="group-folder-create">
-        <input class="inp" id="group-folder-name-inp" placeholder="整理Folder名（例: キャラクター）" autocomplete="off" data-1p-ignore="true" data-lpignore="true">
+        <input class="inp" id="group-folder-label-inp" name="ps_folder_label" placeholder="整理Folder名（例: キャラクター）" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
         <button class="btn secondary" onclick="createGroupFolder()">Folder作成</button>
       </div>
       <div style="margin-bottom:10px;padding:8px;border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface2)">
@@ -803,7 +827,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     <button class="btn secondary" onclick="switchTab('groups')">Groupsを開く</button>
   </div>
   <div class="row">
-    <input class="inp" id="assist-new-group-name" placeholder="新規Group名（例: 仕事中の様子）" style="flex:1">
+    <input class="inp" id="assist-new-group-label" name="ps_assist_group_label" placeholder="新規Group名（例: 仕事中の様子）" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other" style="flex:1">
     <button class="btn" onclick="createAssistGroup()">新規Group作成</button>
   </div>
 
@@ -1046,6 +1070,21 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   </div>
   <img id="preview-lightbox-image" alt="拡大画像" onclick="togglePreviewImageActualSize(event)">
 </div>
+<div id="preview-img2img-compare" class="preview-compare-lightbox" role="dialog" aria-modal="true" aria-label="Img2Img比較表示">
+  <div class="preview-lightbox-toolbar">
+    <button class="btn sm secondary" onclick="closePreviewImg2ImgCompare(event)">閉じる</button>
+  </div>
+  <div class="preview-compare-grid">
+    <div class="preview-compare-pane">
+      <div class="preview-compare-label">元画像</div>
+      <img id="preview-img2img-compare-source" alt="Img2Img元画像" onclick="openPreviewImg2ImgSourceZoom()" title="クリックして単独拡大">
+    </div>
+    <div class="preview-compare-pane">
+      <div class="preview-compare-label">生成結果</div>
+      <img id="preview-img2img-compare-result" alt="Img2Img生成結果" onclick="openPreviewImg2ImgZoom()" title="クリックして単独拡大">
+    </div>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -1128,6 +1167,9 @@ let compareRemixEntries = [], compareRemixResult = '';
 let previewImages = [], activePreviewId = null;
 let selectedPreviewImageIds = new Set();
 let previewSelectionMode = false, lastPreviewSelectedId = null;
+let previewImg2ImgSending = false;
+let previewPromptEditingId = null;
+let previewPromptEditDrafts = {};
 let imagePreviewThumbSize = 120;
 let previewForcedIds = null, previewForcedOrder = [], previewForcedLabel = "", previewForcedOrderMode = "score";
 let relatedSearchStrictness = "normal";
@@ -1569,8 +1611,8 @@ function _renderRegLive(parsed,newTags){
   document.getElementById('reg-live').innerHTML=
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
       <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">
-        <span style="color:var(--accent)">●</span> 新規 ${newTags.length}
-        <span style="color:var(--danger)">●</span> 重複 ${parsed.length-newTags.length}
+        <span style="color:var(--accent)">●</span> 新規 ${newTags.length}　
+        <span style="color:var(--danger)">●</span> 重複 ${parsed.length-newTags.length}　
         <span style="color:var(--accent2)">● 選択 ${selCount}</span></span>`+
     (newTags.length?`<span style="display:flex;gap:4px"><button class="btn sm" onclick="selAllReg()">全選択</button><button class="btn sm" onclick="deselAllReg()">全解除</button></span>`:'')
     +`</div><div class="reg-live-list">`
@@ -2364,6 +2406,9 @@ async function fetchDrawThingsOptionsForTest(url){
     throw err;
   }
 }
+function drawThingsProxyFallbackUrl(){
+  return location.protocol==='file:'?'http://127.0.0.1:8765/dtapi':'/dtapi';
+}
 async function testDrawThingsApi(){
   let url=normalizeDrawThingsApiUrl();
   saveDrawThingsApiUrl();
@@ -2377,12 +2422,12 @@ async function testDrawThingsApi(){
     toast('Draw Things APIに接続できたのだ');
   }catch(err){
     const firstMsg=drawThingsApiFetchErrorMessage(err);
-    const canProxy=(location.protocol==='http:'||location.protocol==='https:') && url!=='/dtapi';
+    const proxyUrl=drawThingsProxyFallbackUrl();
+    const canProxy=url!==proxyUrl;
     if(canProxy){
       drawThingsApiLog(`直接接続失敗: ${firstMsg}`,true);
-      drawThingsApiLog('CORS回避のため /dtapi proxy を試します…',true);
+      drawThingsApiLog(`CORS回避のため ${proxyUrl} を試します…`,true);
       try{
-        const proxyUrl='/dtapi';
         const {res,data}=await fetchDrawThingsOptionsForTest(proxyUrl);
         document.getElementById('dt-api-url').value=proxyUrl;
         localStorage.setItem(SK_DT_API_URL,proxyUrl);
@@ -2403,21 +2448,33 @@ async function testDrawThingsApi(){
   }
 }
 async function sendDrawThingsApiPayload(payload,index,total){
-  const url=normalizeDrawThingsApiUrl();
+  const configuredUrl=normalizeDrawThingsApiUrl();
   const size=payload.width&&payload.height?` ${payload.width}x${payload.height}`:' current-size';
   const lora=Array.isArray(payload.loras)?(payload.loras.length?` lora:${payload.loras.length}`:' lora:OFF'):' lora:current';
   drawThingsApiStatus(`送信中 ${index}/${total}${size}${lora}`);
   drawThingsApiLog(`[${index}/${total}] POST txt2img${size}${lora} :: ${payload.prompt.slice(0,110)}`,true);
-  const res=await fetch(drawThingsApiPath(url,'/sdapi/v1/txt2img'),{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-  });
+  const requestOptions={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
+  let usedUrl=configuredUrl;
+  let res;
+  try{
+    res=await fetch(drawThingsApiPath(configuredUrl,'/sdapi/v1/txt2img'),requestOptions);
+  }catch(directError){
+    const proxyUrl=drawThingsProxyFallbackUrl();
+    if(configuredUrl===proxyUrl) throw directError;
+    drawThingsApiLog(`直接送信失敗。${proxyUrl}へ自動切替します…`,true);
+    drawThingsApiStatus(`Proxyへ切替中 ${index}/${total}`);
+    res=await fetch(drawThingsApiPath(proxyUrl,'/sdapi/v1/txt2img'),requestOptions);
+    usedUrl=proxyUrl;
+    const input=document.getElementById('dt-api-url');
+    if(input) input.value=proxyUrl;
+    localStorage.setItem(SK_DT_API_URL,proxyUrl);
+  }
   const text=await res.text().catch(()=>'');
   if(!res.ok){
     const short=text.slice(0,500).replace(/\s+/g,' ');
     throw new Error(`HTTP ${res.status}${short?' - '+short:''}`);
   }
+  if(usedUrl!==configuredUrl) drawThingsApiLog(`Proxy送信OK: ${usedUrl}`,true);
   return text;
 }
 async function sendPromptsToDrawThingsApi(limit=null){
@@ -2951,7 +3008,7 @@ function groupFolderOptions(selectedId){
   return `<option value=""${!selectedId?' selected':''}>未整理</option>`+groupFolders.map(f=>`<option value="${escA(f.id)}"${f.id===selectedId?' selected':''}>${escH(f.name)}</option>`).join('');
 }
 function createGroupFolder(){
-  const input=document.getElementById('group-folder-name-inp');
+  const input=document.getElementById('group-folder-label-inp');
   const name=String(input?.value||'').trim();
   if(!name){toast('Folder名を入力してほしいのだ');return;}
   if(groupFolders.some(f=>f.name.toLowerCase()===name.toLowerCase())){toast('同名のFolderがあるのだ');return;}
@@ -3042,7 +3099,7 @@ function ensureGroup(){
   return g;
 }
 function createPromptGroup(){
-  const inp=document.getElementById('group-name-inp');
+  const inp=document.getElementById('group-label-inp');
   const name=(inp?.value||prompt('グループ名を入力してください','')||'').trim();
   if(!name){toast('グループ名を入力してほしいのだ');return;}
   createPromptGroupFromName(name);
@@ -3059,7 +3116,7 @@ function createPromptGroupFromName(name){
   return g;
 }
 function createAssistGroup(){
-  const inp=document.getElementById('assist-new-group-name');
+  const inp=document.getElementById('assist-new-group-label');
   const name=(inp?.value||'').trim();
   if(!name){toast('新規Group名を入力してほしいのだ');return;}
   const g=createPromptGroupFromName(name);
@@ -6131,7 +6188,16 @@ function renderPreviewDetail(){
   if(!item){box.innerHTML='<div class="group-empty">画像を選択すると情報を表示します。</div>';return;}
   const detailNote=item.lazyLoaded&&!item.detailsLoaded?'<div class="group-empty">高速読み込み中: この画像のメタデータはまだ未解析です。必要なら下のボタンで読み込めます。</div>':'';
   const meta=item.meta||{};
-  const lora=Array.isArray(meta.lora)?meta.lora.map(x=>`${x.model||''}${x.weight!=null?` (${x.weight})`:''}`).join(', '):'';
+  const loraEntries=Array.isArray(meta.lora)?meta.lora:(Array.isArray(meta.loras)?meta.loras:[]);
+  const lora=loraEntries.map(x=>`${x.model||x.file||x.name||''}${x.weight!=null&&x.weight!==''?` (${formatPreviewLoraWeight(x.weight)})`:''}`).join(', ');
+  const loraDetails=loraEntries.length?loraEntries.map((x,index)=>{
+    const file=String(x.file||x.model||x.name||`LoRA ${index+1}`);
+    const weight=x.weight!=null&&x.weight!==''?formatPreviewLoraWeight(x.weight):'—';
+    const mode=String(x.mode||'');
+    return `<div class="preview-lora-row"><div class="preview-lora-file">${escH(file)}</div><div class="preview-lora-value">Weight ${escH(weight)}</div><div class="group-meta">${escH(mode)}</div></div>`;
+  }).join(''):'<div class="group-empty" style="padding:6px 0">この画像にはLoRA情報がありません。</div>';
+  const promptEditing=previewPromptEditingId===item.id;
+  const promptDraft=Object.prototype.hasOwnProperty.call(previewPromptEditDrafts,item.id)?previewPromptEditDrafts[item.id]:String(item.prompt||'');
   box.innerHTML=`<div class="preview-image-stage">
       <img class="preview-detail-img" src="${escA(item.url)}" alt="${escA(item.name)}" onclick="openPreviewImageZoom()" title="クリックして拡大">
       <button class="btn sm preview-image-zoom-btn" onclick="openPreviewImageZoom()" title="画像を拡大表示">拡大</button>
@@ -6151,8 +6217,44 @@ function renderPreviewDetail(){
       <b>Scale</b><span>${escH(meta.scale||meta.guidance_scale||'')}</span>
       <b>LoRA</b><span>${escH(lora)}</span>
     </div>
+    <details class="preview-img2img-card" id="preview-img2img-card" ${previewImg2ImgIsOpen()?'open':''} ontoggle="savePreviewImg2ImgOpen(this.open)">
+      <summary>
+        <span><b>Img2Img API</b><span class="mini-help" style="margin-left:8px">表示画像を起点に再生成</span></span>
+        <span class="count-badge">入力 ${escH(item.width&&item.height?`${item.width}x${item.height}`:'サイズ未取得')}</span>
+      </summary>
+      <div class="preview-img2img-body">
+      <div class="mini-help" style="margin-top:8px">表示画像をDraw Thingsへ直接送って再生成します。Steps / CFG / Seedが空欄ならDraw Things側の現在設定を使います。</div>
+      <div class="preview-img2img-grid" style="margin-top:8px">
+        <input class="inp" id="preview-img2img-strength" type="number" min="0" max="1" step="0.05" value="0.2" placeholder="Strength">
+        <input class="inp" id="preview-img2img-steps" type="number" min="2" step="1" placeholder="Steps（空欄）">
+        <input class="inp" id="preview-img2img-cfg" type="number" min="0" step="0.1" placeholder="CFG（空欄）">
+        <input class="inp wide" id="preview-img2img-seed" type="number" step="1" placeholder="Seed（空欄ならDraw Things設定）">
+      </div>
+      <textarea class="preview-prompt-box" id="preview-img2img-prompt" style="margin-top:6px;min-height:82px" placeholder="Img2Img Prompt">${escH(item.prompt||'')}</textarea>
+      <textarea class="preview-prompt-box" id="preview-img2img-negative" style="margin-top:6px;min-height:58px" placeholder="Negative Prompt">${escH(item.negative||'')}</textarea>
+      <div class="row" style="margin-top:7px">
+        <button class="btn sm related" id="preview-img2img-send" onclick="sendActivePreviewImageToImg2Img()">この画像を起点に生成</button>
+        <span class="group-meta" id="preview-img2img-status">未送信</span>
+      </div>
+      <div class="preview-img2img-result" id="preview-img2img-result">
+        <div class="sl" style="margin-top:0">Generated Result</div>
+        <img id="preview-img2img-result-image" alt="Img2Img generated result" onclick="openPreviewImg2ImgZoom()" title="クリックして拡大">
+        <div class="row" style="margin-top:7px">
+          <button class="btn sm related" onclick="openPreviewImg2ImgZoom()">生成結果を拡大</button>
+          <button class="btn sm related" onclick="openPreviewImg2ImgCompare()">元画像と比較</button>
+          <button class="btn sm related" onclick="downloadPreviewImg2ImgResult()">生成画像をDownload</button>
+          <button class="btn sm secondary" onclick="clearPreviewImg2ImgResult()">結果をClear</button>
+        </div>
+      </div>
+      </div>
+    </details>
     <div class="sl">Positive Prompt</div>
-    <textarea class="preview-prompt-box" id="image-preview-prompt-text" readonly>${escH(item.prompt||'')}</textarea>
+    <textarea class="preview-prompt-box${promptEditing?' editing':''}" id="image-preview-prompt-text" ${promptEditing?'':'readonly'} oninput="updatePreviewPromptDraft(this.value)">${escH(promptDraft)}</textarea>
+    <div class="row" style="margin-top:6px">
+      ${promptEditing?`<button class="btn sm primary" onclick="sendEditedPreviewPromptToCompose()">編集内容を1行化してComposeへ</button>
+      <button class="btn sm secondary" onclick="cancelPreviewPromptEdit()">編集を取消</button>`:`<button class="btn sm secondary" onclick="startPreviewPromptEdit()">Promptを編集</button>`}
+      <span class="group-meta">${promptEditing?'編集中（PNGメタデータは変更されません）':'作業用コピーとして編集できます'}</span>
+    </div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:6px;align-items:center">
       <div class="clearable-input">
         <input class="inp" id="image-preview-snippet" placeholder="任意の検索部分。Prompt欄で文字選択して下のボタンも使えます">
@@ -6173,8 +6275,7 @@ function renderPreviewDetail(){
       <button class="btn sm secondary" onclick="sendPreviewSnippetToGroupsSearch()">抽出部分でGroups検索</button>
       <button class="btn sm secondary" onclick="registerPreviewSnippetToLibrary()">抽出部分をLibrary登録</button>
       <button class="btn sm secondary" onclick="sendPreviewPromptToGroupsSearch()">全文をGroups検索へ</button>
-      <button class="btn sm secondary" onclick="sendPreviewPromptToCompose()">Composeへ</button>
-      <button class="btn sm secondary" onclick="sendPreviewPromptOneLineToCompose()">1行化してComposeへ</button>
+      <button class="btn sm secondary" onclick="sendPreviewPromptOneLineToCompose()">Composeへ（1行化されます）</button>
       <button class="btn sm secondary" onclick="sendPreviewPromptToCompareRemix()">Compare & Remixへ</button>
     </div>
     <div class="related-manual-row" style="margin-top:8px">
@@ -6191,7 +6292,7 @@ function renderPreviewDetail(){
       <div class="group-meta" style="margin-bottom:5px">Group登録</div>
       <div style="display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr);gap:6px;align-items:center">
         <select class="inp" id="preview-group-select">${previewGroupSelectOptions()}</select>
-        <input class="inp" id="preview-new-group-name" placeholder="新規Group名（空なら左の既存Groupへ登録）">
+        <input class="inp" id="preview-new-group-label" name="ps_preview_group_label" placeholder="新規Group名（空なら左の既存Groupへ登録）" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn sm primary" onclick="addPreviewPromptToGroupChoice(false)">PromptをGroup登録</button>
@@ -6202,9 +6303,137 @@ function renderPreviewDetail(){
     <div id="preview-group-matches"></div>
     <div class="sl">Negative Prompt</div>
     <textarea class="preview-prompt-box" readonly>${escH(item.negative||'')}</textarea>
-    <div class="row"><button class="btn sm" onclick="copyPreviewNegative()">Negative Copy</button><button class="btn sm" onclick="copyPreviewSeed()">Seed Copy</button><button class="btn sm secondary" onclick="registerPreviewLorasToLibrary()">LoRAをLibrary登録</button><button class="btn sm secondary" onclick="copyPreviewMetadata()">Metadata Copy</button></div>
+    <div class="row"><button class="btn sm" onclick="copyPreviewNegative()">Negative Copy</button><button class="btn sm" onclick="copyPreviewSeed()">Seed Copy</button><button class="btn sm secondary" onclick="copyPreviewMetadata()">Metadata Copy</button></div>
+    <div class="preview-lora-card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="sl" style="margin:0">LoRA Settings</div>
+        ${loraEntries.length?'<button class="btn sm primary" onclick="registerPreviewLorasToLibrary()">表示LoRAをLibrary登録</button>':''}
+      </div>
+      <div class="mini-help">この生成画像のPNGメタデータから取得したLoRA設定です。</div>
+      ${loraDetails}
+    </div>
     <div class="sl">Raw Metadata</div>
     <div class="preview-meta-box">${escH(item.metadataRaw||'メタデータなし / PNG以外は現在ファイル情報のみ表示します。')}</div>`;
+}
+
+function previewImg2ImgIsOpen(){
+  return localStorage.getItem('promptStudio.previewImg2ImgOpen')==='1';
+}
+function savePreviewImg2ImgOpen(open){
+  localStorage.setItem('promptStudio.previewImg2ImgOpen',open?'1':'0');
+}
+function setPreviewImg2ImgStatus(message,type){
+  const el=document.getElementById('preview-img2img-status');
+  if(!el) return;
+  el.textContent=message||'';
+  el.style.color=type==='ok'?'var(--success)':type==='err'?'var(--danger)':'var(--muted)';
+}
+function previewImg2ImgNumber(id,label,{min=null,max=null,integer=false}={}){
+  const raw=String(document.getElementById(id)?.value||'').trim();
+  if(!raw) return null;
+  const value=Number(raw);
+  if(!Number.isFinite(value)) throw new Error(`${label}が数値ではありません`);
+  if(min!=null&&value<min) throw new Error(`${label}は${min}以上にしてください`);
+  if(max!=null&&value>max) throw new Error(`${label}は${max}以下にしてください`);
+  return integer?Math.floor(value):value;
+}
+async function previewItemBase64(item){
+  let blob=item?.file||null;
+  if(!blob&&item?.url){
+    const res=await fetch(item.url);
+    if(!res.ok) throw new Error('表示画像を読み込めませんでした');
+    blob=await res.blob();
+  }
+  if(!blob) throw new Error('送信する画像ファイルがありません');
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||'').split(',',2)[1]||'');
+    reader.onerror=()=>reject(new Error('画像のBase64変換に失敗しました'));
+    reader.readAsDataURL(blob);
+  });
+}
+async function sendActivePreviewImageToImg2Img(){
+  if(previewImg2ImgSending){toast('Img2Imgを送信中なのだ');return;}
+  const item=activePreviewImage();
+  if(!item){toast('送信する画像を選択してほしいのだ');return;}
+  const prompt=String(document.getElementById('preview-img2img-prompt')?.value||'').trim();
+  if(!prompt){toast('Img2Img Promptを入力してほしいのだ');return;}
+  let strength,steps,cfg,seed;
+  try{
+    strength=previewImg2ImgNumber('preview-img2img-strength','Strength',{min:0,max:1});
+    steps=previewImg2ImgNumber('preview-img2img-steps','Steps',{min:2,integer:true});
+    cfg=previewImg2ImgNumber('preview-img2img-cfg','CFG',{min:0});
+    seed=previewImg2ImgNumber('preview-img2img-seed','Seed',{integer:true});
+  }catch(err){toast(err.message);setPreviewImg2ImgStatus(err.message,'err');return;}
+  if(strength==null) strength=.2;
+  if(!item.width||!item.height){toast('入力画像のサイズを取得できません');return;}
+  if(!confirm(`${item.width}x${item.height} / Strength ${strength}${steps!=null?` / Steps ${steps}`:' / StepsはDraw Things設定'}でImg2Img生成します。よろしいですか？`)) return;
+  const button=document.getElementById('preview-img2img-send');
+  previewImg2ImgSending=true;
+  if(button) button.disabled=true;
+  setPreviewImg2ImgStatus('画像を変換中…');
+  try{
+    const imageBase64=await previewItemBase64(item);
+    const payload={
+      prompt,
+      negative_prompt:String(document.getElementById('preview-img2img-negative')?.value||''),
+      init_images:[imageBase64],
+      strength,
+      width:item.width,
+      height:item.height,
+      batch_count:1,
+      batch_size:1
+    };
+    if(steps!=null) payload.steps=steps;
+    if(cfg!=null) payload.guidance_scale=cfg;
+    if(seed!=null) payload.seed=seed;
+    setPreviewImg2ImgStatus('Draw Thingsで生成中…');
+    const requestOptions={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
+    const configuredUrl=normalizeDrawThingsApiUrl();
+    let usedUrl=configuredUrl;
+    let res;
+    try{
+      res=await fetch(drawThingsApiPath(configuredUrl,'/sdapi/v1/img2img'),requestOptions);
+    }catch(directError){
+      const localProxy=drawThingsProxyFallbackUrl();
+      if(configuredUrl===localProxy) throw directError;
+      setPreviewImg2ImgStatus('CORS回避用ローカルサーバーへ切替中…');
+      res=await fetch(drawThingsApiPath(localProxy,'/sdapi/v1/img2img'),requestOptions);
+      usedUrl=localProxy;
+    }
+    const text=await res.text().catch(()=>'');
+    if(!res.ok) throw new Error(`HTTP ${res.status}${text?' - '+text.slice(0,500).replace(/\s+/g,' '):''}`);
+    const data=JSON.parse(text||'{}');
+    const raw=String(data?.images?.[0]||'').split(',').pop();
+    if(!raw) throw new Error('Draw Thingsから生成画像が返りませんでした');
+    const image=document.getElementById('preview-img2img-result-image');
+    const result=document.getElementById('preview-img2img-result');
+    if(image) image.src=`data:image/png;base64,${raw}`;
+    if(result) result.style.display='block';
+    setPreviewImg2ImgStatus(`生成完了${usedUrl!==configuredUrl?'（local proxy）':''}`,'ok');
+    toast('Preview画像からImg2Img生成できたのだ');
+  }catch(err){
+    const message=drawThingsApiFetchErrorMessage(err);
+    setPreviewImg2ImgStatus(`失敗: ${message}`,'err');
+    toast(`Img2Img失敗: ${message}`);
+  }finally{
+    previewImg2ImgSending=false;
+    if(button) button.disabled=false;
+  }
+}
+function downloadPreviewImg2ImgResult(){
+  const src=document.getElementById('preview-img2img-result-image')?.src||'';
+  if(!src.startsWith('data:image/')){toast('ダウンロードする生成結果がないのだ');return;}
+  const base=(activePreviewImage()?.name||'preview').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'_').slice(0,70)||'preview';
+  const a=document.createElement('a');a.href=src;a.download=`${base}_img2img.png`;document.body.appendChild(a);a.click();a.remove();
+  toast('Img2Img生成画像をDownloadしたのだ');
+}
+function clearPreviewImg2ImgResult(){
+  const image=document.getElementById('preview-img2img-result-image');
+  const result=document.getElementById('preview-img2img-result');
+  if(image) image.removeAttribute('src');
+  if(result) result.style.display='none';
+  setPreviewImg2ImgStatus('未送信');
 }
 
 function previewGroupMatchStrictnessValue(){
@@ -6325,6 +6554,42 @@ function openGroupPromptFromPreviewMatch(groupId,promptId){
 
 function clearImagePreviewSearch(){const el=document.getElementById('image-preview-search');if(el) el.value='';renderPreviewImages();}
 function clearPreviewSnippet(){const el=document.getElementById('image-preview-snippet');if(el) el.value='';}
+function startPreviewPromptEdit(){
+  const item=activePreviewImage();
+  if(!item){toast('編集する画像を選択してほしいのだ');return;}
+  if(!Object.prototype.hasOwnProperty.call(previewPromptEditDrafts,item.id)) previewPromptEditDrafts[item.id]=String(item.prompt||'');
+  previewPromptEditingId=item.id;
+  renderPreviewDetail();
+  const el=document.getElementById('image-preview-prompt-text');
+  if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}
+}
+function updatePreviewPromptDraft(value){
+  const item=activePreviewImage();
+  if(item&&previewPromptEditingId===item.id) previewPromptEditDrafts[item.id]=String(value||'');
+}
+function cancelPreviewPromptEdit(){
+  const item=activePreviewImage();
+  if(!item) return;
+  delete previewPromptEditDrafts[item.id];
+  if(previewPromptEditingId===item.id) previewPromptEditingId=null;
+  renderPreviewDetail();
+  toast('Preview Promptの編集を取り消したのだ');
+}
+function sendEditedPreviewPromptToCompose(){
+  const item=activePreviewImage();
+  if(!item){toast('Composeへ送る画像を選択してほしいのだ');return;}
+  const text=String(document.getElementById('image-preview-prompt-text')?.value||previewPromptEditDrafts[item.id]||'').trim();
+  if(!text){toast('Composeへ送るPromptが空なのだ');return;}
+  previewPromptEditDrafts[item.id]=text;
+  const output=oneLineExistingPromptText(text);
+  if(!output){toast('Composeへ送れるPromptがないのだ');return;}
+  document.getElementById('b-pos').value=output;
+  document.getElementById('b-neg').value=previewComposeNegativeValue(item);
+  document.getElementById('batch-width').value='';
+  document.getElementById('batch-height').value='';
+  switchTab('compose');buildCode();updateComposeSummary();
+  toast('Previewで編集したPromptを1行化してComposeへ送ったのだ');
+}
 function normalizePreviewSearchText(s){return String(s||'').replace(/,+\s*/g,' ').replace(/\s+/g,' ').trim();}
 function selectedPreviewPromptText(){
   const ta=document.getElementById('image-preview-prompt-text');
@@ -6393,7 +6658,7 @@ function addPreviewPromptToNewGroup(){
 function addPreviewPromptToGroupChoice(asOneLine){
   const item=activePreviewImage();
   if(!item?.prompt){toast('Group登録するPromptがないのだ');return;}
-  const newName=String(document.getElementById('preview-new-group-name')?.value||'').trim();
+  const newName=String(document.getElementById('preview-new-group-label')?.value||'').trim();
   let g=null;
   if(newName){
     g=createPromptGroupFromName(newName);
@@ -6412,13 +6677,13 @@ function addPreviewPromptToGroupChoice(asOneLine){
     source:asOneLine?'preview-image-oneline':'preview-image'
   },{silent:true});
   activeGroupId=g.id;
-  const nameEl=document.getElementById('preview-new-group-name');
+  const nameEl=document.getElementById('preview-new-group-label');
   if(nameEl) nameEl.value='';
   saveGroups(); renderGroups(); renderGroupSelectors(); renderPreviewDetail();
   toast(asOneLine?`画像Promptを1行化してGroup「${g.name}」へ登録したのだ`:`画像PromptをGroup「${g.name}」へ登録したのだ`);
 }
 function resolvePreviewTargetGroup(){
-  const newName=String(document.getElementById('preview-new-group-name')?.value||'').trim();
+  const newName=String(document.getElementById('preview-new-group-label')?.value||'').trim();
   if(newName) return createPromptGroupFromName(newName);
   const id=document.getElementById('preview-group-select')?.value;
   return promptGroups.find(x=>x.id===id)||activeGroup()||ensureGroup();
@@ -6465,7 +6730,7 @@ async function addSelectedPreviewPromptsToGroupOneLine(){
     added++;
   }
   activeGroupId=g.id;
-  const nameEl=document.getElementById('preview-new-group-name');
+  const nameEl=document.getElementById('preview-new-group-label');
   if(nameEl) nameEl.value='';
   selectedPreviewImageIds.clear();
   saveGroups(); renderGroups(); renderGroupSelectors(); renderPreviewImages(); renderPreviewDetail();
@@ -6510,19 +6775,52 @@ function downloadActivePreviewImage(){
 }
 function openPreviewImageZoom(){
   const item=activePreviewImage();
+  if(!item?.url){toast('拡大する表示画像がないのだ');return;}
+  openPreviewZoomSource(item.url,item.name||'拡大画像');
+}
+function openPreviewZoomSource(src,nameText){
   const lightbox=document.getElementById('preview-lightbox');
   const image=document.getElementById('preview-lightbox-image');
-  if(!item?.url||!lightbox||!image){toast('拡大する表示画像がないのだ');return;}
-  image.src=item.url;
-  image.alt=item.name||'拡大画像';
+  if(!src||!lightbox||!image){toast('拡大する画像がないのだ');return;}
+  image.src=src;
+  image.alt=nameText||'拡大画像';
   image.classList.remove('actual-size');
   lightbox.classList.remove('actual-size-mode');
   const name=document.getElementById('preview-lightbox-name');
-  if(name){name.textContent=item.name||'';name.title=item.name||'';}
+  if(name){name.textContent=nameText||'';name.title=nameText||'';}
   const sizeButton=document.getElementById('preview-lightbox-size');
   if(sizeButton) sizeButton.textContent='100%';
   lightbox.classList.add('open');
   document.body.style.overflow='hidden';
+}
+function openPreviewImg2ImgZoom(){
+  const src=document.getElementById('preview-img2img-result-image')?.src||'';
+  if(!src.startsWith('data:image/')){toast('拡大するImg2Img生成結果がないのだ');return;}
+  closePreviewImg2ImgCompare();
+  openPreviewZoomSource(src,'Img2Img生成結果');
+}
+function openPreviewImg2ImgSourceZoom(){
+  const item=activePreviewImage();
+  if(!item?.url){toast('拡大する元画像がないのだ');return;}
+  closePreviewImg2ImgCompare();
+  openPreviewZoomSource(item.url,item.name||'Img2Img元画像');
+}
+function openPreviewImg2ImgCompare(){
+  const item=activePreviewImage();
+  const resultSrc=document.getElementById('preview-img2img-result-image')?.src||'';
+  const modal=document.getElementById('preview-img2img-compare');
+  const source=document.getElementById('preview-img2img-compare-source');
+  const result=document.getElementById('preview-img2img-compare-result');
+  if(!item?.url||!resultSrc.startsWith('data:image/')||!modal||!source||!result){toast('比較する元画像または生成結果がないのだ');return;}
+  source.src=item.url;
+  result.src=resultSrc;
+  modal.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePreviewImg2ImgCompare(event){
+  event?.stopPropagation();
+  document.getElementById('preview-img2img-compare')?.classList.remove('open');
+  if(!document.getElementById('preview-lightbox')?.classList.contains('open')) document.body.style.overflow='';
 }
 function closePreviewImageZoom(event){
   const lightbox=document.getElementById('preview-lightbox');
@@ -6546,6 +6844,10 @@ function togglePreviewImageActualSize(event){
 }
 function setupPreviewImageZoom(){
   document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&document.getElementById('preview-img2img-compare')?.classList.contains('open')){
+      closePreviewImg2ImgCompare();
+      return;
+    }
     if(event.key==='Escape'&&document.getElementById('preview-lightbox')?.classList.contains('open')){
       closePreviewImageZoom();
     }
@@ -6563,10 +6865,10 @@ async function downloadSelectedPreviewImages(){
   toast(`${started}件の選択画像をDownload開始したのだ`);
 }
 function clearPreviewObjectUrls(){previewImages.forEach(x=>{try{URL.revokeObjectURL(x.url);}catch(e){}});}
-function clearPreviewImages(){clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Previewをクリアしたのだ');}
+function clearPreviewImages(){clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Previewをクリアしたのだ');}
 function registerPreviewLorasToLibrary(){
   const item=activePreviewImage();
-  const loras=Array.isArray(item?.meta?.lora)?item.meta.lora:[];
+  const loras=Array.isArray(item?.meta?.lora)?item.meta.lora:(Array.isArray(item?.meta?.loras)?item.meta.loras:[]);
   if(!loras.length){toast('この画像にLoRA情報が見つからないのだ');return;}
   let added=0, updated=0;
   loras.forEach(src=>{
@@ -6611,11 +6913,15 @@ function previewSizeParts(item){
 }
 function previewScaleValue(meta){return previewMetaValue(meta,['scale','guidance_scale','guidanceScale']);}
 function previewStepsValue(meta){return previewMetaValue(meta,['steps','step']);}
+function formatPreviewLoraWeight(value){
+  const number=Number(value);
+  return Number.isFinite(number)?number.toFixed(2):String(value??'');
+}
 function previewLoraSummary(meta,mode){
   const arr=Array.isArray(meta?.lora)?meta.lora:(Array.isArray(meta?.loras)?meta.loras:[]);
   if(!arr.length) return '';
-  if(mode==='lines') return arr.map((x,i)=>`- ${x.model||x.file||x.name||''}${x.weight!=null&&x.weight!==''?` : ${x.weight}`:''}`).join('\n');
-  return arr.map(x=>`${x.model||x.file||x.name||''}${x.weight!=null&&x.weight!==''?`:${x.weight}`:''}`).join(', ');
+  if(mode==='lines') return arr.map((x,i)=>`- ${x.model||x.file||x.name||''}${x.weight!=null&&x.weight!==''?` : ${formatPreviewLoraWeight(x.weight)}`:''}`).join('\n');
+  return arr.map(x=>`${x.model||x.file||x.name||''}${x.weight!=null&&x.weight!==''?`:${formatPreviewLoraWeight(x.weight)}`:''}`).join(', ');
 }
 function previewOneLinePromptWithSize(item){
   const prompt=oneLineExistingPromptText(item?.prompt||'');
@@ -6709,14 +7015,6 @@ function sendPreviewPromptToGroupsSearch(){
   if(el) el.value=item.prompt.replace(/\s+/g,' ').trim();
   refreshGroupPromptHighlights(true); renderGroupSearchTerms();
   toast('PromptをGroups検索欄へ送ったのだ');
-}
-function sendPreviewPromptToCompose(){
-  const item=activePreviewImage(); if(!item?.prompt){toast('Composeへ送るPromptがないのだ');return;}
-  document.getElementById('b-pos').value=item.prompt;
-  document.getElementById('b-neg').value=previewComposeNegativeValue(item);
-  document.getElementById('batch-width').value=''; document.getElementById('batch-height').value='';
-  switchTab('compose'); buildCode(); updateComposeSummary();
-  toast('PromptをComposeへ送ったのだ');
 }
 function sendPreviewPromptOneLineToCompose(){
   const item=activePreviewImage();
