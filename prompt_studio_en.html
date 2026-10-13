@@ -1011,7 +1011,6 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <div class="preview-toolbar">
     <button class="btn primary" onclick="selectPreviewFolder()">Select image folder</button>
     <button class="btn secondary" id="preview-load-cancel" hidden onclick="cancelPreviewFileLoad()">Stop Loading</button>
-    <span class="group-meta" id="preview-load-progress" aria-live="polite"></span>
     <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="loadPreviewFiles([...this.files])">
     <div class="clearable-input" style="flex:1;min-width:220px">
       <input class="inp" id="image-preview-search" placeholder="Metadata search: portrait / ramen / seed / model..." oninput="renderPreviewImages()">
@@ -1032,7 +1031,10 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <option value="image-area-asc">Image Size Smallest</option>
     </select>
     <button class="btn secondary" id="image-preview-forced-clear" onclick="clearPreviewForcedFilter()" style="display:none">Remove related filtering</button>
-    <button class="btn secondary" onclick="clearPreviewImages()">Clear</button>
+    <div class="preview-load-actions" style="display:inline-flex;align-items:center;gap:6px;flex:0 1 250px;min-width:0;max-width:100%">
+      <button class="btn secondary" onclick="clearPreviewImages()" style="flex-shrink:0">Clear</button>
+      <span class="group-meta" id="preview-load-progress" aria-live="polite" style="display:block;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+    </div>
   </div>
   <div class="preview-toolbar" style="margin-top:-2px">
     <span class="count-badge">Thumb</span>
