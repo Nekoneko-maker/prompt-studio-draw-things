@@ -210,6 +210,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-library-controls{display:grid;grid-template-columns:minmax(150px,1fr) minmax(120px,.7fr) auto auto auto;gap:6px;align-items:center}
 .group-library-tags{max-height:180px;overflow:auto;margin-top:8px;padding:7px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface)}
 .groups-sticky-tools{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin:10px 0 10px}
+.group-action-section{border-top:1px solid var(--border2);margin-top:8px;padding-top:8px}
+.group-action-section summary{cursor:pointer;font-size:12px;font-weight:600;padding:4px 0}
+.group-action-section .row{flex-wrap:wrap;margin-top:6px}
 .clearable-input{position:relative;min-width:0}
 .clearable-input .inp{width:100%;padding-right:28px}
 .input-clear-x{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:16px;line-height:18px;cursor:pointer;padding:0}
@@ -271,7 +274,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 /* ── Preview ── */
 .preview-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,.9fr);gap:12px;align-items:start}
 .preview-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-.preview-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--preview-thumb-size,120px),1fr));gap:8px;max-height:70vh;overflow:auto;padding:4px}
+.preview-thumbs{display:block;height:70vh;max-height:780px;min-height:220px;overflow:auto;padding:4px;contain:layout paint}
+.preview-virtual-spacer{position:relative;width:100%}.preview-virtual-window{position:absolute;left:4px;right:4px;display:grid;gap:8px;align-items:stretch}.preview-virtual-window .preview-card{min-height:0;overflow:hidden}
 .preview-card{position:relative;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);padding:6px;cursor:pointer;transition:all .12s;min-width:0;overflow:hidden}
 .preview-card:hover{border-color:var(--accent)}
 .preview-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -324,7 +328,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .preview-kv span{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 .preview-meta-box{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:180px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:8px;font-family:var(--mono);font-size:10px;line-height:1.45;max-width:100%;box-sizing:border-box}
 .preview-prompt-box{width:100%;min-height:96px;font-size:11px;line-height:1.55}
-@media(max-width:980px){.preview-grid{grid-template-columns:1fr}.preview-thumbs{max-height:none}}
+@media(max-width:980px){.preview-grid{grid-template-columns:1fr}.preview-thumbs{max-height:70vh}}
 
 /* ── Misc ── */
 .count-badge{font-family:var(--mono);font-size:10px;color:var(--muted);padding:3px 0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
@@ -693,6 +697,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         </div>
         <div class="group-meta">Comma-separated is AND search. Extract prompts from all groups.</div>
       </div>
+      <div class="row" style="margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn sm secondary" onclick="openGroupPromptTransfer('tags')">Tag Matches → Group</button>
+        <button class="btn sm secondary" onclick="openGroupPromptTransfer('selected')">Selected Prompts → Group</button>
+        <button class="btn sm secondary" onclick="openGroupPromptTransfer('group')">Entire Active Group → Group</button>
+      </div>
+      <div id="group-transfer-panel" hidden style="padding:10px;margin-bottom:10px;border:1px solid var(--border2);border-radius:var(--r2)"></div>
+      <button class="btn sm secondary" onclick="exportSelectedGroups()" style="margin-bottom:8px">Export Selected Groups JSON</button>
+      <div class="group-meta" style="margin-bottom:8px">Group-only files import as copies; existing data is retained.</div>
       <div id="group-list"></div>
     </section>
     <section class="workspace-card">
@@ -702,6 +714,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
           <div id="group-detail-title" style="font-size:13px;color:var(--muted);margin-top:2px">Select a group</div>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn sm secondary" onclick="openGroupPromptTransfer('group')">Move / Copy to Group</button>
           <button class="btn sm secondary" onclick="copyActiveGroupBatch()">Copy Batch</button>
           <button class="btn sm" onclick="duplicateActiveGroup()">Duplicate</button>
           <button class="btn sm" onclick="renameActiveGroup()">Rename</button>
@@ -725,17 +738,24 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       </div>
       <div class="divider"></div>
       <div class="groups-sticky-tools">
-      <div class="sl" style="margin-top:0">Batch edit selected prompts</div>
+      <div class="sl">Prompt Actions</div>
       <div class="row">
         <button class="btn sm" onclick="selectAllGroupPrompts(true)">Select All</button>
         <button class="btn sm" onclick="selectAllGroupPrompts(false)">Deselect</button>
         <button class="btn sm" onclick="clearAllGroupPromptSelections()">Deselect all Groups</button>
+      </div>
+      <details class="group-action-section" open><summary>Send to Compose</summary><div class="row">
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompose()">Send selections to Compose</button>
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToComposeAppend()">Append selections to Compose</button>
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompareRemix()">To Compare & Remix</button>
-        <button class="btn sm" onclick="clearAllPromptLoraOffFlags()">Clear Per-Prompt LoRA</button>
+      </div></details>
+      <details class="group-action-section" open><summary>Review Images</summary><div class="row">
         <button class="btn sm related" onclick="showRelatedImagesForSelectedPrompts()">Related Images in Selection Order</button>
         <button class="btn sm related" onclick="showTopScoreImagesForSelectedPrompts()">Top score image</button>
+      </div></details>
+      <details class="group-action-section"><summary>Organize / Merge / Duplicate Check</summary><div class="row">
+        <button class="btn sm secondary" onclick="openGroupPromptTransfer('selected')">Selected → Group</button>
+        <button class="btn sm" onclick="clearAllPromptLoraOffFlags()">Clear Per-Prompt LoRA</button>
         <button class="btn sm primary" onclick="showAllGroupDuplicateCheck()">Duplicate check</button>
         <button class="btn sm primary" onclick="showCrossGroupDuplicateCheck()">Cross-Group Duplicates</button>
         <button class="btn sm secondary" onclick="showSelectedGroupDuplicateCheck()">Check only for selected items</button>
@@ -743,7 +763,23 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn sm merge" onclick="copyCombinedSelectedGroupPrompts()">Copy Combined Selection</button>
         <button class="btn sm merge" onclick="sendCombinedSelectedGroupPromptsToCompose()">Send merge to Compose</button>
         <button class="btn sm merge" onclick="addCombinedSelectedGroupPromptsToGroup()">Add merge to Group</button>
-      </div>
+      </div></details>
+      <details class="group-action-section"><summary>Random Sampling / Generation Checks</summary>
+        <div class="row" style="flex-wrap:wrap">
+          <input class="inp" id="group-random-prompt-count" type="number" min="1" value="10" style="max-width:90px" aria-label="Count">
+          <label><input type="checkbox" id="group-random-exclude-sampled" checked>Exclude sampled this session</label>
+          <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(false,true)">All Remaining → Compose</button>
+          <button class="btn" onclick="sampledGroupPrompts.clear();toast(GROUP_TRANSFER_EN?'Sampling history cleared.':'抽出履歴を解除しました')">Reset Sampling</button>
+          <label><input type="checkbox" id="group-random-only-pending" checked>Not generated / changed only</label>
+          <label><input type="checkbox" id="group-random-use-sizes">Random sizes</label>
+          <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(false)">Sample → Compose</button>
+          <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(true)">Sample → Append</button>
+        </div><div class="row">
+          <button class="btn" onclick="markSelectedPromptsGenerated(true)">Mark Generated</button>
+          <button class="btn" onclick="markSelectedPromptsGenerated(false)">Clear Generated</button>
+          <select class="inp" id="group-generation-filter" onchange="renderGroups()" style="max-width:200px"><option value="all">All statuses</option><option value="pending">Not generated / changed</option><option value="done">Generated</option></select>
+        </div>
+      </details>
       <div id="group-cross-select-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
       <div style="display:grid;grid-template-columns:minmax(150px,1.4fr) 80px 80px auto;gap:6px;margin-top:8px;align-items:center">
         <select class="inp" id="group-send-size-preset" onchange="applySizePresetToInputs(this.value,'group-send-width','group-send-height')"></select>
@@ -974,6 +1010,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <div class="panel-intro">This is where you load generated images from a folder, search for Draw Things PNG metadata.</div>
   <div class="preview-toolbar">
     <button class="btn primary" onclick="selectPreviewFolder()">Select image folder</button>
+    <button class="btn secondary" id="preview-load-cancel" hidden onclick="cancelPreviewFileLoad()">Stop Loading</button>
+    <span class="group-meta" id="preview-load-progress" aria-live="polite"></span>
     <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="loadPreviewFiles([...this.files])">
     <div class="clearable-input" style="flex:1;min-width:220px">
       <input class="inp" id="image-preview-search" placeholder="Metadata search: portrait / ramen / seed / model..." oninput="renderPreviewImages()">
@@ -1002,6 +1040,20 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     <span class="count-badge" id="image-preview-thumb-label">120px</span>
     <span class="count-badge" id="image-preview-selected-status">0 selected</span>
     <button class="btn sm secondary" id="image-preview-selection-mode" onclick="togglePreviewSelectionMode()">Selection Mode OFF</button>
+    <details style="flex-basis:100%;margin:6px 0"><summary>Match Images to Generated Prompts</summary>
+      <div class="row">
+        <input class="inp" id="preview-generation-ignore" style="flex:1;min-width:180px" placeholder="Ignore tags (comma-separated): official art, anime paintings">
+        <button class="btn secondary" onclick="registerPreviewGenerationIgnoreTags()">Save Ignore Tags</button>
+      </div>
+      <details id="preview-generation-ignore-list" style="margin:8px 0">
+        <summary id="preview-generation-ignore-summary" style="cursor:pointer">Saved Ignore Tags</summary>
+        <div id="preview-generation-ignore-tags" class="row" style="margin-top:6px;overflow-wrap:anywhere" aria-live="polite"></div>
+      </details>
+      <button class="btn secondary" onclick="matchSelectedPreviewGeneration()">Match Selected Images</button>
+      <div class="group-meta">Saved tags plus input tags are ignored only when matching, at any position. Prompt text is unchanged. Saved tags persist; use × to remove. Remaining tag order must match. Review before marking.</div>
+      <div id="preview-generation-matches" hidden style="max-height:450px;overflow:auto"></div>
+    </details>
+    <button class="btn sm secondary" id="image-preview-show-selected" onclick="togglePreviewShowSelectedOnly()" disabled>Show Selected Images</button>
     <button class="btn sm secondary" onclick="selectVisiblePreviewImages()">Select Visible</button>
     <label class="count-badge" style="display:inline-flex;align-items:center;gap:4px"><input type="checkbox" id="preview-compose-include-size"> With size</label>
     <label class="count-badge" style="display:inline-flex;align-items:center;gap:4px" title="Do not enter negative when sending from Preview to Compose if ON"><input type="checkbox" id="preview-compose-positive-only" checked onchange="savePreviewComposePositiveOnly()"> Positive only</label>
@@ -1165,6 +1217,7 @@ const SK_GROUPS = 'prompt_studio_en_prompt_groups_v1'; // [{id,name,prompts}]
 const SK_GROUP_FOLDERS = 'prompt_studio_en_group_folders_v1'; // [{id,name,collapsed}]
 const SK_GROUP_UNFILED_COLLAPSED = 'prompt_studio_en_group_unfiled_collapsed_v1';
 const SK_GROUP_SEARCH_TERMS = 'prompt_studio_en_group_search_terms_v1';
+const SK_PREVIEW_GENERATION_IGNORE_TAGS = 'prompt_studio_en_preview_generation_ignore_tags_v1';
 const SK_GROUP_PALETTE_OPEN = 'prompt_studio_en_group_palette_open_v1';
 const SK_GROUP_RANDOM_SIZE_OPEN = 'prompt_studio_en_group_random_size_open_v1';
 const SK_DT_API_URL = 'prompt_studio_en_draw_things_api_url_v1';
@@ -1227,30 +1280,39 @@ let groupEditFindCursor = {}; // {promptId:index}
 let groupPromptEditDrafts = {}; // unsaved group editor text, protected across re-render
 let topScoreEditDrafts = {}; // unsaved top-score editor text, protected across re-render
 let groupSearchTerms = [];
+let previewGenerationIgnoreTags = [];
 let groupPaletteCat = 'ALL', groupPaletteSelected = new Set();
 let groupPaletteOpen = false;
 let groupRandomSizeOpen = false, groupRandomSizeSelected = new Set();
 let previewRandomSizeOpen = false, previewRandomSizeSelected = new Set();
 let compareRemixEntries = [], compareRemixResult = '';
 let previewImages = [], activePreviewId = null;
+let previewFileLoadGeneration=0,previewFileLoading=false;
 let selectedPreviewImageIds = new Set();
 let previewSelectionMode = false, lastPreviewSelectedId = null;
+let previewShowSelectedOnly = false;
 let previewImg2ImgSending = false;
 let previewPromptEditingId = null;
 let previewPromptEditDrafts = {};
 let imagePreviewThumbSize = 120;
+let previewNeighborCount = 10;
+let previewVirtualScrollTop = 0, previewVirtualRenderQueued = false;
 let previewForcedIds = null, previewForcedOrder = [], previewForcedLabel = "", previewForcedOrderMode = "score";
 let relatedSearchStrictness = "normal";
 let topScoreImageCount = 1;
 let backupTimer = null;
 let backupSuppressed = false;
 let backupRunning = false;
+let backupTaskPromise = null;
 let backupQueuedReason = '';
 let lastBackupFingerprint = '';
 let groupsPersistenceReady = false;
 let groupsPersistencePending = false;
+let groupsPersistencePendingReplace = false;
 let groupsPersistenceFailed = false;
 let groupsSaveQueue = Promise.resolve();
+let groupsInitializationPromise = Promise.resolve();
+let groupsLastSaveError = null;
 let lastPersistedGroups = [];
 let groupsStorageStatusText = 'Preparing IndexedDB...';
 
@@ -1282,6 +1344,8 @@ function load(){
     if(!Array.isArray(groupSearchTerms)) groupSearchTerms=[];
   }catch(e){ groupSearchTerms=[]; }
   ['expression','smile','looking at viewer','sitting','standing','cel shading'].forEach(t=>{if(!groupSearchTerms.includes(t)) groupSearchTerms.push(t);});
+  try{previewGenerationIgnoreTags=normalizePreviewGenerationIgnoreTags(JSON.parse(localStorage.getItem(SK_PREVIEW_GENERATION_IGNORE_TAGS)||'[]'));}
+  catch(e){previewGenerationIgnoreTags=[];}
   groupPaletteOpen = localStorage.getItem(SK_GROUP_PALETTE_OPEN)==='true';
   groupRandomSizeOpen = localStorage.getItem(SK_GROUP_RANDOM_SIZE_OPEN)==='true';
   if(promptGroups.length && !activeGroupId) activeGroupId = promptGroups[0].id;
@@ -1448,7 +1512,7 @@ async function groupsDbPut(record){
 function cloneGroups(value){return JSON.parse(JSON.stringify(Array.isArray(value)?value:[]));}
 function groupsSnapshotSignature(groups){
   const list=Array.isArray(groups)?groups:[];
-  return `${list.length}:${list.reduce((n,g)=>n+(g.prompts||[]).length,0)}:${JSON.stringify(list).length}`;
+  return JSON.stringify(list);
 }
 function setGroupsStorageStatus(message,isError=false){
   groupsStorageStatusText=String(message||'');
@@ -1456,15 +1520,18 @@ function setGroupsStorageStatus(message,isError=false){
   if(el){el.textContent=groupsStorageStatusText;el.style.color=isError?'var(--danger)':'var(--muted)';}
 }
 function refreshGroupsStorageStatus(){setGroupsStorageStatus(groupsStorageStatusText,groupsPersistenceFailed);}
-function queueGroupsIndexedDbSave(reason){
+function queueGroupsIndexedDbSave(reason,replace=false){
   const snapshot=cloneGroups(promptGroups);
   if(!groupsPersistenceReady){
     groupsPersistencePending=true;
+    if(replace) groupsPersistencePendingReplace=true;
     if(groupsPersistenceFailed){
       try{
         localStorage.setItem(SK_GROUPS,JSON.stringify(snapshot));
         lastPersistedGroups=snapshot;
+        groupsLastSaveError=null;
       }catch(error){
+        groupsLastSaveError=error;
         setGroupsStorageStatus(`Groups save failed: ${error.message||error}`,true);
         toast('Could not save Groups. Export your JSON backup and free browser storage.');
       }
@@ -1472,12 +1539,19 @@ function queueGroupsIndexedDbSave(reason){
     return;
   }
   groupsSaveQueue=groupsSaveQueue.then(async()=>{
+    groupsLastSaveError=null;
     const active=await groupsDbGet('active');
-    const merged=active&&Array.isArray(active.groups)?mergeGroupsForSave(snapshot,active.groups):snapshot;
+    // Normal saves merge concurrent tabs. A replace import must not merge
+    // old IndexedDB data back in, or imported titles can appear to disappear.
+    const merged=replace
+      ? snapshot
+      : (active&&Array.isArray(active.groups)?mergeGroupsForSave(snapshot,active.groups):snapshot);
     await groupsDbPut({key:'active',version:1,savedAt:new Date().toISOString(),reason:String(reason||'groups'),groups:merged});
+    groupsPersistenceFailed=false;
     lastPersistedGroups=cloneGroups(merged);
     setGroupsStorageStatus(`Saved to IndexedDB: ${merged.length} Groups / ${merged.reduce((n,g)=>n+(g.prompts||[]).length,0)} Prompts`);
   }).catch(error=>{
+    groupsLastSaveError=error;
     groupsPersistenceFailed=true;
     setGroupsStorageStatus(`Groups save failed: ${error.message||error}`,true);
     toast('Failed to save Groups to IndexedDB.');
@@ -1498,6 +1572,12 @@ async function initializeGroupsPersistence(){
     await groupsDbPut({key:'active',version:1,savedAt:new Date().toISOString(),reason:active?'startup-merge':'localStorage-migration',groups:canonical});
     const verified=await groupsDbGet('active');
     if(!verified||groupsSnapshotSignature(verified.groups)!==groupsSnapshotSignature(canonical)) throw new Error('Post-migration verification failed');
+    // Preserve edits made while initialization awaits IndexedDB.
+    if(groupsPersistencePending){
+      canonical=groupsPersistencePendingReplace
+        ? cloneGroups(promptGroups)
+        : mergeGroupsForSave(promptGroups,active?.groups||legacy);
+    }
     promptGroups=cloneGroups(canonical);
     lastPersistedGroups=cloneGroups(canonical);
     groupsPersistenceReady=true;
@@ -1506,7 +1586,12 @@ async function initializeGroupsPersistence(){
     if(promptGroups.length&&!promptGroups.find(g=>g.id===activeGroupId)) activeGroupId=promptGroups[0].id;
     setGroupsStorageStatus(`IndexedDB migration complete: ${promptGroups.length} Groups / ${promptGroups.reduce((n,g)=>n+(g.prompts||[]).length,0)} Prompts`);
     renderGroups();renderGroupSelectors();
-    if(groupsPersistencePending){groupsPersistencePending=false;queueGroupsIndexedDbSave('pending-after-init');}
+    if(groupsPersistencePending){
+      const pendingReplace=groupsPersistencePendingReplace;
+      groupsPersistencePending=false;
+      groupsPersistencePendingReplace=false;
+      queueGroupsIndexedDbSave('pending-after-init',pendingReplace);
+    }
   }catch(error){
     groupsPersistenceFailed=true;
     groupsPersistenceReady=false;
@@ -2074,7 +2159,8 @@ function backupCoreData(){
     stock:[...stock],
     promptGroups:JSON.parse(JSON.stringify(promptGroups||[])),
     groupFolders:JSON.parse(JSON.stringify(groupFolders||[])),
-    groupSearchTerms:[...groupSearchTerms]
+    groupSearchTerms:[...groupSearchTerms],
+    previewGenerationIgnoreTags:[...previewGenerationIgnoreTags]
   };
 }
 function backupFingerprint(text){
@@ -2163,6 +2249,17 @@ function setBackupStatus(message,isError=false){
   if(el){el.textContent=message;el.style.color=isError?'var(--danger)':'var(--muted)';}
 }
 async function performBackup(reason='auto',options={}){
+  while(backupTaskPromise){
+    if(!options.force){backupQueuedReason=reason;return null;}
+    await backupTaskPromise;
+  }
+  const task=performBackupNow(reason,options);
+  backupTaskPromise=task;
+  try{return await task;}finally{if(backupTaskPromise===task) backupTaskPromise=null;}
+}
+async function performBackupNow(reason='auto',options={}){
+  await groupsInitializationPromise;
+  await groupsSaveQueue;
   if(backupSuppressed) return null;
   if(backupRunning){backupQueuedReason=reason;return null;}
   backupRunning=true; clearTimeout(backupTimer); backupTimer=null; backupQueuedReason='';
@@ -2224,13 +2321,15 @@ async function restoreBackup(source,id){
   try{
     const data=source==='browser'?(await browserBackupGet(id))?.data:await serverBackupGet(id);
     if(!data) throw new Error('Backup data was not found.');
-    applyBackupData(data);
+    await applyBackupData(data);
     toast('Restored from backup.');
     setBackupStatus(`${new Date().toLocaleString()} — Restore complete`);
     await refreshBackupLists();
   }catch(error){setBackupStatus(`Restore error: ${error.message}`,true);toast('Could not be restored.');}
 }
-function applyBackupData(data){
+async function applyBackupData(data){
+  await groupsInitializationPromise;
+  await groupsSaveQueue;
   if(!data||!Array.isArray(data.promptGroups)) throw new Error('Not a valid Prompt Studio backup.');
   backupSuppressed=true;
   try{
@@ -2245,13 +2344,18 @@ function applyBackupData(data){
     promptGroups=data.promptGroups.map(normalizeGroupRecord);
     groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(f=>({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()})):[];
     groupSearchTerms=Array.isArray(data.groupSearchTerms)?data.groupSearchTerms:[];
+    if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags(data.previewGenerationIgnoreTags);
     activeGroupId=promptGroups[0]?.id||null;
     localStorage.setItem(SK_TAGS,JSON.stringify(tags)); localStorage.setItem(SK_META,JSON.stringify(tagMeta));
     localStorage.setItem(SK_CATS,JSON.stringify(tagCats)); localStorage.setItem(SK_CATDEF,JSON.stringify(catDefs));
     localStorage.setItem(SK_LORAS,JSON.stringify(loraList)); localStorage.setItem(SK_SETS,JSON.stringify(loraSets));
-    localStorage.setItem(SK_STOCK,JSON.stringify(stock)); queueGroupsIndexedDbSave('restore');
+    localStorage.setItem(SK_STOCK,JSON.stringify(stock));
     localStorage.setItem(SK_GROUP_FOLDERS,JSON.stringify(groupFolders)); localStorage.setItem(SK_GROUP_SEARCH_TERMS,JSON.stringify(groupSearchTerms));
     localStorage.setItem(SK_GROUP_TOMBSTONES,JSON.stringify({prompts:[],groups:[]}));
+    lastPersistedGroups=cloneGroups(promptGroups);
+    queueGroupsIndexedDbSave('restore',true);
+    await groupsSaveQueue;
+    if(groupsLastSaveError) throw groupsLastSaveError;
     groupPromptSelectionOrder=[]; editingGroupPromptId=null; groupPromptEditDrafts={}; topScoreEditDrafts={};
     renderCatBar();renderTags();renderLoras();renderLoraSets();renderStock();renderGroups();renderGroupSelectors();renderGroupSearchTerms();renderGroupLibraryPaletteShell();renderBuilderLoras();renderBuilderCatBar();renderBuilderTags();buildCode();updateComposeSummary();
   }finally{backupSuppressed=false;}
@@ -2259,8 +2363,54 @@ function applyBackupData(data){
 }
 
 // Export / Import
+function exportSelectedGroups(){
+  const groups=promptGroups.filter(g=>selectedGroupIds.has(g.id));
+  if(!groups.length){toast("Select Groups using the left checkboxes.");return;}
+  const folderIds=new Set(groups.map(g=>g.folderId).filter(Boolean));
+  const refs=JSON.stringify(groups);
+  const sets=loraSets.filter(s=>refs.includes('set:'+s.id));
+  const loraIds=new Set(sets.flatMap(s=>(s.loras||[]).map(l=>l.id)));
+  const data={version:6,exportType:'selected-groups',importPolicy:'add-only',exported:nowIso(),promptGroups:cloneGroups(groups),groupFolders:groupFolders.filter(f=>folderIds.has(f.id)),loraSets:sets,loraList:loraList.filter(l=>loraIds.has(l.id)||refs.includes('lora:'+l.id))};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='prompt-studio-groups-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  toast("Selected Groups exported.");
+}
+function importSelectedGroupsPackage(data,log){
+  if(!Array.isArray(data.promptGroups)||!data.promptGroups.length) throw new Error("No Groups in this file.");
+  if(!confirm("This is a Group-only file. Add its Groups as copies? Existing data will be retained.")) return;
+  const now=nowIso(),folders=new Map(),loras=new Map(),sets=new Map();
+  (data.groupFolders||[]).filter(f=>f&&f.id).forEach(f=>{
+    const id=uid('folder');folders.set(f.id,id);groupFolders.push({...f,id});
+  });
+  (data.loraList||[]).filter(l=>l&&l.id).forEach(l=>{
+    const id=uid('lora');loras.set(l.id,id);loraList.push({...l,id});
+  });
+  (data.loraSets||[]).filter(s=>s&&s.id).forEach(s=>{
+    const id=uid('set');sets.set(s.id,id);loraSets.push({...s,id,loras:(s.loras||[]).map(l=>({...l,id:loras.get(l.id)||l.id}))});
+  });
+  const remap=value=>{
+    if(Array.isArray(value)) return value.map(remap);
+    if(value&&typeof value==='object') return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,remap(v)]));
+    if(typeof value==='string'){
+      if(value.startsWith('lora:')&&loras.has(value.slice(5))) return 'lora:'+loras.get(value.slice(5));
+      if(value.startsWith('set:')&&sets.has(value.slice(4))) return 'set:'+sets.get(value.slice(4));
+    }
+    return value;
+  };
+  const groups=data.promptGroups.map(raw=>{
+    const g=normalizeGroupRecord(remap(raw));
+    return {...g,id:uid('group'),folderId:folders.get(g.folderId)||'',createdAt:now,updatedAt:now,prompts:g.prompts.map(p=>({...p,id:uid('prompt'),createdAt:now,updatedAt:now}))};
+  });
+  promptGroups.push(...groups);activeGroupId=groups[0].id;
+  saveLoras();saveSets();saveGroupFolders();saveGroups();
+  renderGroups();renderGroupSelectors();renderLoras();renderLoraSets();renderBuilderLoras();
+  log.textContent="Group-only import completed: "+groups.length+' Groups';
+  toast(log.textContent);
+}
 function exportData(){
-  const data={version:5,exported:new Date().toISOString(),tags,meta:tagMeta,cats:tagCats,catDefs,loraList,loraSets,stock,promptGroups,groupFolders,groupSearchTerms};
+  const data={version:5,exported:new Date().toISOString(),tags,meta:tagMeta,cats:tagCats,catDefs,loraList,loraSets,stock,promptGroups,groupFolders,groupSearchTerms,previewGenerationIgnoreTags};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`prompt_studio_en_${new Date().toISOString().slice(0,10)}.json`; a.click();
@@ -2273,6 +2423,11 @@ function importData(input){
   reader.onload=async e=>{
     try{
       const data=JSON.parse(e.target.result);
+      if(data.exportType==='selected-groups'||data.importPolicy==='add-only'){
+        importSelectedGroupsPackage(data,log);
+        input.value='';
+        return;
+      }
       const mode=document.getElementById('import-mode')?.value||'all';
       const importTags=mode==='all'||mode==='tags';
       const importGroups=mode==='all'||mode==='groups';
@@ -2302,6 +2457,7 @@ function importData(input){
         });
         data.promptGroups.forEach(g=>{if(g&&g.id&&!promptGroups.find(x=>x.id===g.id)){promptGroups.push(g);groupAdded++;}});
         if(Array.isArray(data.groupSearchTerms)) data.groupSearchTerms.forEach(t=>{if(typeof t==='string'&&!groupSearchTerms.includes(t)){groupSearchTerms.push(t);searchTermAdded++;}});
+        if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags([...previewGenerationIgnoreTags,...data.previewGenerationIgnoreTags]);
       }
       if(promptGroups.length && !activeGroupId) activeGroupId=promptGroups[0].id;
       saveTags();saveMeta();saveCats();saveLoras();saveSets();saveStock();saveGroups();saveGroupFolders();saveGroupSearchTerms();
@@ -2323,6 +2479,8 @@ async function replaceImportedData(data,{mode,importTags,importGroups,input,log}
   if(!ok){input.value='';return;}
   log.textContent='Creating a backup before replacement...';
   await performBackup('before-replace-import',{force:true,silent:true});
+  await groupsInitializationPromise;
+  await groupsSaveQueue;
   backupSuppressed=true;
   try{
     if(importTags){
@@ -2344,12 +2502,19 @@ async function replaceImportedData(data,{mode,importTags,importGroups,input,log}
       promptGroups=(Array.isArray(data.promptGroups)?data.promptGroups:[]).map(normalizeGroupRecord);
       groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(f=>({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()})):[];
       groupSearchTerms=Array.isArray(data.groupSearchTerms)?data.groupSearchTerms.filter(t=>typeof t==='string'):[];
+      // Older JSON files have no exclusion settings: preserve the local registry.
+      if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags(data.previewGenerationIgnoreTags);
       activeGroupId=promptGroups[0]?.id||null;
       groupPromptSelectionOrder=[]; editingGroupPromptId=null; groupPromptEditDrafts={}; topScoreEditDrafts={};
-      queueGroupsIndexedDbSave('replace-import');
+      // Make the imported snapshot the new merge baseline immediately, so a
+      // following normal save cannot reintroduce the pre-import records.
+      lastPersistedGroups=cloneGroups(promptGroups);
       localStorage.setItem(SK_GROUP_FOLDERS,JSON.stringify(groupFolders));
       localStorage.setItem(SK_GROUP_SEARCH_TERMS,JSON.stringify(groupSearchTerms));
       localStorage.setItem(SK_GROUP_TOMBSTONES,JSON.stringify({prompts:[],groups:[]}));
+      queueGroupsIndexedDbSave('replace-import',true);
+      await groupsSaveQueue;
+      if(groupsLastSaveError) throw groupsLastSaveError;
     }
     renderCatBar(); renderTags(); renderLoras(); renderLoraSets(); renderStock();
     renderGroups(); renderGroupSelectors(); renderGroupSearchTerms(); renderGroupLibraryPaletteShell();
@@ -4461,6 +4626,214 @@ function createDerivedGroupFromSelectedPrompts(){
   saveGroups(); renderGroups(); renderGroupSelectors();
   toast(`${entries.length} items to create a derived group "${g.name}"`);
 }
+const GROUP_TRANSFER_EN=true;
+let groupTransferPromptIds=[];
+function openGroupPromptTransfer(scope){
+  let entries=[];
+  if(scope==='tags') entries=groupPromptEntriesByTagQuery();
+  else if(scope==='group'){
+    const g=activeGroup();
+    entries=(g?.prompts||[]).map(prompt=>({group:g,prompt}));
+  }else entries=selectedGroupPromptEntries();
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'No prompts to add.':'対象のプロンプトがありません');return;}
+  groupTransferPromptIds=[...new Set(entries.map(e=>e.prompt.id))];
+  const box=document.getElementById('group-transfer-panel');
+  box.innerHTML=`
+    <div class="sl">${GROUP_TRANSFER_EN?'Add Prompts to Group':'プロンプトをGroupへ追加'} (${groupTransferPromptIds.length})</div>
+    <label>${GROUP_TRANSFER_EN?'Destination':'追加先'}</label>
+    <select class="inp" id="group-transfer-target"><option value="">${GROUP_TRANSFER_EN?'Create New Group':'新規Groupを作成'}</option>${promptGroups.map(g=>`<option value="${escA(g.id)}">${escH(g.name)}</option>`).join('')}</select>
+    <input class="inp" id="group-transfer-name" placeholder="${GROUP_TRANSFER_EN?'New Group name':'新規Group名'}" autocomplete="one-time-code" style="margin-top:6px">
+    <select class="inp" id="group-transfer-action" style="margin-top:6px"><option value="copy">${GROUP_TRANSFER_EN?'Copy and Add':'コピーして追加'}</option><option value="move">${GROUP_TRANSFER_EN?'Move (remove from source)':'移動（元Groupから削除）'}</option></select>
+    <details style="margin-top:8px"><summary>${GROUP_TRANSFER_EN?'Review prompts':'対象プロンプトを確認'} (${entries.length})</summary><div style="max-height:300px;overflow:auto">${entries.map(e=>`<div style="padding:8px 0;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><div class="group-meta">${escH(e.group.name)} / ${escH(e.prompt.title||e.prompt.memo||'')}</div>${escH(e.prompt.text)}</div>`).join('')}</div></details>
+    <div class="row" style="margin-top:8px"><button class="btn primary" onclick="commitGroupPromptTransfer()">${GROUP_TRANSFER_EN?'Add':'追加を実行'}</button><button class="btn" onclick="closeGroupPromptTransfer()">${GROUP_TRANSFER_EN?'Cancel':'キャンセル'}</button></div>`;
+  box.hidden=false;
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeGroupPromptTransfer(){
+  groupTransferPromptIds=[];
+  const box=document.getElementById('group-transfer-panel');
+  box.hidden=true;box.innerHTML='';
+}
+function commitGroupPromptTransfer(){
+  const targetId=document.getElementById('group-transfer-target').value;
+  const name=document.getElementById('group-transfer-name').value.trim();
+  const move=document.getElementById('group-transfer-action').value==='move';
+  let target=targetId?promptGroups.find(g=>g.id===targetId):null;
+  if(targetId&&!target){toast(GROUP_TRANSFER_EN?'Destination no longer exists.':'追加先Groupが見つかりません');return;}
+  if(!target&&!name){toast(GROUP_TRANSFER_EN?'Enter a new Group name.':'新規Group名を入力してください');return;}
+  const entries=groupTransferPromptIds.map(findGroupPromptById).filter(Boolean).filter(e=>!move||e.group.id!==targetId);
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'No prompts to move (already in destination).':'移動対象がありません（すでに追加先Group内です）');return;}
+  const targetName=target?.name||name;
+  if(!confirm(GROUP_TRANSFER_EN?`${move?'Move':'Copy'} ${entries.length} prompts to "${targetName}"?`:`「${targetName}」へ${entries.length}件を${move?'移動':'コピーして追加'}しますか？`)) return;
+  const now=nowIso();
+  if(!target){
+    target={id:uid('group'),name,memo:'',folderId:'',createdAt:now,updatedAt:now,prompts:[]};
+    promptGroups.unshift(target);
+  }
+  // New IDs prevent the cross-group save merger from restoring moved records.
+  const copies=entries.map(e=>({...JSON.parse(JSON.stringify(e.prompt)),id:uid('prompt'),parentId:e.prompt.id,parentGroupId:e.group.id,source:move?'group-transfer-move':'group-transfer-copy',createdAt:now,updatedAt:now}));
+  target.prompts.push(...copies);target.updatedAt=now;
+  if(move){
+    const ids=new Set(entries.map(e=>e.prompt.id));
+    const tomb=loadGroupTombstones();
+    tomb.prompts=[...new Set([...tomb.prompts,...ids])];
+    saveGroupTombstones(tomb);
+    promptGroups.forEach(g=>{
+      if(g.prompts.some(p=>ids.has(p.id))){g.prompts=g.prompts.filter(p=>!ids.has(p.id));g.updatedAt=now;}
+    });
+    groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!ids.has(id));
+    groupOrderEdit=null;
+  }
+  activeGroupId=target.id;
+  closeGroupPromptTransfer();
+  saveGroups();renderGroups();renderGroupSelectors();
+  toast(GROUP_TRANSFER_EN?`${copies.length} prompts ${move?'moved':'copied'} to "${targetName}".`:`「${targetName}」へ${copies.length}件を${move?'移動':'コピーして追加'}しました`);
+}
+function generationPromptKey(text,ignored=[]){
+  const skip=new Set(ignored.map(t=>String(t).toLowerCase().replace(/\s+/g,' ').trim()));
+  return String(text||'').split(/[,\r\n]+/).map(t=>t.toLowerCase().replace(/\s+/g,' ').trim()).filter(t=>t&&!skip.has(t)).join(', ');
+}
+function generationState(p){
+  if(!p.generationCheck) return 'pending';
+  return generationPromptKey(p.text)===generationPromptKey(p.generationCheck.text)?'done':'changed';
+}
+function generationStateLabel(p){
+  const state=generationState(p);
+  return GROUP_TRANSFER_EN?({pending:'Not generated',done:'Generated',changed:'Changed / regenerate'})[state]:({pending:'未生成',done:'生成済み',changed:'変更あり・再生成待ち'})[state];
+}
+function setPromptGenerated(id,on,source='manual'){
+  const found=findGroupPromptById(id);if(!found)return;
+  const now=nowIso();
+  if(on) found.prompt.generationCheck={text:found.prompt.text,checkedAt:now,source};
+  else delete found.prompt.generationCheck;
+  found.prompt.updatedAt=now;found.group.updatedAt=now;
+}
+function markSelectedPromptsGenerated(on){
+  const ids=selectedGroupPromptIds();if(!ids.length){toast(GROUP_TRANSFER_EN?'Select prompts first.':'プロンプトを選択してください');return;}
+  ids.forEach(id=>setPromptGenerated(id,on));
+  saveGroups();renderGroups();renderGroupSelectors();
+}
+function togglePromptGenerated(id,on){
+  setPromptGenerated(id,on);saveGroups();renderGroups();renderGroupSelectors();
+}
+function samplePromptSubset(entries,count,rng=Math.random){
+  const pool=entries.slice();
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const ids=new Set(pool.slice(0,count).map(e=>e.prompt.id));
+  return entries.filter(e=>ids.has(e.prompt.id));
+}
+const sampledGroupPrompts=new Map();
+function sendRandomSelectedPromptsToCompose(append=false,allRemaining=false){
+  let entries=selectedGroupPromptEntries();
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'Select source prompts first.':'抽出元のプロンプトを選択してください');return;}
+  if(document.getElementById('group-random-only-pending').checked)entries=entries.filter(e=>generationState(e.prompt)!=='done');
+  if(document.getElementById('group-random-exclude-sampled').checked)entries=entries.filter(e=>sampledGroupPrompts.get(e.prompt.id)!==e.prompt.text);
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'No remaining prompts. Reset sampling to choose them again.':'残りの対象はありません。再抽出する場合は抽出履歴を解除してください');return;}
+  const requested=allRemaining?entries.length:Number(document.getElementById('group-random-prompt-count').value);
+  if(!Number.isInteger(requested)||requested<1){toast(GROUP_TRANSFER_EN?'Enter a positive whole number.':'抽出件数に1以上の整数を入力してください');return;}
+  const count=Math.min(requested,entries.length);
+  const randomSize=document.getElementById('group-random-use-sizes').checked;
+  const sizes=randomSize?selectedGroupRandomSizes():[];
+  if(randomSize&&sizes.length<2){toast(GROUP_TRANSFER_EN?'Select at least two random sizes.':'ランダムサイズ候補を2つ以上選択してください');return;}
+  const globalSize=getGroupSendSizeOverride();if(globalSize===null)return;
+  const chosen=samplePromptSubset(entries,count),lines=[];
+  for(const e of chosen){
+    const p=e.prompt;
+    let line;
+    if(randomSize){
+      const size=sizes[Math.floor(Math.random()*sizes.length)];
+      line=applyPromptLoraOverrideToBatchLine(size.width+'x'+size.height+' | '+String(p.text||'').replace(/[\r\n]+/g,', ').replace(/,+\s*$/,'').trim(),p.id);
+    }else line=formatGroupPromptForComposeSendWithFlags(p,globalSize);
+    if(line===null)return;lines.push(line);
+  }
+  writeGroupPromptLinesToCompose(lines,chosen.map(e=>e.prompt),append);
+  chosen.forEach(e=>sampledGroupPrompts.set(e.prompt.id,e.prompt.text));
+  switchTab('compose');buildCode();updateComposeSummary();
+  const remaining=entries.length-count;
+  toast(GROUP_TRANSFER_EN?count+' prompts sent / '+remaining+' remaining':count+'件をComposeへ送りました ／ 残り'+remaining+'件');
+}
+function normalizePreviewGenerationIgnoreTags(value){
+  const raw=Array.isArray(value)?value.filter(t=>typeof t==='string').join(','):typeof value==='string'?value:'';
+  return [...new Set(raw.split(/[,、，\r\n]+/).map(t=>t.toLowerCase().replace(/\s+/g,' ').trim()).filter(Boolean))];
+}
+function renderPreviewGenerationIgnoreTags(){
+  const summary=document.getElementById('preview-generation-ignore-summary');
+  if(summary) summary.textContent=GROUP_TRANSFER_EN
+    ?`Saved Ignore Tags (${previewGenerationIgnoreTags.length}) — applied even when collapsed`
+    :`登録済み除外タグ（${previewGenerationIgnoreTags.length}件）— 非表示でも照合に適用`;
+  const el=document.getElementById('preview-generation-ignore-tags');
+  if(!el)return;
+  el.innerHTML=previewGenerationIgnoreTags.length
+    ?previewGenerationIgnoreTags.map((tag,i)=>`<span class="count-badge" style="max-width:100%;white-space:normal;overflow-wrap:anywhere">${escH(tag)} <button type="button" class="btn sm secondary" onclick="removePreviewGenerationIgnoreTag(${i})" aria-label="${escA(escH((GROUP_TRANSFER_EN?'Remove ignore tag: ':'除外タグを削除: ')+tag))}">×</button></span>`).join('')
+    :'<span class="group-meta">'+(GROUP_TRANSFER_EN?'No saved ignore tags.':'登録済みの除外タグはありません。')+'</span>';
+}
+function setPreviewGenerationIgnoreTags(value){
+  const next=normalizePreviewGenerationIgnoreTags(value);
+  // Persist before updating memory so a failed write does not look like a saved registration.
+  localStorage.setItem(SK_PREVIEW_GENERATION_IGNORE_TAGS,JSON.stringify(next));
+  previewGenerationIgnoreTags=next;
+  renderPreviewGenerationIgnoreTags();
+  scheduleAutoBackup('generation-ignore-tags');
+}
+function registerPreviewGenerationIgnoreTags(){
+  const input=document.getElementById('preview-generation-ignore');
+  const incoming=normalizePreviewGenerationIgnoreTags(input?.value||'');
+  if(!incoming.length){toast(GROUP_TRANSFER_EN?'Enter tags to ignore first.':'除外するタグを入力してください');return;}
+  const before=previewGenerationIgnoreTags.length;
+  try{
+    setPreviewGenerationIgnoreTags([...previewGenerationIgnoreTags,...incoming]);
+    if(input)input.value='';
+    const added=previewGenerationIgnoreTags.length-before;
+    toast(GROUP_TRANSFER_EN?`Saved ${added} new ignore tags. They apply to every generation check.`:`除外タグを${added}件登録しました。次回以降の生成済み照合にも適用されます`);
+  }catch(e){toast((GROUP_TRANSFER_EN?'Could not save ignore tags: ':'除外タグを保存できません: ')+String(e.message||e));}
+}
+function removePreviewGenerationIgnoreTag(index){
+  if(!Number.isInteger(index)||index<0||index>=previewGenerationIgnoreTags.length)return;
+  try{setPreviewGenerationIgnoreTags(previewGenerationIgnoreTags.filter((_,i)=>i!==index));}
+  catch(e){toast((GROUP_TRANSFER_EN?'Could not save ignore tags: ':'除外タグを保存できません: ')+String(e.message||e));}
+}
+function previewGenerationIgnoredTags(){
+  return normalizePreviewGenerationIgnoreTags([...previewGenerationIgnoreTags,document.getElementById('preview-generation-ignore')?.value||'']);
+}
+let previewGenerationMatchRows=[],previewGenerationMatchBusy=false;
+async function matchSelectedPreviewGeneration(){
+  if(previewGenerationMatchBusy)return;
+  const items=selectedPreviewImages();if(!items.length){toast(GROUP_TRANSFER_EN?'Select images first.':'Preview画像を選択してください');return;}
+  previewGenerationMatchBusy=true;
+  const panel=document.getElementById('preview-generation-matches');
+  panel.hidden=false;panel.textContent=GROUP_TRANSFER_EN?'Matching…':'照合中…';
+  try{
+    const ignored=previewGenerationIgnoredTags();
+    const index=new Map();
+    promptGroups.forEach(group=>(group.prompts||[]).forEach(prompt=>{
+      const key=generationPromptKey(prompt.text,ignored);if(!key)return;
+      if(!index.has(key))index.set(key,[]);index.get(key).push({group,prompt,key});
+    }));
+    const rows=new Map();let skipped=0;
+    for(const item of items){
+      await loadPreviewItemDetails(item);
+      if(item.detailsLoading){skipped++;continue;}
+      const key=generationPromptKey(item.prompt,ignored);
+      if(!key){skipped++;continue;}
+      (index.get(key)||[]).forEach(e=>{
+        if(!rows.has(e.prompt.id))rows.set(e.prompt.id,{...e,text:e.prompt.text,images:[]});
+        rows.get(e.prompt.id).images.push(item.name);
+      });
+    }
+    previewGenerationMatchRows=[...rows.values()];
+    panel.innerHTML='<div class="group-meta">'+(GROUP_TRANSFER_EN?'Matches: ':'一致: ')+rows.size+(GROUP_TRANSFER_EN?' prompts; skipped images: ':'件 ／ Promptなし・読込中: ')+skipped+'</div>'+previewGenerationMatchRows.map((r,i)=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input class="preview-generation-match-check" type="checkbox" value="${i}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${escH(r.images.join(' / '))}</div></label>`).join('')+`<div class="row"><button class="btn primary" onclick="confirmPreviewGenerationMatches()">${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn" onclick="document.getElementById('preview-generation-matches').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
+  }catch(e){panel.textContent=String(e.message||e);}finally{previewGenerationMatchBusy=false;}
+}
+function confirmPreviewGenerationMatches(){
+  const rows=[...document.querySelectorAll('.preview-generation-match-check:checked')].map(el=>previewGenerationMatchRows[Number(el.value)]).filter(Boolean);
+  const valid=rows.filter(r=>findGroupPromptById(r.prompt.id)?.prompt.text===r.text);
+  if(!valid.length){toast(GROUP_TRANSFER_EN?'No unchanged prompts selected.':'対象が未選択、または照合後に本文が変更されています');return;}
+  if(!confirm(GROUP_TRANSFER_EN?'Mark '+valid.length+' prompts as generated?':valid.length+'件を生成済みにしますか？'))return;
+  valid.forEach(r=>setPromptGenerated(r.prompt.id,true,'preview-match'));
+  saveGroups();renderGroups();renderGroupSelectors();
+  document.getElementById('preview-generation-matches').hidden=true;
+  toast(GROUP_TRANSFER_EN?'Generation checks saved.':'生成済みチェックを保存しました');
+}
 function groupTagQueryTerms(){
   const raw=String(document.getElementById('group-tag-extract-query')?.value||document.getElementById('group-find')?.value||'').trim();
   if(!raw) return [];
@@ -5206,6 +5579,51 @@ function showRelatedImagesForSelectedPrompts(){
   const hitCount=blocks.reduce((n,b)=>n+b.matches.length,0);
   toast(hitCount?`${entries.length} selection prompts have related image candidates displayed.`:'No related image candidates were found.');
 }
+let relatedPanelPromptSelection=new Set();
+function relatedPanelSelectionTools(){
+  relatedPanelPromptSelection=new Set();
+  return `<div class="row" style="margin:8px 0;flex-wrap:wrap">
+    <button class="btn sm" onclick="setRelatedPanelPromptSelection(true)">Select All</button>
+    <button class="btn sm" onclick="setRelatedPanelPromptSelection(false)">Deselect</button>
+    <button class="btn sm secondary" onclick="sendRelatedPanelSelection('compose')">Selected → Compose</button>
+    <button class="btn sm secondary" onclick="sendRelatedPanelSelection('append')">Append to Compose</button>
+    <button class="btn sm secondary" onclick="sendRelatedPanelSelection('group')">Move / Copy to Group</button>
+    <span class="count-badge" id="related-panel-selected-count">0 selected</span>
+  </div>`;
+}
+function relatedPanelPromptCheckbox(id){
+  return `<label style="display:inline-flex;align-items:center;gap:6px"><input class="related-panel-prompt-check" type="checkbox" value="${escA(id)}" onchange="toggleRelatedPanelPromptSelection(this.value,this.checked)">Select Prompt</label>`;
+}
+function toggleRelatedPanelPromptSelection(id,on){
+  if(on) relatedPanelPromptSelection.add(id);else relatedPanelPromptSelection.delete(id);
+  document.querySelectorAll('.related-panel-prompt-check').forEach(el=>{el.checked=relatedPanelPromptSelection.has(el.value);});
+  const count=document.getElementById('related-panel-selected-count');
+  if(count) count.textContent=relatedPanelPromptSelection.size+' selected';
+}
+function setRelatedPanelPromptSelection(on){
+  relatedPanelPromptSelection.clear();
+  if(on) document.querySelectorAll('.related-panel-prompt-check').forEach(el=>relatedPanelPromptSelection.add(el.value));
+  toggleRelatedPanelPromptSelection('',false);
+}
+function sendRelatedPanelSelection(action){
+  const ids=[...relatedPanelPromptSelection].filter(id=>findGroupPromptById(id));
+  if(!ids.length){toast("Select prompts beside the images first.");return;}
+  // Existing send functions read the main list checkboxes. Temporarily align
+  // them to this panel's selection, then restore the main list unchanged.
+  const priorOrder=groupPromptSelectionOrder.slice();
+  const boxes=[...document.querySelectorAll('.group-prompt-check')];
+  const states=boxes.map(el=>el.checked);
+  groupPromptSelectionOrder=ids;
+  boxes.forEach(el=>{el.checked=ids.includes(el.value);});
+  try{
+    if(action==='group') openGroupPromptTransfer('selected');
+    else if(action==='append') sendSelectedGroupPromptsToComposeAppend();
+    else sendSelectedGroupPromptsToCompose();
+  }finally{
+    groupPromptSelectionOrder=priorOrder;
+    boxes.forEach((el,i)=>{el.checked=states[i];});
+  }
+}
 function renderSelectedRelatedImagesPanel(blocks,topN){
   const panel=document.getElementById('group-related-images-panel');
   if(!panel) return;
@@ -5230,12 +5648,14 @@ function renderSelectedRelatedImagesPanel(blocks,topN){
       <button class="btn sm secondary" onclick="showRelatedImagesForSelectedPrompts()">Rerun search</button>
       <button class="btn sm related" onclick="openRelatedResultsInPreview()">Candidates are displayed in Preview</button>
     </div>
+    ${relatedPanelSelectionTools()}
     ${blocks.some(b=>b.matches.length)?`<div style="display:grid;gap:12px;margin-top:10px">${blocks.map(b=>{
       const p=b.entry.prompt;
       const title=p.memo||p.title||p.text.slice(0,70);
       return `<div class="prompt-item" style="margin:0">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">
           <div>
+            ${relatedPanelPromptCheckbox(p.id)}
             <b>#${b.idx+1} ${escH(b.entry.group.name)}</b>
             <div class="group-meta">${escH(title)}</div>
           </div>
@@ -5684,6 +6104,7 @@ function renderTopScoreImagesPanel(rows,topN){
       <button class="btn sm secondary" onclick="showTopScoreImagesForSelectedPrompts()">Rerun search</button>
       <button class="btn sm related" onclick="openRelatedResultsInPreview()">Display Top Image in Preview</button>
     </div>
+    ${relatedPanelSelectionTools()}
     <div class="top-score-board">${rows.map(r=>{
       const p=r.entry.prompt;
       const title=p.memo||p.title||p.text.slice(0,80);
@@ -5701,6 +6122,7 @@ function renderTopScoreImagesPanel(rows,topN){
         <div>
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">
             <div>
+              ${relatedPanelPromptCheckbox(p.id)}
               <b>#${r.idx+1} ${escH(r.entry.group.name)}</b>
               <div class="group-meta" id="top-score-title-${escA(p.id)}">${escH(title)}</div>
             </div>
@@ -5818,6 +6240,9 @@ function clearPreviewForcedFilter(){
 function resetPreviewSearchForNewResult(){
   const el=document.getElementById('image-preview-search');
   if(el) el.value='';
+  previewVirtualScrollTop=0;
+  const list=document.getElementById('image-preview-list');
+  if(list) list.scrollTop=0;
   previewForcedIds=null; previewForcedOrder=[]; previewForcedLabel=''; previewForcedOrderMode='score';
 }
 function clearGroupsSearchContextForIncomingSearch(){
@@ -5925,6 +6350,9 @@ function renderGroups(){
   const selectedSet=new Set(groupPromptSelectionOrder);
   const orderEditing=isActiveGroupOrderEditing();
   const visiblePrompts=(g.prompts||[]).map((p,idx)=>({p,idx})).filter(({p})=>{
+    const statusFilter=document.getElementById('group-generation-filter')?.value||'all';
+    if(statusFilter==='done'&&generationState(p)!=='done')return false;
+    if(statusFilter==='pending'&&generationState(p)==='done')return false;
     if(!commentQuery) return true;
     return String([p.memo,p.title,p.comment].filter(Boolean).join('\n')).toLowerCase().includes(commentQuery);
   });
@@ -5980,6 +6408,7 @@ function renderGroups(){
         <button class="btn sm" onclick="copyGroupPrompt('${escA(p.id)}')">Copy</button>
         <button class="btn sm secondary" onclick="loadGroupPromptToCompose('${escA(p.id)}')">To Compose</button>
         <button class="btn sm related" onclick="showRelatedImagesForGroupPrompt('${escA(p.id)}')">Related images</button>
+        <label class="count-badge"><input type="checkbox" ${generationState(p)==='done'?'checked':''} onchange="togglePromptGenerated('${escA(p.id)}',this.checked)"> ${escH(generationStateLabel(p))}</label>
         <span class="prompt-send-size" title="For this time only, use individual sizes for sending to Compose. We do not change the saved size.">
           <select class="inp" id="send-size-preset-${escA(p.id)}" onchange="applyPromptSendSizePreset('${escA(p.id)}',this.value)">${sizePresetOptions(sendSize.width,sendSize.height)}</select>
           <input class="inp" id="send-size-w-${escA(p.id)}" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="W" value="${escV(sendSize.width||'')}" oninput="setPromptSendSize('${escA(p.id)}')">
@@ -6402,8 +6831,22 @@ async function collectImageFilesFromDirectory(dir,files,prefix){
 function isPreviewImageFile(file){
   return /^image\//.test(file.type)||/\.(png|jpe?g|webp|gif)$/i.test(file.name||'');
 }
+function cancelPreviewFileLoad(){
+  previewFileLoadGeneration++;
+  previewFileLoading=false;
+  const button=document.getElementById('preview-load-cancel');if(button) button.hidden=true;
+  const progress=document.getElementById('preview-load-progress');
+  if(progress) progress.textContent='Loading stopped. Loaded images retained.';
+}
 async function loadPreviewFiles(files){
+  const generation=++previewFileLoadGeneration;
+  previewFileLoading=true;
+  const cancelButton=document.getElementById('preview-load-cancel');if(cancelButton) cancelButton.hidden=false;
+  const progress=document.getElementById('preview-load-progress');
   clearPreviewObjectUrls();
+  selectedPreviewImageIds.clear();
+  lastPreviewSelectedId=null;
+  previewShowSelectedOnly=false;
   // File reload creates new image IDs. Keeping IDs from the previous load
   // produces ghost selections that cannot be registered or sent to Compose.
   selectedPreviewImageIds.clear();
@@ -6411,10 +6854,13 @@ async function loadPreviewFiles(files){
   const imageFiles=(files||[]).filter(isPreviewImageFile).sort((a,b)=>(b.lastModified||0)-(a.lastModified||0));
   const loadMode=document.getElementById('image-preview-load-mode')?.value||'full';
   const lazy=loadMode==='lazy';
+  let lastListRenderAt=0;
   previewImages=[]; activePreviewId=null; previewForcedIds=null; previewForcedOrder=[]; previewForcedLabel=''; previewForcedOrderMode='score';
   const status=document.getElementById('image-preview-status');
   if(status) status.textContent=lazy?`Loading ${imageFiles.length} images quickly...`:`Loading ${imageFiles.length} images...`;
+  try{
   for(let i=0;i<imageFiles.length;i++){
+    if(generation!==previewFileLoadGeneration) return;
     const file=imageFiles[i];
     const item={
       id:'img_'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,6),
@@ -6429,30 +6875,60 @@ async function loadPreviewFiles(files){
       prompt:'',negative:'',meta:{},metadataRaw:'',searchText:'',
       detailsLoaded:false,detailsLoading:false,lazyLoaded:lazy
     };
-    if(!lazy){
-      await loadPreviewItemDetails(item);
-    }else{
-      updatePreviewItemSearchText(item);
-    }
     previewImages.push(item);
     if(i===0) activePreviewId=item.id;
-    if(i%24===0) renderPreviewImages();
-    if(lazy && i%80===0) await new Promise(r=>setTimeout(r,0));
+    updatePreviewItemSearchText(item);
+    if(progress) progress.textContent=(i+1)+' / '+imageFiles.length+' — '+item.name;
+    if(!lazy){
+      const now=Date.now();
+      if(i===0||now-lastListRenderAt>=200){
+        renderPreviewImages();
+        lastListRenderAt=now;
+      }
+      await loadPreviewItemDetails(item);
+    }
+    if(generation!==previewFileLoadGeneration){if(!previewImages.includes(item))URL.revokeObjectURL(item.url);return;}
+    if(lazy&&i%24===0) renderPreviewImages();
+    if(i%24===0) await new Promise(r=>setTimeout(r,0));
   }
+  if(generation!==previewFileLoadGeneration) return;
+  }finally{
+    if(generation===previewFileLoadGeneration){
+      previewFileLoading=false;
+      if(cancelButton) cancelButton.hidden=true;
+    }
+  }
+  if(generation!==previewFileLoadGeneration) return;
   renderPreviewImages(); renderPreviewDetail();
   toast(lazy?`Loaded ${previewImages.length} images. Selecting will show detailed information.`:`Loaded ${previewImages.length} images`);
 }
+function previewReadWithTimeout(promise,ms=12000){
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error("File read timed out. Download from iCloud and retry.")),ms);
+    Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value);},error=>{clearTimeout(timer);reject(error);});
+  });
+}
 async function loadPreviewItemDetails(item){
-  if(!item||item.detailsLoaded||item.detailsLoading) return item;
+  if(!item||item.detailsLoaded)return item;
+  if(item.detailsPromise)return item.detailsPromise;
   item.detailsLoading=true;
-  try{Object.assign(item,await readPreviewImageDimensions(item.file));}catch(e){}
-  if(/\.png$/i.test(item.name)||item.type==='image/png'){
-    try{Object.assign(item,await readDrawThingsPngMetadata(item.file));}catch(e){item.metadataRaw='PNG metadata parse error: '+String(e.message||e);}
-  }
-  item.detailsLoaded=true;
-  item.detailsLoading=false;
-  updatePreviewItemSearchText(item);
-  return item;
+  item.detailsPromise=(async()=>{
+    const errors=[];
+    try{
+      const tasks=[];
+      if(!item.dimensionsLoaded)tasks.push(previewReadWithTimeout(readPreviewImageDimensions(item.file)).then(data=>{Object.assign(item,data);item.dimensionsLoaded=true;}).catch(error=>errors.push(String(error.message||error))));
+      const png=/\.png$/i.test(item.name)||item.type==='image/png';
+      if(png&&!item.metadataLoaded)tasks.push(previewReadWithTimeout(readDrawThingsPngMetadata(item.file)).then(data=>{Object.assign(item,data);item.metadataLoaded=true;}).catch(error=>errors.push(String(error.message||error))));
+      await Promise.all(tasks);
+      item.detailsError=errors.join(' / ');
+      item.detailsLoaded=!!item.dimensionsLoaded&&(!png||!!item.metadataLoaded);
+      item.lazyLoaded=!item.detailsLoaded;
+      if(errors.length&&!item.metadataLoaded)item.metadataRaw=item.detailsError;
+      updatePreviewItemSearchText(item);
+      return item;
+    }finally{item.detailsLoading=false;item.detailsPromise=null;}
+  })();
+  return item.detailsPromise;
 }
 function updatePreviewItemSearchText(item){
   item.searchText=[item.name,item.path,item.type,item.width&&item.height?item.width+'x'+item.height:'',item.prompt,item.negative,JSON.stringify(item.meta||{}),item.metadataRaw].join('\n').toLowerCase();
@@ -6613,6 +7089,7 @@ function previewFilteredImages(){
     base=previewImages;
   }
   if(q) base=base.filter(item=>q.split(/\s+/).filter(Boolean).every(t=>item.searchText.includes(t)));
+  if(previewShowSelectedOnly) base=base.filter(item=>selectedPreviewImageIds.has(item.id));
   return previewForcedIds?base:sortedPreviewImages(base);
 }
 function renderPreviewImages(){
@@ -6623,17 +7100,36 @@ function renderPreviewImages(){
   const filtered=previewFilteredImages();
   const forcedBtn=document.getElementById('image-preview-forced-clear');
   if(forcedBtn) forcedBtn.style.display=previewForcedIds?'inline-flex':'none';
-  if(status) status.textContent=`${filtered.length} / ${previewImages.length} images / ${(document.getElementById('image-preview-sort')?.selectedOptions?.[0]?.textContent||'')}${previewForcedIds?' / '+previewForcedLabel:''}`;
+  if(status) status.textContent=`${filtered.length} / ${previewImages.length} images / ${previewShowSelectedOnly?'Selected only / ':''}${previewForcedIds?(previewForcedOrderMode==='chronological'?'Modified oldest first':previewForcedOrderMode==='sequence'?'Selection order':'Score order'):(document.getElementById('image-preview-sort')?.selectedOptions?.[0]?.textContent||'')}${previewForcedIds?' / '+previewForcedLabel:''}`;
   updatePreviewSelectionStatus();
   if(!previewImages.length){list.innerHTML='<div class="group-empty">Images have not been loaded yet.</div>';return;}
   if(!filtered.length){list.innerHTML='<div class="group-empty">No matching images found.</div>';return;}
-  list.innerHTML=filtered.map(item=>`<div class="preview-card${item.id===activePreviewId?' active':''}${selectedPreviewImageIds.has(item.id)?' selected':''}${previewSelectionMode?' selection-mode':''}" onclick="handlePreviewCardClick('${escA(item.id)}',event)">
+  const thumbSize=imagePreviewThumbSize;
+  const rowHeight=Math.max(80,Math.round(thumbSize*.92)+52);
+  const columns=Math.max(1,Math.floor((list.clientWidth-8+8)/(thumbSize+8)));
+  const totalRows=Math.ceil(filtered.length/columns);
+  const viewportHeight=list.clientHeight||Math.round(window.innerHeight*.7);
+  const scrollTop=Math.min(Math.max(0,list.scrollTop||previewVirtualScrollTop),Math.max(0,totalRows*rowHeight-viewportHeight));
+  const firstRow=Math.max(0,Math.floor(scrollTop/rowHeight)-4);
+  const lastRow=Math.min(totalRows,Math.ceil((scrollTop+viewportHeight)/rowHeight)+4);
+  const start=firstRow*columns, end=Math.min(filtered.length,lastRow*columns);
+  const cards=filtered.slice(start,end).map(item=>`<div class="preview-card${item.id===activePreviewId?' active':''}${selectedPreviewImageIds.has(item.id)?' selected':''}${previewSelectionMode?' selection-mode':''}" onclick="handlePreviewCardClick('${escA(item.id)}',event)">
     <input class="preview-select-box" type="checkbox" ${selectedPreviewImageIds.has(item.id)?'checked':''} onclick="event.stopPropagation()" onchange="togglePreviewImageSelection('${escA(item.id)}',this.checked,event)">
     <img src="${escA(item.url)}" alt="${escA(item.name)}">
     <div class="preview-card-name" title="${escA(item.name)}">${escH(shortPreviewFileName(item.name))}</div>
     <div class="group-meta">${escH((item.meta?.size)||((item.width&&item.height)?`${item.width}x${item.height}`:''))} ${item.meta?.seed?`/ seed ${escH(item.meta.seed)}`:''}</div>
   </div>`).join('');
+  list.innerHTML=`<div class="preview-virtual-spacer" style="height:${Math.max(1,totalRows*rowHeight)}px"><div class="preview-virtual-window" style="top:${firstRow*rowHeight}px;grid-template-columns:repeat(${columns},minmax(0,1fr));grid-auto-rows:${rowHeight}px">${cards}</div></div>`;
+  list.onscroll=onPreviewListScroll;
   updatePreviewSelectionStatus();
+}
+function onPreviewListScroll(){
+  const list=document.getElementById('image-preview-list');
+  if(!list) return;
+  previewVirtualScrollTop=list.scrollTop;
+  if(previewVirtualRenderQueued) return;
+  previewVirtualRenderQueued=true;
+  requestAnimationFrame(()=>{previewVirtualRenderQueued=false;renderPreviewImages();});
 }
 async function selectPreviewImage(id){activePreviewId=id;renderPreviewImages();renderPreviewDetail();await ensureActivePreviewDetails();}
 function activePreviewImage(){return previewImages.find(x=>x.id===activePreviewId)||previewImages[0]||null;}
@@ -6648,6 +7144,21 @@ function updatePreviewSelectionStatus(){
     btn.classList.toggle('primary',previewSelectionMode);
     btn.classList.toggle('secondary',!previewSelectionMode);
   }
+  const showBtn=document.getElementById('image-preview-show-selected');
+  if(showBtn){
+    showBtn.textContent=previewShowSelectedOnly?'Show All Images':'Show Selected Images';
+    showBtn.classList.toggle('primary',previewShowSelectedOnly);
+    showBtn.classList.toggle('secondary',!previewShowSelectedOnly);
+    showBtn.disabled=!previewShowSelectedOnly&&selectedPreviewImageIds.size===0;
+  }
+}
+function togglePreviewShowSelectedOnly(){
+  if(!previewShowSelectedOnly&&!selectedPreviewImageIds.size){toast('Select images first');return;}
+  previewShowSelectedOnly=!previewShowSelectedOnly;
+  previewVirtualScrollTop=0;
+  const list=document.getElementById('image-preview-list');
+  if(list) list.scrollTop=0;
+  renderPreviewImages();
 }
 function togglePreviewSelectionMode(){
   previewSelectionMode=!previewSelectionMode;
@@ -6763,6 +7274,9 @@ function renderPreviewDetail(){
       </div>
       <textarea class="preview-prompt-box" id="preview-img2img-prompt" style="margin-top:6px;min-height:82px" placeholder="Img2Img Prompt">${escH(item.prompt||'')}</textarea>
       <textarea class="preview-prompt-box" id="preview-img2img-negative" style="margin-top:6px;min-height:58px" placeholder="Negative Prompt">${escH(item.negative||'')}</textarea>
+      <div class="sl" style="margin-top:10px">Add a common tag to selected images</div>
+      <div class="row" style="margin-top:5px"><input class="inp" id="preview-img2img-common-tag" placeholder="Example: (anime style painting:1.3)" style="flex:1"><button class="btn sm related" onclick="sendSelectedPreviewImagesToImg2ImgWithCommonTag()">Generate selected images</button></div>
+      <div class="mini-help">Adds the common tag to the beginning of each selected image prompt and runs Img2Img sequentially with the same settings.</div>
       <div class="row" style="margin-top:7px">
         <button class="btn sm related" id="preview-img2img-send" onclick="sendActivePreviewImageToImg2Img()">Generate from this image</button>
         <span class="group-meta" id="preview-img2img-status">Not sent</span>
@@ -6777,12 +7291,16 @@ function renderPreviewDetail(){
           <button class="btn sm secondary" onclick="clearPreviewImg2ImgResult()">Clear result</button>
         </div>
       </div>
+      <div id="preview-img2img-batch-result" class="preview-img2img-result"></div>
       </div>
     </details>
     <div class="sl">Positive Prompt</div>
     <textarea class="preview-prompt-box${promptEditing?' editing':''}" id="image-preview-prompt-text" ${promptEditing?'':'readonly'} oninput="updatePreviewPromptDraft(this.value)">${escH(promptDraft)}</textarea>
     <div class="row" style="margin-top:6px">
       ${promptEditing?`<button class="btn sm primary" onclick="sendEditedPreviewPromptToCompose()">Send edited prompt to Compose (one line)</button>
+      <button class="btn sm primary" onclick="sendEditedPreviewPromptToCompose('size')">Edited → Original Size</button>
+      <button class="btn sm primary" onclick="sendEditedPreviewPromptToCompose('settings')">Edited → Restore Settings (Seed)</button>
+      <label class="count-badge"><input type="checkbox" ${previewComposePositiveOnly()?'':'checked'} onchange="document.getElementById('preview-compose-positive-only').checked=!this.checked;savePreviewComposePositiveOnly()"> Include Negative</label>
       <button class="btn sm secondary" onclick="cancelPreviewPromptEdit()">Cancel editing</button>`:`<button class="btn sm secondary" onclick="startPreviewPromptEdit()">Edit Prompt</button>`}
       <span class="group-meta">${promptEditing?'Editing (PNG metadata will not be changed)':'Edit a working copy without changing the PNG'}</span>
     </div>
@@ -6819,6 +7337,14 @@ function renderPreviewDetail(){
       <button class="btn sm primary" onclick="findGroupsFromActivePreviewImage()">Nearby Group search from image Prompt</button>
       <button class="btn sm related" onclick="findImagesFromActivePreviewImage()">Approximate image search from image Prompt</button>
       <button class="btn sm secondary" onclick="clearPreviewGroupMatches()">Clear Candidate</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label for="preview-neighbor-count" class="group-meta">Before and after, each</label>
+      <select class="inp" id="preview-neighbor-count" style="width:auto" onchange="previewNeighborCount=Number(this.value)">
+        ${[5,10,25,50].map(n=>`<option value="${n}" ${previewNeighborCount===n?'selected':''}>${n} images</option>`).join('')}
+      </select>
+      <button class="btn sm related" onclick="showPreviewNeighborImages()">Show Nearby Images</button>
+      <span class="group-meta">By modification time, including the current image (loaded images only)</span>
     </div>
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border2)">
       <div class="group-meta" style="margin-bottom:5px">Register Group</div>
@@ -6953,6 +7479,25 @@ async function sendActivePreviewImageToImg2Img(){
     if(button) button.disabled=false;
   }
 }
+async function sendSelectedPreviewImagesToImg2ImgWithCommonTag(){
+  if(previewImg2ImgSending){toast('Img2Img is already being sent.');return;}
+  const items=selectedPreviewImages();
+  const common=String(document.getElementById('preview-img2img-common-tag')?.value||'').trim();
+  if(items.length<1){toast('Select Preview images for sequential generation.');return;}
+  if(!common){toast('Enter the common tag to add.');return;}
+  let strength,steps,cfg,seed;
+  try{strength=previewImg2ImgNumber('preview-img2img-strength','Strength',{min:0,max:1});steps=previewImg2ImgNumber('preview-img2img-steps','Steps',{min:2,integer:true});cfg=previewImg2ImgNumber('preview-img2img-cfg','CFG',{min:0});seed=previewImg2ImgNumber('preview-img2img-seed','Seed',{integer:true});}catch(err){toast(err.message);return;}
+  if(strength==null) strength=.2;
+  if(!confirm(`Add "${common}" to ${items.length} selected images and generate Img2Img sequentially?`)) return;
+  const panel=document.getElementById('preview-img2img-batch-result');
+  if(panel){panel.style.display='block';panel.innerHTML='<div class="sl" style="margin-top:0">Common-tag Img2Img results</div><div id="preview-img2img-batch-list" class="related-image-grid"></div>';}
+  const list=document.getElementById('preview-img2img-batch-list'); previewImg2ImgSending=true;
+  try{
+    const configuredUrl=normalizeDrawThingsApiUrl(),localProxy=drawThingsProxyFallbackUrl();
+    for(let i=0;i<items.length;i++){const item=items[i];if(!item.detailsLoaded) await loadPreviewItemDetails(item);if(!item.width||!item.height||!item.prompt) continue;setPreviewImg2ImgStatus(`${i+1}/${items.length} generating…`);const imageBase64=await previewItemBase64(item);const payload={prompt:`${common}, ${oneLineExistingPromptText(item.prompt)}`,negative_prompt:String(item.negative||''),init_images:[imageBase64],strength,width:item.width,height:item.height,batch_count:1,batch_size:1};if(steps!=null) payload.steps=steps;if(cfg!=null) payload.guidance_scale=cfg;if(seed!=null) payload.seed=seed;const requestOptions={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};let res;try{res=await fetch(drawThingsApiPath(configuredUrl,'/sdapi/v1/img2img'),requestOptions);}catch(e){res=await fetch(drawThingsApiPath(localProxy,'/sdapi/v1/img2img'),requestOptions);}const text=await res.text().catch(()=>'');if(!res.ok) throw new Error(`HTTP ${res.status}${text?' - '+text.slice(0,300).replace(/\s+/g,' '):''}`);const raw=String(JSON.parse(text||'{}')?.images?.[0]||'').split(',').pop();if(!raw) throw new Error('No generated image was returned');if(list){const card=document.createElement('div');card.className='related-image-card';card.innerHTML=`<img src="data:image/png;base64,${raw}" alt="${escA(item.name)} common-tag Img2Img"><div class="group-meta">${escH(item.name)} / image ${i+1}</div>`;list.appendChild(card);}}
+    setPreviewImg2ImgStatus(`${items.length} common-tag Img2Img generations completed`,'ok');toast(`Generated ${items.length} selected images with the common tag.`);
+  }catch(err){setPreviewImg2ImgStatus(`Failed: ${drawThingsApiFetchErrorMessage(err)}`,'err');toast(`Img2Img failed: ${drawThingsApiFetchErrorMessage(err)}`);}finally{previewImg2ImgSending=false;}
+}
 function downloadPreviewImg2ImgResult(){
   const src=document.getElementById('preview-img2img-result-image')?.src||'';
   if(!src.startsWith('data:image/')){toast('No generated result to download');return;}
@@ -7000,12 +7545,35 @@ function findGroupsFromActivePreviewImage(){
   renderPreviewGroupMatches(matches,item);
   toast(matches.length?`Displayed ${matches.length} Candidates of Similar Prompts within Groups`:'No Close Matches Found in Groups');
 }
+function previewChronologicalNeighbors(items,anchorId,count){
+  const ordered=items.filter(img=>Number.isFinite(Number(img.modified))&&Number(img.modified)>0)
+    .slice().sort((a,b)=>Number(a.modified)-Number(b.modified)||String(a.name||'').localeCompare(String(b.name||''),undefined,{numeric:true})||String(a.id).localeCompare(String(b.id)));
+  const index=ordered.findIndex(img=>img.id===anchorId);
+  if(index<0) return null;
+  const n=Math.max(1,Math.min(50,Math.floor(Number(count)||10)));
+  const start=Math.max(0,index-n), end=Math.min(ordered.length,index+n+1);
+  return {images:ordered.slice(start,end),before:index-start,after:end-index-1};
+}
+function showPreviewNeighborImages(){
+  const item=activePreviewImage();
+  if(!item){toast('Select a reference image first');return;}
+  const result=previewChronologicalNeighbors(previewImages,item.id,previewNeighborCount);
+  if(!result){toast('Cannot determine nearby images: modification time is unavailable for this image');return;}
+  resetPreviewSearchForNewResult();
+  previewShowSelectedOnly=false;
+  previewForcedOrder=result.images.map(img=>img.id);
+  previewForcedIds=new Set(previewForcedOrder);
+  previewForcedOrderMode='chronological';
+  previewForcedLabel=`${result.before} before / 1 reference / ${result.after} after — ${item.name||'Preview image'}`;
+  renderPreviewImages();
+  toast(`Showing ${result.images.length} images, oldest first (reference image highlighted). Use "Remove related filtering" above to reset`);
+}
 function findImagesFromActivePreviewImage(){
   const item=activePreviewImage();
   if(!item?.prompt){toast('No Image Prompt Available for Similar Image Search');return;}
   if(previewImages.length<2){toast('Not Enough Images to Compare Yet');return;}
   relatedSearchStrictness=previewGroupMatchStrictnessValue();
-  const matches=relatedImageMatchesForPrompt(item.prompt,60,relatedSearchStrictness).filter(m=>m.img.id!==item.id);
+  const matches=relatedImageMatchesForPrompt(item.prompt,120,relatedSearchStrictness).filter(m=>m.img.id!==item.id);
   if(!matches.length){toast('No Close Matches Found.');return;}
   const ids=matches.map(m=>m.img.id);
   resetPreviewSearchForNewResult();
@@ -7055,7 +7623,7 @@ function showPreviewGroupMatchImages(promptId){
   if(!found){toast('No Prompt Found for Similar Image Source');return;}
   if(!previewImages.length){toast('Load an image folder in Preview first.');return;}
   relatedSearchStrictness=previewGroupMatchStrictnessValue();
-  const matches=relatedImageMatchesForPrompt(found.prompt.text,60,relatedSearchStrictness);
+  const matches=relatedImageMatchesForPrompt(found.prompt.text,120,relatedSearchStrictness);
   if(!matches.length){toast("No similar image was found for this candidate.");return;}
   const ids=matches.map(m=>m.img.id);
   resetPreviewSearchForNewResult();
@@ -7107,12 +7675,21 @@ function cancelPreviewPromptEdit(){
   renderPreviewDetail();
   toast('Preview Prompt edits were canceled');
 }
-function sendEditedPreviewPromptToCompose(){
+function previewComposeSourceItem(){
+  const item=activePreviewImage();
+  if(!item||previewPromptEditingId!==item.id)return item;
+  const editor=document.getElementById('image-preview-prompt-text');
+  const text=editor?editor.value:(previewPromptEditDrafts[item.id]??item.prompt);
+  return {...item,prompt:String(text||'')};
+}
+function sendEditedPreviewPromptToCompose(mode='plain'){
   const item=activePreviewImage();
   if(!item){toast('Select an image to send to Compose');return;}
   const text=String(document.getElementById('image-preview-prompt-text')?.value||previewPromptEditDrafts[item.id]||'').trim();
   if(!text){toast('The Prompt to send to Compose is empty');return;}
   previewPromptEditDrafts[item.id]=text;
+  if(mode==='size'){sendPreviewPromptOneLineToCompose(false,true);return;}
+  if(mode==='settings'){sendPreviewPromptToComposeExactSettings();return;}
   const output=oneLineExistingPromptText(text);
   if(!output){toast('No Prompt can be sent to Compose');return;}
   document.getElementById('b-pos').value=output;
@@ -7448,7 +8025,7 @@ async function downloadSelectedPreviewImages(){
   toast(`I started to download the selected ${started} images.`);
 }
 function clearPreviewObjectUrls(){previewImages.forEach(x=>{try{URL.revokeObjectURL(x.url);}catch(e){}});}
-function clearPreviewImages(){clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Preview cleared');}
+function clearPreviewImages(){cancelPreviewFileLoad();const progress=document.getElementById("preview-load-progress");if(progress) progress.textContent="";clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewShowSelectedOnly=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Preview cleared');}
 function registerPreviewLorasToLibrary(){
   const item=activePreviewImage();
   const loras=Array.isArray(item?.meta?.lora)?item.meta.lora:(Array.isArray(item?.meta?.loras)?item.meta.loras:[]);
@@ -7593,7 +8170,7 @@ function copyPreviewSettingsMemo(){
   copyTextToClipboard(memo,()=>toast('Copied the image setting memo'));
 }
 function sendPreviewPromptToComposeWithSettings(){
-  const item=activePreviewImage();
+  const item=previewComposeSourceItem();
   if(!item?.prompt){toast('No prompt to send to Compose');return;}
   const meta=item.meta||{};
   const size=previewSizeParts(item);
@@ -7610,7 +8187,7 @@ function sendPreviewPromptToComposeWithSettings(){
   toast(`Sent prompt, settings, and LoRA to Compose${loraResult.count?` (${loraResult.count} LoRA)`: ' (LoRA OFF)'}`);
 }
 function sendPreviewPromptToComposeExactSettings(){
-  const item=activePreviewImage();
+  const item=previewComposeSourceItem();
   if(!item?.prompt){toast('No prompt is available for settings reproduction.');return;}
   const meta=item.meta||{};
   sendPreviewPromptToComposeWithSettings();
@@ -7634,7 +8211,7 @@ function sendPreviewPromptToGroupsSearch(){
   toast('Sent a prompt to the Groups search field');
 }
 function sendPreviewPromptOneLineToCompose(append=false,forceOriginalSize=false){
-  const item=activePreviewImage();
+  const item=previewComposeSourceItem();
   if(!item?.prompt){toast('No prompt to send to Compose as a 1-line item');return;}
   const includeSize=forceOriginalSize||!!document.getElementById('preview-compose-include-size')?.checked;
   const line=previewOneLinePrompt(item,includeSize);
@@ -7734,7 +8311,8 @@ function undoComposeBulkEdit(){
 //  INIT
 // ═══════════════════════════════════════════════════════════
 load();
-initializeGroupsPersistence().finally(()=>autoImportOnStartup());
+groupsInitializationPromise=initializeGroupsPersistence();
+groupsInitializationPromise.then(()=>autoImportOnStartup());
 loadTheme();
 setupTabShortcuts();
 renderCatBar();
@@ -7751,6 +8329,7 @@ renderBuilderCatBar();
 renderBuilderTags();
 renderSizePresetSelects();
 setupPreviewComposeOptions();
+renderPreviewGenerationIgnoreTags();
 setupPreviewImageZoom();
 initDrawThingsApiUI();
 buildCode();
