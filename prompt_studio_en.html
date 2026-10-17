@@ -282,7 +282,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 /* ── Preview ── */
 .preview-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,.9fr);gap:12px;align-items:start}
 .preview-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-.preview-thumbs{display:block;height:70vh;max-height:780px;min-height:220px;overflow:auto;padding:4px;contain:layout paint}
+.preview-thumbs{display:block;height:70vh;max-height:780px;min-height:220px;overflow:auto;padding:4px;contain:layout paint;overflow-anchor:none}
 .preview-virtual-spacer{position:relative;width:100%}.preview-virtual-window{position:absolute;left:4px;right:4px;display:grid;gap:8px;align-items:stretch}.preview-virtual-window .preview-card{min-height:0;overflow:hidden}
 .preview-card{position:relative;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);padding:6px;cursor:pointer;transition:all .12s;min-width:0;overflow:hidden}
 .preview-card:hover{border-color:var(--accent)}
@@ -1325,6 +1325,7 @@ let previewPromptEditDrafts = {};
 let imagePreviewThumbSize = 120;
 let previewNeighborCount = 10;
 let previewVirtualScrollTop = 0, previewVirtualRenderQueued = false;
+let previewVirtualState=null,previewVirtualResizeObserver=null;
 let previewForcedIds = null, previewForcedOrder = [], previewForcedLabel = "", previewForcedOrderMode = "score";
 let relatedSearchStrictness = "normal";
 const SK_RELATED_SCORING_MODE='prompt_studio_en_related_scoring_mode_v1';
@@ -6402,7 +6403,10 @@ function renderTopScoreGalleryPanel(preserveSelection=false){
       return `<article class="top-gallery-card">
         <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
         <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
-        ${relatedPanelPromptCheckbox(p.id)}
+        <div class="row" style="align-items:center;margin:6px 0">
+          ${relatedPanelPromptCheckbox(p.id)}
+          <button class="btn sm secondary" onclick="openGroupPromptFromPreviewMatch('${escA(r.entry.group.id)}','${escA(p.id)}')">${GROUP_TRANSFER_EN?'Open in Groups':'Groupsで開く'}</button>
+        </div>
         ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(${bases[start+k]+i},event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button></div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
         <details><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
           <div class="top-gallery-prompt">${escH(p.text||'')}</div>
@@ -7754,6 +7758,84 @@ function previewFilteredImages(){
   if(previewShowSelectedOnly) base=base.filter(item=>selectedPreviewImageIds.has(item.id));
   return previewForcedIds?base:sortedPreviewImages(base);
 }
+function createPreviewVirtualCard(item){
+  const id=item.id,card=document.createElement('div');
+  card.dataset.previewId=id;
+  card.onclick=event=>handlePreviewCardClick(id,event);
+  const check=document.createElement('input');
+  check.className='preview-select-box';check.type='checkbox';
+  check.onclick=event=>event.stopPropagation();
+  check.onchange=event=>togglePreviewImageSelection(id,check.checked,event);
+  const image=document.createElement('img');
+  image.dataset.previewThumb=id;image.loading='lazy';image.decoding='async';
+  const cached=previewThumbCache.get(id);
+  image.src=cached&&cached.file===item.file?cached.url:PREVIEW_THUMB_PLACEHOLDER;
+  const name=document.createElement('div');name.className='preview-card-name';
+  const meta=document.createElement('div');meta.className='group-meta';
+  card.append(check,image,name,meta);
+  return card;
+}
+function updatePreviewVirtualCard(card,item){
+  card.className='preview-card'+(item.id===activePreviewId?' active':'')+(selectedPreviewImageIds.has(item.id)?' selected':'')+(previewSelectionMode?' selection-mode':'');
+  const check=card.querySelector('.preview-select-box');check.checked=selectedPreviewImageIds.has(item.id);
+  const image=card.querySelector('img');image.alt=item.name;
+  if(card.previewSourceFile&&card.previewSourceFile!==item.file){
+    image.src=PREVIEW_THUMB_PLACEHOLDER;
+    if(previewThumbVisible.has(image))queuePreviewThumbnail(image);
+  }
+  card.previewSourceFile=item.file;
+  const name=card.querySelector('.preview-card-name'),label=shortPreviewFileName(item.name);
+  if(name.textContent!==label)name.textContent=label;
+  if(name.title!==item.name)name.title=item.name;
+  const meta=card.querySelector('.group-meta');
+  const text=((item.meta?.size)||((item.width&&item.height)?`${item.width}x${item.height}`:''))+' '+(item.meta?.seed?`/ seed ${item.meta.seed}`:'');
+  if(meta.textContent!==text)meta.textContent=text;
+}
+function renderPreviewVirtualWindow(filtered,scrollOnly=false){
+  const list=document.getElementById('image-preview-list');if(!list)return;
+  let state=previewVirtualState;
+  if(!state||state.list!==list||state.spacer.parentNode!==list||state.window.parentNode!==state.spacer){
+    const spacer=document.createElement('div');spacer.className='preview-virtual-spacer';
+    const windowEl=document.createElement('div');windowEl.className='preview-virtual-window';spacer.append(windowEl);
+    list.replaceChildren(spacer);
+    state=previewVirtualState={list,spacer,window:windowEl,filtered:[],start:-1,end:-1,columns:0,rowHeight:0};
+  }
+  state.filtered=filtered;
+  const thumbSize=imagePreviewThumbSize,rowHeight=Math.max(80,Math.round(thumbSize*.92)+52)+8;
+  const columns=Math.max(1,Math.floor(list.clientWidth/(thumbSize+8))),totalRows=Math.ceil(filtered.length/columns);
+  const viewportHeight=list.clientHeight||Math.round(window.innerHeight*.7);
+  const scrollTop=Math.min(Math.max(0,list.scrollTop||0),Math.max(0,totalRows*rowHeight-viewportHeight));
+  const firstRow=Math.max(0,Math.floor(scrollTop/rowHeight)-4),lastRow=Math.min(totalRows,Math.ceil((scrollTop+viewportHeight)/rowHeight)+4);
+  const start=firstRow*columns,end=Math.min(filtered.length,lastRow*columns);
+  // Scroll within the same buffered window needs no DOM or thumbnail changes.
+  if(scrollOnly&&state.start===start&&state.end===end&&state.columns===columns&&state.rowHeight===rowHeight)return;
+  state.spacer.style.height=Math.max(1,totalRows*rowHeight)+'px';
+  state.window.style.top=firstRow*rowHeight+'px';
+  state.window.style.gridTemplateColumns=`repeat(${columns},minmax(0,1fr))`;
+  state.window.style.gridAutoRows=(rowHeight-8)+'px';
+  const existing=new Map([...state.window.children].map(card=>[card.dataset.previewId,card]));
+  const wanted=new Set(),cards=[];
+  for(let i=start;i<end;i++){
+    const item=filtered[i];wanted.add(item.id);
+    const card=existing.get(item.id)||createPreviewVirtualCard(item);
+    updatePreviewVirtualCard(card,item);cards.push(card);
+  }
+  // Keep overlapping cards attached; removing/recreating their img elements causes flashing.
+  for(const card of [...state.window.children])if(!wanted.has(card.dataset.previewId))card.remove();
+  let cursor=state.window.firstElementChild;
+  for(const card of cards){
+    if(card===cursor)cursor=cursor.nextElementSibling;
+    else state.window.insertBefore(card,cursor);
+  }
+  Object.assign(state,{start,end,columns,rowHeight});
+  list.onscroll=onPreviewListScroll;
+  if(window.ResizeObserver&&!previewVirtualResizeObserver){
+    previewVirtualResizeObserver=new ResizeObserver(()=>{
+      if(list.clientWidth>0&&list.clientHeight>0)onPreviewListScroll();
+    });
+    previewVirtualResizeObserver.observe(list);
+  }
+}
 function renderPreviewImages(){
   const list=document.getElementById('image-preview-list');
   const status=document.getElementById('image-preview-status');
@@ -7764,26 +7846,9 @@ function renderPreviewImages(){
   if(forcedBtn) forcedBtn.style.display=previewForcedIds?'inline-flex':'none';
   if(status) status.textContent=`${filtered.length} / ${previewImages.length} images / ${previewShowSelectedOnly?'Selected only / ':''}${previewForcedIds?(previewForcedOrderMode==='chronological'?'Modified oldest first':previewForcedOrderMode==='sequence'?'Selection order':'Score order'):(document.getElementById('image-preview-sort')?.selectedOptions?.[0]?.textContent||'')}${previewForcedIds?' / '+previewForcedLabel:''}`;
   updatePreviewSelectionStatus();
-  if(!previewImages.length){list.innerHTML='<div class="group-empty">Images have not been loaded yet.</div>';return;}
-  if(!filtered.length){list.innerHTML='<div class="group-empty">No matching images found.</div>';return;}
-  const thumbSize=imagePreviewThumbSize;
-  const rowHeight=Math.max(80,Math.round(thumbSize*.92)+52);
-  const columns=Math.max(1,Math.floor((list.clientWidth-8+8)/(thumbSize+8)));
-  const totalRows=Math.ceil(filtered.length/columns);
-  const viewportHeight=list.clientHeight||Math.round(window.innerHeight*.7);
-  const scrollTop=Math.min(Math.max(0,list.scrollTop||previewVirtualScrollTop),Math.max(0,totalRows*rowHeight-viewportHeight));
-  const firstRow=Math.max(0,Math.floor(scrollTop/rowHeight)-4);
-  const lastRow=Math.min(totalRows,Math.ceil((scrollTop+viewportHeight)/rowHeight)+4);
-  const start=firstRow*columns, end=Math.min(filtered.length,lastRow*columns);
-  const cards=filtered.slice(start,end).map(item=>`<div class="preview-card${item.id===activePreviewId?' active':''}${selectedPreviewImageIds.has(item.id)?' selected':''}${previewSelectionMode?' selection-mode':''}" onclick="handlePreviewCardClick('${escA(item.id)}',event)">
-    <input class="preview-select-box" type="checkbox" ${selectedPreviewImageIds.has(item.id)?'checked':''} onclick="event.stopPropagation()" onchange="togglePreviewImageSelection('${escA(item.id)}',this.checked,event)">
-    <img ${previewThumbnailAttributes(item)} alt="${escA(item.name)}">
-    <div class="preview-card-name" title="${escA(item.name)}">${escH(shortPreviewFileName(item.name))}</div>
-    <div class="group-meta">${escH((item.meta?.size)||((item.width&&item.height)?`${item.width}x${item.height}`:''))} ${item.meta?.seed?`/ seed ${escH(item.meta.seed)}`:''}</div>
-  </div>`).join('');
-  list.innerHTML=`<div class="preview-virtual-spacer" style="height:${Math.max(1,totalRows*rowHeight)}px"><div class="preview-virtual-window" style="top:${firstRow*rowHeight}px;grid-template-columns:repeat(${columns},minmax(0,1fr));grid-auto-rows:${rowHeight}px">${cards}</div></div>`;
-  list.onscroll=onPreviewListScroll;
-  updatePreviewSelectionStatus();
+  if(!previewImages.length){previewVirtualState=null;previewVirtualScrollTop=0;list.innerHTML='<div class="group-empty">Images have not been loaded yet.</div>';return;}
+  if(!filtered.length){previewVirtualState=null;previewVirtualScrollTop=0;list.innerHTML='<div class="group-empty">No matching images found.</div>';return;}
+  renderPreviewVirtualWindow(filtered);
 }
 function onPreviewListScroll(){
   const list=document.getElementById('image-preview-list');
@@ -7791,7 +7856,12 @@ function onPreviewListScroll(){
   previewVirtualScrollTop=list.scrollTop;
   if(previewVirtualRenderQueued) return;
   previewVirtualRenderQueued=true;
-  requestAnimationFrame(()=>{previewVirtualRenderQueued=false;renderPreviewImages();});
+  requestAnimationFrame(()=>{
+    previewVirtualRenderQueued=false;
+    const state=previewVirtualState;
+    if(state&&state.list===list&&state.spacer.parentNode===list)renderPreviewVirtualWindow(state.filtered,true);
+    else renderPreviewImages();
+  });
 }
 async function selectPreviewImage(id){activePreviewId=id;renderPreviewImages();renderPreviewDetail();await ensureActivePreviewDetails();}
 function activePreviewImage(){return previewImages.find(x=>x.id===activePreviewId)||previewImages[0]||null;}
