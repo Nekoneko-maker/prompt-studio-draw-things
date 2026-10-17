@@ -762,6 +762,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <label class="group-meta" style="display:inline-flex;align-items:center;gap:4px" title="近似検索のみ適用。登録済みの除外タグを使用し、一時入力は含みません。変更後は再検索してください。"><input type="checkbox" class="related-use-generation-ignore" onchange="setRelatedUseGenerationIgnore(this.checked)"> 生成済み照合の除外タグを適用</label>
         <button class="btn sm related" onclick="showRelatedImagesForSelectedPrompts()">選択順に関連画像</button>
         <button class="btn sm related" onclick="showTopScoreImagesForSelectedPrompts()">Topスコア画像</button>
+        <button class="btn sm secondary" id="group-image-search-stop" hidden onclick="stopGroupRelatedImageSearch()">画像検索を停止</button>
+        <span class="group-meta" id="group-image-search-progress" style="overflow-wrap:anywhere" aria-live="polite"></span>
       </div></details>
       <details class="group-action-section"><summary>Group整理・結合・重複チェック</summary><div class="row">
         <button class="btn sm secondary" onclick="openGroupPromptTransfer('selected')">選択をGroupへ</button>
@@ -790,6 +792,13 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
           <select class="inp" id="group-generation-filter" onchange="renderGroups()" style="max-width:200px"><option value="all">全状態を表示</option><option value="pending">未生成・変更あり</option><option value="done">生成済み</option></select>
         </div>
         <div id="group-generation-status" class="group-meta" style="margin-top:8px;overflow-wrap:anywhere" aria-live="polite"></div>
+        <div class="row">
+          <button class="btn secondary" id="group-folder-generation-start" onclick="matchSelectedGroupsAgainstAllPreviewImages()">選択プロンプトを読込画像すべてと照合</button>
+          <button class="btn secondary" id="group-folder-generation-stop" hidden onclick="stopGroupFolderGenerationMatch()">照合を停止</button>
+        </div>
+        <div class="group-meta">Previewで読み込み済みの全画像が対象です（画像選択・検索の絞り込みは無視）。Positive Promptを生成済み照合の除外タグで照合します。結果は確認後に確定し、一致なしのチェックは変更しません。</div>
+        <div id="group-folder-generation-progress" class="group-meta" style="margin-top:6px" aria-live="polite"></div>
+        <div id="group-folder-generation-results" hidden style="padding:8px;margin-top:6px;border:1px solid var(--border2);border-radius:var(--r2)"></div>
       </details>
       <div id="group-cross-select-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
       <div style="display:grid;grid-template-columns:minmax(150px,1.4fr) 80px 80px auto;gap:6px;margin-top:8px;align-items:center">
@@ -4894,6 +4903,97 @@ function confirmPreviewGenerationMatches(){
   document.getElementById('preview-generation-matches').hidden=true;
   toast(GROUP_TRANSFER_EN?'Generation checks saved.':'生成済みチェックを保存しました');
 }
+let groupFolderGenerationRows=[],groupFolderGenerationRun=0,groupFolderGenerationBusy=false;
+function stopGroupFolderGenerationMatch(){
+  groupFolderGenerationRun++;groupFolderGenerationBusy=false;
+  const stop=document.getElementById('group-folder-generation-stop');if(stop)stop.hidden=true;
+  const start=document.getElementById('group-folder-generation-start');if(start)start.disabled=false;
+  const progress=document.getElementById('group-folder-generation-progress');
+  if(progress)progress.textContent=GROUP_TRANSFER_EN?'Stopped. No generation checks were changed.':'照合を停止しました。生成済みチェックは変更していません。';
+}
+async function matchSelectedGroupsAgainstAllPreviewImages(){
+  if(groupFolderGenerationBusy)return;
+  const entries=selectedGroupPromptEntries().map(e=>({...e,text:String(e.prompt.text||'')}));
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'Select prompts in Groups first.':'Groupsで照合するプロンプトを選択してください');return;}
+  const images=previewImages.slice();
+  if(!images.length){toast(GROUP_TRANSFER_EN?'Load an image folder in Preview first.':'先にPreviewで画像フォルダを読み込んでください');return;}
+  if(previewFileLoading){toast(GROUP_TRANSFER_EN?'Wait for Preview loading to finish or stop it first.':'Previewの画像読み込みを完了するか停止してから照合してください');return;}
+  const run=++groupFolderGenerationRun,folderVersion=previewFileLoadGeneration;
+  groupFolderGenerationBusy=true;groupFolderGenerationRows=[];
+  const panel=document.getElementById('group-folder-generation-results');
+  const progress=document.getElementById('group-folder-generation-progress');
+  const stop=document.getElementById('group-folder-generation-stop');
+  const start=document.getElementById('group-folder-generation-start');
+  if(panel){panel.hidden=true;panel.innerHTML='';}
+  if(stop)stop.hidden=false;if(start)start.disabled=true;
+  const ignored=previewGenerationIgnoredTags();
+  const targets=entries.map(e=>({...e,key:generationPromptKey(e.text,ignored)}));
+  const keys=new Set(targets.map(e=>e.key).filter(Boolean)),found=new Map();
+  let noPrompt=0,readFailed=0,checked=0;
+  try{
+    for(const image of images){
+      if(run!==groupFolderGenerationRun)return;
+      if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+      let readError=false;
+      try{await loadPreviewItemDetails(image);}catch(e){readFailed++;readError=true;}
+      if(run!==groupFolderGenerationRun)return;
+      if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+      if(readError){/* Counted above; do not use stale metadata after a read error. */}
+      else if(image.detailsError&&!image.prompt)readFailed++;
+      else if(!image.prompt)noPrompt++;
+      else{
+        const key=generationPromptKey(image.prompt,ignored);
+        if(key&&keys.has(key)){
+          if(!found.has(key))found.set(key,{count:0,names:[]});
+          const hit=found.get(key);hit.count++;
+          if(hit.names.length<3)hit.names.push(image.name);
+        }
+      }
+      checked++;
+      if(checked===1||checked%20===0||checked===images.length){
+        if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Checking all loaded images: ':'読込画像すべてを照合中: ')+checked+' / '+images.length;
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+    }
+    if(run!==groupFolderGenerationRun)return;
+    if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+    groupFolderGenerationRows=targets.map(e=>({...e,match:e.key?found.get(e.key)||null:null}));
+    renderGroupFolderGenerationResults(images.length,noPrompt,readFailed,ignored);
+    if(progress)progress.textContent=GROUP_TRANSFER_EN?'Check complete — review and confirm below.':'照合完了 — 下の結果を確認し、生成済みを確定してください。';
+  }catch(e){
+    if(run===groupFolderGenerationRun){
+      if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Check failed (no changes): ':'照合失敗（チェック変更なし）: ')+String(e.message||e);
+    }
+  }finally{
+    if(run===groupFolderGenerationRun){groupFolderGenerationBusy=false;if(stop)stop.hidden=true;if(start)start.disabled=false;}
+  }
+}
+function renderGroupFolderGenerationResults(imageCount,noPrompt,readFailed,ignored){
+  const panel=document.getElementById('group-folder-generation-results');if(!panel)return;
+  const matched=groupFolderGenerationRows.filter(r=>r.match);
+  const unmatched=groupFolderGenerationRows.filter(r=>!r.match);
+  const actions=`<div class="row"><button class="btn primary" onclick="confirmGroupFolderGenerationMatches()" ${matched.length?'':'disabled'}>${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn secondary" onclick="document.getElementById('group-folder-generation-results').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
+  panel.hidden=false;
+  panel.innerHTML=`<div class="group-meta">${GROUP_TRANSFER_EN?'Selected prompts':'選択プロンプト'} ${groupFolderGenerationRows.length} / ${GROUP_TRANSFER_EN?'All loaded images':'読込画像全体'} ${imageCount}<br>
+    ${GROUP_TRANSFER_EN?'Matched':'一致'} ${matched.length} / ${GROUP_TRANSFER_EN?'No match':'一致なし'} ${unmatched.length} / ${GROUP_TRANSFER_EN?'Images without Prompt':'Promptなし画像'} ${noPrompt} / ${GROUP_TRANSFER_EN?'Read failures':'読込失敗'} ${readFailed}</div>
+    <div class="group-meta" style="margin-top:6px">${GROUP_TRANSFER_EN?'Unconfirmed. Existing checks are kept for unmatched prompts. No match does not prove a prompt has never been generated.':'未確定です。一致なしの既存チェックは解除しません。一致なし＝未生成の確定ではありません。'}</div>
+    <details><summary>${GROUP_TRANSFER_EN?'Ignore tags used':'今回適用した除外タグ'} (${ignored.length})</summary><div class="group-meta" style="overflow-wrap:anywhere">${escH(ignored.join(', ')||'—')}</div></details>
+    ${actions}
+    <div style="max-height:450px;overflow:auto">${matched.map(r=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input type="checkbox" class="group-folder-generation-check" value="${escA(r.prompt.id)}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${r.match.count} images — ${escH(r.match.names.join(' / '))}${r.match.count>3?' …':''}</div></label>`).join('')}</div>
+    ${actions}
+    <details style="margin-top:8px"><summary>${GROUP_TRANSFER_EN?'Prompts with no match':'一致しなかったプロンプト'} (${unmatched.length})</summary><div style="max-height:300px;overflow:auto">${unmatched.map(r=>`<div style="padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><div class="group-meta">${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}${r.key?'':(GROUP_TRANSFER_EN?' — No tags left after exclusions':' — 除外後に照合できるタグなし')}</div>${escH(r.text)}</div>`).join('')}</div></details>`;
+}
+function confirmGroupFolderGenerationMatches(){
+  const checked=new Set([...document.querySelectorAll('.group-folder-generation-check:checked')].map(el=>el.value));
+  const valid=groupFolderGenerationRows.filter(r=>r.match&&checked.has(r.prompt.id)&&findGroupPromptById(r.prompt.id)?.prompt.text===r.text);
+  if(!valid.length){toast(GROUP_TRANSFER_EN?'No unchanged matching prompts selected.':'対象が未選択、または照合後に本文が変更されています');return;}
+  if(!confirm(GROUP_TRANSFER_EN?'Mark '+valid.length+' prompts as generated?':valid.length+'件を生成済みにしますか？'))return;
+  valid.forEach(r=>setPromptGenerated(r.prompt.id,true,'folder-match'));
+  saveGroups();renderGroups();renderGroupSelectors();updateGroupGenerationStatus();
+  const panel=document.getElementById('group-folder-generation-results');if(panel)panel.hidden=true;
+  groupFolderGenerationRows=[];
+  toast(GROUP_TRANSFER_EN?'Generation checks saved.':'生成済みチェックを保存しました');
+}
 function groupTagQueryTerms(){
   const raw=String(document.getElementById('group-tag-extract-query')?.value||document.getElementById('group-find')?.value||'').trim();
   if(!raw) return [];
@@ -5505,18 +5605,17 @@ function promptTokenCoveredByQuery(candidateToken,queryTokens){
     return qt===ct || qt.includes(ct) || ct.includes(qt);
   });
 }
-function candidateOvermatchPenalty(item,queryTokens,mode){
+function candidateOvermatchPenalty(item,queryTokens,mode,differenceTokens=null){
   const source=String(item.sourceText||item.promptText||item.hay||'');
-  const candTokens=promptSearchTokens(source,mode).filter(isPromptDifferenceToken);
-  if(!candTokens.length) return {penalty:0,extra:[]};
+  const candTokens=differenceTokens||promptSearchTokens(source,mode).filter(isPromptDifferenceToken);
+  if(!candTokens.length)return {penalty:0,extra:[]};
   const extra=[...new Set(candTokens.filter(t=>!promptTokenCoveredByQuery(t,queryTokens)))];
   let penalty=0;
   extra.forEach(t=>{
-    penalty += t.indexOf(' ')>=0 ? 0.95 : 0.55;
-    if(/\b(slicked|all-back|all back|side hair|forehead)\b/.test(t)) penalty += 0.9;
+    penalty+=t.indexOf(' ')>=0?0.95:0.55;
+    if(/\b(slicked|all-back|all back|side hair|forehead)\b/.test(t))penalty+=0.9;
   });
-  if(mode==='loose') penalty*=0.55;
-  if(mode==='strict') penalty*=1.25;
+  if(mode==='loose')penalty*=0.55;if(mode==='strict')penalty*=1.25;
   return {penalty,extra};
 }
 function setRelatedScoringMode(value){
@@ -5531,15 +5630,15 @@ function initializeRelatedScoringMode(){
   try{relatedUseGenerationIgnore=localStorage.getItem(SK_RELATED_SCORING_MODE+'_apply_ignore')==='true';}catch(e){relatedUseGenerationIgnore=false;}
   document.querySelectorAll('.related-use-generation-ignore').forEach(el=>{el.checked=relatedUseGenerationIgnore;});
 }
-function scorePromptCandidates(tokens,candidates,mode){
+function scorePromptCandidates(tokens,candidates,mode,options={}){
   if(relatedUseGenerationIgnore){
     tokens=(tokens||[]).filter(tag=>relatedSearchSource(tag).trim());
-    candidates=candidates.map(item=>{
+    if(!options.sourcesCleaned)candidates=candidates.map(item=>{
       const source=relatedSearchSource(item.sourceText||item.promptText||item.hay||'');
       return {...item,sourceText:source,promptText:source,hay:source.toLowerCase()};
     });
   }
-  return relatedScoringMode==='tags'?scorePromptCandidatesByTags(tokens,candidates,mode):scorePromptCandidatesLegacy(tokens,candidates,mode);
+  return relatedScoringMode==='tags'?scorePromptCandidatesByTags(tokens,candidates,mode,options):scorePromptCandidatesLegacy(tokens,candidates,mode,options);
 }
 function relatedCandidateTags(item){
   const source=String(item.sourceText||item.hay||'');
@@ -5548,72 +5647,92 @@ function relatedCandidateTags(item){
   const cached=relatedTokenCache.get(key);
   if(cached&&cached.source===source)return cached;
   const tags=promptSearchTokens(source,'normal');
-  const value={source,tags,set:new Set(tags)};
+  const value={source,tags,set:new Set(tags),padded:tags.map(t=>' '+t+' ')};
   relatedTokenCache.set(key,value);
   return value;
 }
-function scorePromptCandidatesByTags(tokens,candidates,mode){
+function scorePromptCandidatesByTags(tokens,candidates,mode,options={}){
   const query=[...new Set(tokens||[])];if(!query.length||!candidates.length)return [];
-  const prepared=candidates.map(item=>({item,...relatedCandidateTags(item)}));
-  const df=new Map();
-  prepared.forEach(({tags})=>tags.forEach(tag=>df.set(tag,(df.get(tag)||0)+1)));
-  const weights=new Map(),querySet=new Set(query);
+  const prepared=options.prepared||candidates.map(item=>({item,...relatedCandidateTags(item)}));
+  const df=options.docFreq||new Map();
+  if(!options.docFreq)prepared.forEach(({tags})=>tags.forEach(tag=>df.set(tag,(df.get(tag)||0)+1)));
+  const weights=options.weights||new Map(),querySet=new Set(query);
   const weight=tag=>{if(!weights.has(tag))weights.set(tag,promptTokenWeight(tag,df.get(tag)||1,candidates.length,'normal'));return weights.get(tag);};
-  const total=query.reduce((sum,t)=>sum+weight(t),0);
-  return prepared.map(({item,tags,set})=>{
+  const total=query.reduce((sum,t)=>sum+weight(t),0),paddedQuery=query.map(tag=>' '+tag+' '),results=[];
+  for(const {item,tags,set,padded} of prepared){
     const hits=[],missingTags=[];let score=0;
-    for(const tag of query){
+    for(let i=0;i<query.length;i++){
+      const tag=query[i];
       if(set.has(tag)){hits.push(tag);score+=weight(tag);}
-      else if(tags.some(t=>(' '+t+' ').includes(' '+tag+' ')||(' '+tag+' ').includes(' '+t+' '))){
+      else if((padded||tags.map(t=>' '+t+' ')).some(t=>t.includes(paddedQuery[i])||paddedQuery[i].includes(t))){
         hits.push(tag);score+=weight(tag)*0.25;missingTags.push(tag);
       }else missingTags.push(tag);
     }
     const extra=tags.filter(t=>!querySet.has(t));
-    const extraWeight=extra.reduce((sum,t)=>sum+weight(t),0);
-    const coverage=total?score/total:0;
+    const extraWeight=extra.reduce((sum,t)=>sum+weight(t),0),coverage=total?score/total:0;
     const rankScore=100*score/(total+extraWeight*0.65);
-    return {...item,score,total,hits,rankScore,missingTags,extraDiffs:extra,overPenalty:extraWeight,tagCoverage:coverage};
-  }).filter(x=>x.tagCoverage>=(mode==='strict'?0.6:mode==='loose'?0.1:0.2)&&x.rankScore>0);
+    if(coverage>=(mode==='strict'?0.6:mode==='loose'?0.1:0.2)&&rankScore>0){
+      retainRelatedSearchResult(results,{...item,score,total,hits,rankScore,missingTags,extraDiffs:extra,overPenalty:extraWeight,tagCoverage:coverage},options);
+    }
+  }
+  return results;
 }
-function scorePromptCandidatesLegacy(tokens,candidates,mode){
-  const unique=[...new Set(tokens||[])];
-  if(!unique.length||!candidates.length) return [];
-  const docCount=candidates.length;
-  const df=new Map();
-  unique.forEach(t=>{
-    let c=0;
-    candidates.forEach(item=>{if(item.hay.includes(t)) c++;});
-    df.set(t,c||1);
-  });
-  const total=unique.reduce((sum,t)=>sum+promptTokenWeight(t,df.get(t),docCount,mode),0);
-  const minScore=mode==='strict'?Math.min(total,3.2):0.65;
-  return candidates.map(item=>{
-    const hits=[];
-    let score=0;
-    unique.forEach(t=>{
-      if(item.hay.includes(t)){
-        hits.push(t);
-        score+=promptTokenWeight(t,df.get(t),docCount,mode);
-      }
-    });
-    const over=candidateOvermatchPenalty(item,unique,mode);
+function scorePromptCandidatesLegacy(tokens,candidates,mode,options={}){
+  const unique=[...new Set(tokens||[])];if(!unique.length||!candidates.length)return [];
+  const docCount=candidates.length,df=new Map(),weights=new Map();
+  unique.forEach(t=>{let count=0;candidates.forEach(item=>{if(item.hay.includes(t))count++;});df.set(t,count||1);});
+  const total=unique.reduce((sum,t)=>{const w=promptTokenWeight(t,df.get(t),docCount,mode);weights.set(t,w);return sum+w;},0);
+  const minScore=mode==='strict'?Math.min(total,3.2):0.65,results=[];
+  for(const item of candidates){
+    const hits=[];let score=0;
+    unique.forEach(t=>{if(item.hay.includes(t)){hits.push(t);score+=weights.get(t);}});
+    const over=candidateOvermatchPenalty(item,unique,mode,options.differenceTokens?.get(item));
     const rankScore=score-over.penalty;
-    return {...item,score,total,hits,rankScore,extraDiffs:over.extra,overPenalty:over.penalty};
-  }).filter(x=>x.score>=minScore && x.rankScore>0);
+    if(score>=minScore&&rankScore>0)retainRelatedSearchResult(results,{...item,score,total,hits,rankScore,extraDiffs:over.extra,overPenalty:over.penalty},options);
+  }
+  return results;
 }
-function relatedImageMatchesForPrompt(promptText,limit,mode){
+function compareRelatedImageScores(a,b){
+  return (b.rankScore??b.score)-(a.rankScore??a.score)||b.score-a.score||b.hits.length-a.hits.length||(b.img?.modified||0)-(a.img?.modified||0);
+}
+function retainRelatedSearchResult(results,result,options={}){
+  const limit=Number(options.limit)||0;
+  if(limit<=0){results.push(result);return;}
+  const compare=options.compare||compareRelatedImageScores;
+  let index=results.length;
+  while(index>0&&compare(result,results[index-1])<0)index--;
+  if(index<limit){results.splice(index,0,result);if(results.length>limit)results.pop();}
+  if(options.onRetained)options.onRetained(results.length);
+}
+function relatedImageSearchSettingsKey(){
+  return JSON.stringify([relatedScoringMode,relatedUseGenerationIgnore,relatedUseGenerationIgnore?normalizePreviewGenerationIgnoreTags(previewGenerationIgnoreTags):[]]);
+}
+function createRelatedImageSearchSession(images,mode,previous=null){
+  const context=previous||{candidates:[],prepared:relatedScoringMode==='tags'?[]:null,docFreq:relatedScoringMode==='tags'?new Map():null,weights:new Map(),differenceTokens:relatedScoringMode==='tags'?null:new Map(),tagPool:new Map()};
+  const intern=tag=>{
+    if(!context.tagPool.has(tag))context.tagPool.set(tag,{tag,padded:' '+tag+' '});
+    return context.tagPool.get(tag);
+  };
+  for(const img of images){
+    const raw=String(relatedScoringMode==='tags'?(img.prompt||''):(img.prompt||img.metadataRaw||''));
+    const sourceText=relatedUseGenerationIgnore?relatedSearchSource(raw):raw;
+    const item={img,sourceText,hay:relatedScoringMode==='tags'?'':sourceText.toLowerCase(),mode:'auto'};
+    context.candidates.push(item);
+    if(context.prepared){
+      const tags=promptSearchTokens(sourceText,'normal').map(t=>intern(t).tag);
+      context.prepared.push({item,tags,set:new Set(tags),padded:tags.map(t=>intern(t).padded)});
+      tags.forEach(tag=>context.docFreq.set(tag,(context.docFreq.get(tag)||0)+1));
+    }else context.differenceTokens.set(item,promptSearchTokens(sourceText,mode).filter(isPromptDifferenceToken).map(t=>intern(t).tag));
+  }
+  return context;
+}
+function relatedImageMatchesForPrompt(promptText,limit,mode,session=null){
   mode=mode||relatedStrictnessValue();
   const tokens=promptSearchTokens(promptText,relatedScoringMode==='tags'?'normal':mode,true);
-  if(!tokens.length) return [];
-  const candidates=previewImages.map(img=>({
-    img,
-    sourceText:String(relatedScoringMode==='tags'?(img.prompt||''):(img.prompt||img.metadataRaw||'')),
-    hay:String(relatedScoringMode==='tags'?(img.prompt||''):(img.prompt||img.metadataRaw||'')).toLowerCase(),
-    mode:'auto'
-  }));
-  const scored=scorePromptCandidates(tokens,candidates,mode);
-  scored.sort((a,b)=>(b.rankScore??b.score)-(a.rankScore??a.score) || b.score-a.score || b.hits.length-a.hits.length || (b.img.modified||0)-(a.img.modified||0));
-  return scored.slice(0,limit||24);
+  if(!tokens.length)return [];
+  const context=session||createRelatedImageSearchSession(previewImages,mode);
+  const options={...context,limit:limit||24,sourcesCleaned:true,compare:compareRelatedImageScores};
+  return scorePromptCandidates(tokens,context.candidates,mode,options);
 }
 function relatedImageMatchesForSnippet(snippet,limit,mode){
   mode=mode||relatedStrictnessValue();
@@ -5669,7 +5788,7 @@ function renderGroupRelatedImagesPanel(found,matches,manualQuery){
     </div>
     ${matches.length?`<div class="related-image-grid">${matches.map(m=>`
       <div class="related-image-card" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">
-        <img src="${escA(m.img.url)}" alt="${escA(m.img.name)}">
+        <img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}">
         <div class="related-score">${m.mode==='manual'?'match':'score'} ${formatMatchScore(m)} / ${escH((m.img.meta&&m.img.meta.size)||((m.img.width&&m.img.height)?`${m.img.width}x${m.img.height}`:''))}</div>
         <div class="preview-card-name" title="${escA(m.img.name)}">${escH(shortPreviewFileName(m.img.name))}</div>
         <div class="related-tags">${escH(m.hits.slice(0,8).join(', '))}</div>
@@ -5693,22 +5812,72 @@ function touchGroupsForEntries(entries){
   const now=new Date().toISOString();
   new Set((entries||[]).map(e=>e&&e.group).filter(Boolean)).forEach(g=>{g.updatedAt=now;});
 }
-function showRelatedImagesForSelectedPrompts(){
-  const entries=selectedGroupPromptEntries();
-  if(!entries.length){clearGroupRelatedImagesPanel();toast('関連画像を見るプロンプトを選んでほしいのだ');return;}
-  if(!previewImages.length){toast('先にPreviewで画像フォルダを読み込んでほしいのだ');return;}
-  resetGroupRelatedSearchState();
-  const topN=3;
-  const blocks=entries.map((entry,idx)=>({
-    entry,
-    idx,
-    matches:relatedImageMatchesForPrompt(entry.prompt.text,topN,'normal')
-  }));
-  renderSelectedRelatedImagesPanel(blocks,topN);
-  document.getElementById('group-related-images-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
-  const hitCount=blocks.reduce((n,b)=>n+b.matches.length,0);
-  toast(hitCount?`${entries.length}件の選択プロンプトに対する関連画像候補を表示したのだ`:'関連画像候補が見つからなかったのだ');
+let groupRelatedImageSearchRun=0,groupRelatedImageSearchBusy=false;
+function stopGroupRelatedImageSearch(silent=false){
+  if(!groupRelatedImageSearchBusy)return;
+  groupRelatedImageSearchRun++;groupRelatedImageSearchBusy=false;
+  const stop=document.getElementById('group-image-search-stop');if(stop)stop.hidden=true;
+  const progress=document.getElementById('group-image-search-progress');
+  if(progress)progress.textContent=silent?'':(GROUP_TRANSFER_EN?'Image search stopped.':'画像検索を停止しました。');
 }
+async function runGroupRelatedImageSearch(kind='top'){
+  const entries=selectedGroupPromptEntries().map(entry=>({entry,text:String(entry.prompt.text||'')}));
+  if(!entries.length){clearGroupRelatedImagesPanel();toast(GROUP_TRANSFER_EN?'Select prompts first.':'画像検索するプロンプトを選択してください');return;}
+  if(!previewImages.length){toast(GROUP_TRANSFER_EN?'Load an image folder in Preview first.':'先にPreviewで画像フォルダを読み込んでください');return;}
+  const topN=kind==='top'?topScoreCountValue():3;
+  resetGroupRelatedSearchState();
+  const run=++groupRelatedImageSearchRun,folderVersion=previewFileLoadGeneration,settings=relatedImageSearchSettingsKey();
+  groupRelatedImageSearchBusy=true;
+  const progress=document.getElementById('group-image-search-progress'),stop=document.getElementById('group-image-search-stop');
+  if(stop)stop.hidden=false;
+  let session=null;
+  const valid=()=>run===groupRelatedImageSearchRun&&folderVersion===previewFileLoadGeneration&&settings===relatedImageSearchSettingsKey();
+  try{
+    const imageCount=previewImages.length;
+    for(let offset=0;offset<imageCount;offset+=256){
+      if(!valid())return;
+      session=createRelatedImageSearchSession(previewImages.slice(offset,offset+256),'normal',session);
+      if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Preparing image search: ':'画像の比較データを準備中: ')+Math.min(imageCount,offset+256)+' / '+imageCount;
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    const rows=[];
+    for(let i=0;i<entries.length;i++){
+      if(!valid())return;
+      const {entry,text}=entries[i];
+      if(String(entry.prompt.text||'')!==text)throw new Error(GROUP_TRANSFER_EN?'A prompt changed. Run the search again.':'プロンプトが変更されました。検索をやり直してください。');
+      rows.push({entry,idx:i,matches:relatedImageMatchesForPrompt(text,topN,'normal',session)});
+      if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Searching selected prompts: ':'選択プロンプトを検索中: ')+(i+1)+' / '+entries.length;
+      // Drop each query's temporary allocations before the next one; allow painting and cancellation.
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    if(!valid())return;
+    if(entries.some(e=>String(e.entry.prompt.text||'')!==e.text))throw new Error(GROUP_TRANSFER_EN?'A prompt changed. Run the search again.':'プロンプトが変更されました。検索をやり直してください。');
+    const current=new Map(selectedGroupPromptEntries().map(entry=>[entry.prompt.id,entry]));
+    if(current.size!==entries.length||entries.some(e=>String(current.get(e.entry.prompt.id)?.prompt.text||'')!==e.text)){
+      throw new Error(GROUP_TRANSFER_EN?'Selected prompts changed. Run the search again.':'選択プロンプトが変更されました。検索をやり直してください。');
+    }
+    rows.forEach(row=>{row.entry=current.get(row.entry.prompt.id);});
+    session=null;
+    if(kind==='top')renderTopScoreImagesPanel(rows,topN);else renderSelectedRelatedImagesPanel(rows,topN);
+    document.getElementById('group-related-images-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    const matched=rows.filter(row=>row.matches.length).length;
+    const message=GROUP_TRANSFER_EN?'Search complete: '+matched+' / '+entries.length+' prompts matched.':'検索完了: '+entries.length+'件中 '+matched+'件に画像候補が見つかりました。';
+    if(progress)progress.textContent=message;toast(message);
+  }catch(e){
+    if(run===groupRelatedImageSearchRun){
+      const message=String(e.message||e);if(progress)progress.textContent=message;toast(message);
+    }
+  }finally{
+    session=null;
+    if(run===groupRelatedImageSearchRun){
+      groupRelatedImageSearchBusy=false;if(stop)stop.hidden=true;
+      if(folderVersion!==previewFileLoadGeneration||settings!==relatedImageSearchSettingsKey()){
+        if(progress)progress.textContent=GROUP_TRANSFER_EN?'Image set or search settings changed. Run search again.':'読込画像または検索設定が変わったため停止しました。再検索してください。';
+      }
+    }
+  }
+}
+async function showRelatedImagesForSelectedPrompts(){return runGroupRelatedImageSearch('related');}
 let relatedPanelPromptSelection=new Set();
 function relatedPanelSelectionTools(preserve=false){
   if(!preserve)relatedPanelPromptSelection=new Set();
@@ -5796,7 +5965,7 @@ function renderSelectedRelatedImagesPanel(blocks,topN){
         </div>
         ${b.matches.length?`<div class="related-image-grid" style="margin-top:8px">${b.matches.map((m,i)=>`
           <div class="related-image-card" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">
-            <img src="${escA(m.img.url)}" alt="${escA(m.img.name)}">
+            <img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}">
             <div class="related-score">#${i+1} score ${formatMatchScore(m)} / ${escH((m.img.meta&&m.img.meta.size)||((m.img.width&&m.img.height)?`${m.img.width}x${m.img.height}`:''))}</div>
             <div class="preview-card-name" title="${escA(m.img.name)}">${escH(shortPreviewFileName(m.img.name))}</div>
             <div class="related-tags">${escH(m.hits.slice(0,8).join(', '))}</div>
@@ -6100,22 +6269,7 @@ function topScoreCountValue(){
   topScoreImageCount=Math.min(3,Math.max(1,n||1));
   return topScoreImageCount;
 }
-function showTopScoreImagesForSelectedPrompts(){
-  const entries=selectedGroupPromptEntries();
-  if(!entries.length){clearGroupRelatedImagesPanel();toast('Topスコア画像を見るプロンプトを選んでほしいのだ');return;}
-  if(!previewImages.length){toast('先にPreviewで画像フォルダを読み込んでほしいのだ');return;}
-  const topN=topScoreCountValue();
-  resetGroupRelatedSearchState();
-  const rows=entries.map((entry,idx)=>({
-    entry,
-    idx,
-    matches:relatedImageMatchesForPrompt(entry.prompt.text,topN,'normal')
-  }));
-  renderTopScoreImagesPanel(rows,topN);
-  document.getElementById('group-related-images-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
-  const hitCount=rows.filter(r=>r.matches&&r.matches.length).length;
-  toast(`${entries.length}件中 ${hitCount}件のTopスコア画像を表示したのだ`);
-}
+async function showTopScoreImagesForSelectedPrompts(){return runGroupRelatedImageSearch('top');}
 function toggleTopScorePromptEditor(promptId){
   const box=document.getElementById(`top-score-edit-box-${promptId}`);
   const btn=document.getElementById(`top-score-edit-toggle-${promptId}`);
@@ -6259,7 +6413,7 @@ function renderTopScoreGalleryPanel(preserveSelection=false){
         <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
         <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
         ${relatedPanelPromptCheckbox(p.id)}
-        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img loading="lazy" decoding="async" src="${escA(m.img.url)}" alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(${bases[start+k]+i},event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button></div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
+        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(${bases[start+k]+i},event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button></div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
         <details><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
           <div class="top-gallery-prompt">${escH(p.text||'')}</div>
           ${r.matches.map((m,i)=>`<div class="top-gallery-file">#${i+1} score ${formatMatchScore(m)}<br>${escH(m.img.name)}${m.missingTags?`<div>${GROUP_TRANSFER_EN?'Not exact: ':'完全一致しないタグ: '}${escH(m.missingTags.join(', ')||'—')}</div><div>${GROUP_TRANSFER_EN?'Extra: ':'画像側の追加タグ: '}${escH((m.extraDiffs||[]).join(', ')||'—')}</div>`:''}<button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>`).join('')}
@@ -6275,7 +6429,7 @@ function setTopScoreGallerySize(value){
 function openTopGalleryImage(index){
   const entry=topGalleryZoomItems[index];if(!entry)return;
   topGalleryZoomIndex=index;
-  openPreviewZoomSource(entry.img.url,(index+1)+' / '+topGalleryZoomItems.length+' — '+entry.title+' — '+entry.img.name,true);
+  openPreviewZoomSource(previewOriginalUrl(entry.img),(index+1)+' / '+topGalleryZoomItems.length+' — '+entry.title+' — '+entry.img.name,true);
 }
 function downloadTopGalleryImage(index,event){
   event?.stopPropagation();
@@ -6368,7 +6522,7 @@ function renderTopScoreImagesPanel(rows,topN,preserveSelection=false){
         </div>
         <div class="top-score-img-grid">
           ${matches.length?matches.map((m,i)=>`<div class="top-score-img">
-            <img src="${escA(m.img.url)}" alt="${escA(m.img.name)}" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">
+            <img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">
             <div class="related-score">#${i+1} score ${formatMatchScore(m)} / ${escH((m.img.meta&&m.img.meta.size)||((m.img.width&&m.img.height)?`${m.img.width}x${m.img.height}`:''))}</div>
             <div class="preview-card-name" title="${escA(m.img.name)}">${escH(shortPreviewFileName(m.img.name))}</div>
             <div class="row" style="margin-top:6px"><button class="btn sm related" onclick="showRelatedImagesForGroupPrompt('${escA(p.id)}')">候補を見る</button><button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>
@@ -6393,10 +6547,12 @@ function clearGroupRelatedManualQuery(){
   if(el) el.value='';
 }
 function clearGroupRelatedImagesPanel(){
+  stopGroupRelatedImageSearch(true);
   const panel=document.getElementById('group-related-images-panel');
   if(panel){panel.style.display='none';panel.innerHTML='';}
 }
 function clearGroupImageResultsOnSelectionChange(){
+  stopGroupRelatedImageSearch(true);
   const panel=document.getElementById('group-related-images-panel');
   if(panel&&panel.style.display!=='none'&&panel.innerHTML){
     panel.style.display='none';
@@ -6407,24 +6563,8 @@ function clearGroupImageResultsOnSelectionChange(){
   window.__groupRelatedImageOrderMode='score';
 }
 async function ensurePreviewItemDisplayUrl(item){
-  if(!item) return false;
-  const testUrl=String(item.url||'');
-  if(testUrl){
-    const loaded=await new Promise(resolve=>{
-      const image=new Image();
-      const timer=setTimeout(()=>resolve(false),3000);
-      image.onload=()=>{clearTimeout(timer);resolve(true);};
-      image.onerror=()=>{clearTimeout(timer);resolve(false);};
-      image.src=testUrl;
-    });
-    if(loaded) return true;
-  }
-  if(item.file){
-    try{if(item.url) URL.revokeObjectURL(item.url);}catch(e){}
-    item.url=URL.createObjectURL(item.file);
-    return true;
-  }
-  return false;
+  if(!item)return false;
+  try{return !!previewOriginalUrl(item);}catch(e){return false;}
 }
 async function openRelatedImageInPreview(id){
   const target=previewImages.find(item=>item.id===id);
@@ -7052,6 +7192,183 @@ async function collectImageFilesFromDirectory(dir,files,prefix,generation=null){
     }
   }
 }
+const PREVIEW_THUMB_PLACEHOLDER='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221%22 height=%221%22/%3E';
+const PREVIEW_THUMB_LIMIT=96,PREVIEW_THUMB_BYTE_LIMIT=16*1024*1024,PREVIEW_THUMB_EDGE=384;
+let previewThumbCache=new Map(),previewThumbCacheBytes=0,previewThumbQueue=[],previewThumbPending=new Map();
+let previewThumbWorker=false,previewThumbEpoch=0,previewThumbObserver=null,previewThumbMutationObserver=null,previewThumbRefreshQueued=false;
+let previewThumbObserved=new Set(),previewThumbVisible=new Set(),previewOriginalUrls=new Map();
+function previewThumbnailAttributes(item){
+  return `data-preview-thumb="${escA(item.id)}" src="${PREVIEW_THUMB_PLACEHOLDER}" loading="lazy" decoding="async"`;
+}
+function prunePreviewOriginalUrls(keepUrl=''){
+  // Only the current detail image and open viewers need full-resolution URLs.
+  const pinned=new Set([keepUrl]);
+  document.querySelectorAll('.preview-detail-img, #preview-lightbox-image, #preview-img2img-compare-source').forEach(el=>{
+    const src=el.getAttribute('src');if(src)pinned.add(src);
+  });
+  for(const [id,entry] of previewOriginalUrls){
+    if(pinned.has(entry.url))continue;
+    URL.revokeObjectURL(entry.url);if(entry.item.url===entry.url)entry.item.url='';
+    previewOriginalUrls.delete(id);
+  }
+}
+function previewOriginalUrl(item){
+  if(!item)return '';
+  if(!item.file)return item.url||'';
+  const previous=previewOriginalUrls.get(item.id);
+  if(previous&&previous.file===item.file){
+    item.url=previous.url;prunePreviewOriginalUrls(previous.url);return previous.url;
+  }
+  if(previous){URL.revokeObjectURL(previous.url);previewOriginalUrls.delete(item.id);}
+  const url=URL.createObjectURL(item.file);
+  item.url=url;previewOriginalUrls.set(item.id,{file:item.file,item,url});
+  prunePreviewOriginalUrls(url);
+  return url;
+}
+function releasePreviewImageResources(item){
+  if(!item)return;
+  const thumb=previewThumbCache.get(item.id);
+  if(thumb){URL.revokeObjectURL(thumb.url);previewThumbCacheBytes-=thumb.bytes;previewThumbCache.delete(item.id);}
+  const original=previewOriginalUrls.get(item.id);
+  if(original){URL.revokeObjectURL(original.url);previewOriginalUrls.delete(item.id);}
+  else if(item.url)URL.revokeObjectURL(item.url);
+  item.url='';
+}
+function clearPreviewImageCaches(){
+  previewThumbEpoch++;previewThumbQueue=[];previewThumbPending.clear();
+  previewThumbCache.forEach(entry=>URL.revokeObjectURL(entry.url));
+  previewThumbCache.clear();previewThumbCacheBytes=0;
+  previewOriginalUrls.forEach(entry=>{URL.revokeObjectURL(entry.url);if(entry.item.url===entry.url)entry.item.url='';});
+  previewOriginalUrls.clear();
+  previewThumbObserved.forEach(el=>{previewThumbObserver?.unobserve(el);el.src=PREVIEW_THUMB_PLACEHOLDER;});
+  previewThumbObserved.clear();previewThumbVisible.clear();
+}
+function evictPreviewThumbnailCache(){
+  const pinned=new Set([...previewThumbVisible].filter(el=>el.isConnected).map(el=>el.dataset.previewThumb));
+  for(const [id,entry] of previewThumbCache){
+    if(previewThumbCache.size<=PREVIEW_THUMB_LIMIT&&previewThumbCacheBytes<=PREVIEW_THUMB_BYTE_LIMIT)break;
+    // Normally the visible set is smaller than the cache. Never blank an image being viewed.
+    if(pinned.has(id))continue;
+    URL.revokeObjectURL(entry.url);previewThumbCacheBytes-=entry.bytes;previewThumbCache.delete(id);
+  }
+}
+async function createPreviewThumbnailBlob(item){
+  const file=item.file;if(!file)throw new Error('Original image file unavailable');
+  let bitmap=null,image=null,url='',canvas=null;
+  try{
+    let width=item.width,height=item.height;
+    if(!width||!height){const dimensions=await readPreviewImageDimensions(file);width=dimensions.width;height=dimensions.height;}
+    const ratio=Math.min(1,PREVIEW_THUMB_EDGE/Math.max(width,height));
+    const targetWidth=Math.max(1,Math.round(width*ratio)),targetHeight=Math.max(1,Math.round(height*ratio));
+    if(window.createImageBitmap){
+      try{bitmap=await createImageBitmap(file,{resizeWidth:targetWidth,resizeHeight:targetHeight,resizeQuality:'medium'});}
+      catch(e){bitmap=await createImageBitmap(file);}
+    }else{
+      url=URL.createObjectURL(file);image=new Image();
+      await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>{image.onload=null;image.onerror=null;image.src='';reject(new Error('Thumbnail decode timed out'));},12000);
+        image.onload=()=>{clearTimeout(timer);resolve();};
+        image.onerror=()=>{clearTimeout(timer);reject(new Error('Thumbnail decode failed'));};
+        image.src=url;
+      });
+    }
+    canvas=document.createElement('canvas');canvas.width=targetWidth;canvas.height=targetHeight;
+    const context=canvas.getContext('2d');if(!context)throw new Error('Canvas unavailable');
+    context.drawImage(bitmap||image,0,0,targetWidth,targetHeight);
+    // The canvas now owns the resized pixels; do not keep the source decode alive while encoding.
+    bitmap?.close?.();bitmap=null;
+    if(image){image.onload=null;image.onerror=null;image.src='';image=null;}
+    if(url){URL.revokeObjectURL(url);url='';}
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Thumbnail encoding failed')),'image/webp',0.85));
+    return blob;
+  }finally{
+    bitmap?.close?.();
+    if(image){image.onload=null;image.onerror=null;image.src='';}
+    if(url)URL.revokeObjectURL(url);
+    if(canvas){canvas.width=0;canvas.height=0;}
+  }
+}
+function queuePreviewThumbnail(el){
+  const id=el.dataset.previewThumb,item=previewImages.find(img=>img.id===id);
+  if(!item||!el.isConnected)return;
+  const cached=previewThumbCache.get(id);
+  if(cached&&cached.file===item.file){
+    previewThumbCache.delete(id);previewThumbCache.set(id,cached);el.src=cached.url;return;
+  }
+  if(cached){URL.revokeObjectURL(cached.url);previewThumbCacheBytes-=cached.bytes;previewThumbCache.delete(id);}
+  const pending=previewThumbPending.get(id);
+  if(pending&&pending.item===item){pending.elements.add(el);return;}
+  const task={id,item,elements:new Set([el]),epoch:previewThumbEpoch};
+  previewThumbPending.set(id,task);previewThumbQueue.push(task);
+  void pumpPreviewThumbnailQueue();
+}
+async function pumpPreviewThumbnailQueue(){
+  if(previewThumbWorker)return;
+  previewThumbWorker=true;
+  try{
+    while(previewThumbQueue.length){
+      const task=previewThumbQueue.shift();
+      const live=()=>[...task.elements].filter(el=>el.isConnected&&previewThumbVisible.has(el));
+      if(task.epoch!==previewThumbEpoch||!live().length){if(previewThumbPending.get(task.id)===task)previewThumbPending.delete(task.id);continue;}
+      try{
+        const blob=await createPreviewThumbnailBlob(task.item);
+        if(task.epoch!==previewThumbEpoch||!previewImages.includes(task.item)||!live().length)continue;
+        const url=URL.createObjectURL(blob);
+        const old=previewThumbCache.get(task.id);
+        if(old){URL.revokeObjectURL(old.url);previewThumbCacheBytes-=old.bytes;}
+        previewThumbCache.set(task.id,{file:task.item.file,url,bytes:blob.size});previewThumbCacheBytes+=blob.size;
+        live().forEach(el=>{el.src=url;});
+        evictPreviewThumbnailCache();
+      }catch(e){
+        live().forEach(el=>{el.title=GROUP_TRANSFER_EN?'Thumbnail unavailable; click to open the original.':'サムネイルを作成できません。クリックすると元画像を開けます。';});
+      }finally{if(previewThumbPending.get(task.id)===task)previewThumbPending.delete(task.id);}
+    }
+  }finally{previewThumbWorker=false;}
+}
+function refreshPreviewThumbnailObservers(){
+  previewThumbRefreshQueued=false;
+  for(const el of previewThumbObserved){
+    if(!el.isConnected){previewThumbObserver?.unobserve(el);el.src=PREVIEW_THUMB_PLACEHOLDER;previewThumbObserved.delete(el);previewThumbVisible.delete(el);}
+  }
+  document.querySelectorAll('img[data-preview-thumb]').forEach(el=>{
+    if(previewThumbObserver){
+      if(previewThumbObserved.has(el))return;
+      previewThumbObserved.add(el);previewThumbObserver.observe(el);
+    }else{
+      previewThumbObserved.add(el);
+      const rect=el.getBoundingClientRect();
+      const visible=rect.width>0&&rect.height>0&&rect.bottom>0&&rect.top<window.innerHeight&&rect.right>0&&rect.left<window.innerWidth;
+      if(visible){previewThumbVisible.add(el);queuePreviewThumbnail(el);}
+      else{previewThumbVisible.delete(el);el.src=PREVIEW_THUMB_PLACEHOLDER;}
+    }
+  });
+  evictPreviewThumbnailCache();
+}
+function schedulePreviewThumbnailObservers(){
+  if(previewThumbRefreshQueued)return;
+  previewThumbRefreshQueued=true;requestAnimationFrame(refreshPreviewThumbnailObservers);
+}
+function setupPreviewThumbnailRendering(){
+  if(previewThumbMutationObserver)return;
+  if(window.IntersectionObserver){
+    previewThumbObserver=new IntersectionObserver(entries=>{
+      entries.forEach(({target,isIntersecting})=>{
+        if(isIntersecting){previewThumbVisible.add(target);queuePreviewThumbnail(target);}
+        else{previewThumbVisible.delete(target);target.src=PREVIEW_THUMB_PLACEHOLDER;}
+      });
+      evictPreviewThumbnailCache();
+    },{rootMargin:'100px'});
+  }
+  previewThumbMutationObserver=new MutationObserver(records=>{
+    if(records.some(record=>[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&(node.matches?.('img[data-preview-thumb]')||node.querySelector?.('img[data-preview-thumb]')))))schedulePreviewThumbnailObservers();
+  });
+  previewThumbMutationObserver.observe(document.body,{childList:true,subtree:true});
+  if(!previewThumbObserver){
+    document.addEventListener('scroll',schedulePreviewThumbnailObservers,true);
+    window.addEventListener('resize',schedulePreviewThumbnailObservers);
+  }
+  schedulePreviewThumbnailObservers();
+}
 function previewFileIdentity(file){
   if(file._previewPath)return file._previewPath;
   const path=String(file.webkitRelativePath||'');
@@ -7062,7 +7379,7 @@ function createIncrementalPreviewItem(file,id,lazy){
     id:id||'img_'+Date.now()+'_'+Math.random().toString(36).slice(2),
     file,name:file.name,path:file._previewPath||file.webkitRelativePath||file.name,
     size:file.size,modified:file.lastModified||0,type:file.type||guessMime(file.name),
-    url:URL.createObjectURL(file),width:null,height:null,
+    url:'',width:null,height:null,
     prompt:'',negative:'',meta:{},metadataRaw:'',searchText:'',
     detailsLoaded:false,detailsLoading:false,lazyLoaded:lazy
   };
@@ -7129,7 +7446,7 @@ async function appendPreviewFiles(files,scanGeneration=null){
       updatePreviewItemSearchText(item);
       if(old){
         previewImages[positions.get(old.id)]=item;
-        URL.revokeObjectURL(old.url);updated++;
+        releasePreviewImageResources(old);updated++;
       }else{
         positions.set(item.id,previewImages.length);previewImages.push(item);added++;
       }
@@ -7201,7 +7518,7 @@ async function loadPreviewFiles(files){
       size:file.size,
       modified:file.lastModified||0,
       type:file.type||guessMime(file.name),
-      url:URL.createObjectURL(file),
+      url:'',
       width:null,height:null,
       prompt:'',negative:'',meta:{},metadataRaw:'',searchText:'',
       detailsLoaded:false,detailsLoading:false,lazyLoaded:lazy
@@ -7276,55 +7593,65 @@ function guessMime(name){
   if(/\.webp$/i.test(name)) return 'image/webp';
   return '';
 }
+async function readPreviewPngHeader(file){
+  const buffer=await file.slice(0,33).arrayBuffer(),bytes=new Uint8Array(buffer);
+  if(bytes.length<33||[137,80,78,71,13,10,26,10].some((value,i)=>bytes[i]!==value))throw new Error('Invalid or incomplete PNG header');
+  const view=new DataView(buffer);
+  if(view.getUint32(8)!==13||String.fromCharCode(...bytes.subarray(12,16))!=='IHDR')throw new Error('PNG IHDR is missing');
+  const width=view.getUint32(16),height=view.getUint32(20);
+  if(!width||!height)throw new Error('Invalid PNG dimensions');
+  return {width,height};
+}
 async function readPreviewImageDimensions(file){
+  if(/\.png$/i.test(file.name||'')||file.type==='image/png')return readPreviewPngHeader(file);
   if(window.createImageBitmap){
     const bmp=await createImageBitmap(file);
-    const out={width:bmp.width,height:bmp.height};
-    bmp.close&&bmp.close();
-    return out;
+    try{return {width:bmp.width,height:bmp.height};}finally{bmp.close?.();}
   }
   return new Promise((resolve,reject)=>{
-    const url=URL.createObjectURL(file);
-    const img=new Image();
-    img.onload=()=>{const out={width:img.naturalWidth,height:img.naturalHeight};URL.revokeObjectURL(url);resolve(out);};
-    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('image load failed'));};
+    const url=URL.createObjectURL(file),img=new Image();
+    const cleanup=()=>{clearTimeout(timer);img.onload=null;img.onerror=null;img.src='';URL.revokeObjectURL(url);};
+    const timer=setTimeout(()=>{cleanup();reject(new Error('Image dimensions timed out'));},12000);
+    img.onload=()=>{const out={width:img.naturalWidth,height:img.naturalHeight};cleanup();resolve(out);};
+    img.onerror=()=>{cleanup();reject(new Error('Image load failed'));};
     img.src=url;
   });
 }
 async function readDrawThingsPngMetadata(file){
-  const buf=await file.arrayBuffer();
-  const bytes=new Uint8Array(buf);
-  if(bytes.length<8||bytes[0]!==0x89||bytes[1]!==0x50||bytes[2]!==0x4e||bytes[3]!==0x47) return {};
-  const view=new DataView(buf);
-  const dec=new TextDecoder('utf-8');
-  let pos=8;
-  const texts=[];
-  while(pos+8<=bytes.length){
-    const len=view.getUint32(pos); pos+=4;
-    const type=String.fromCharCode(...bytes.slice(pos,pos+4)); pos+=4;
-    const data=bytes.slice(pos,pos+len); pos+=len+4;
-    if(type==='tEXt'){
-      const z=data.indexOf(0);
-      const key=z>=0?dec.decode(data.slice(0,z)):type;
-      const text=z>=0?dec.decode(data.slice(z+1)):dec.decode(data);
-      texts.push({type,key,text});
-    }else if(type==='iTXt'){
-      const parts=splitNullParts(data,5);
-      const key=dec.decode(parts[0]||new Uint8Array());
-      const compFlag=(parts[1]&&parts[1][0])||0;
-      const textBytes=parts[5]||new Uint8Array();
-      const text=compFlag?'[compressed iTXt is not supported in browser preview]':dec.decode(textBytes);
-      texts.push({type,key,text});
-    }else if(type==='zTXt'){
-      const z=data.indexOf(0);
-      const key=z>=0?dec.decode(data.slice(0,z)):type;
-      texts.push({type,key,text:'[compressed zTXt is not supported in browser preview]'});
+  const dimensions=await readPreviewPngHeader(file);
+  const dec=new TextDecoder('utf-8'),texts=[];
+  let pos=8,textBytesRead=0,chunks=0;
+  while(pos+12<=file.size){
+    if(++chunks>100000)throw new Error('Too many PNG chunks');
+    const buffer=await file.slice(pos,pos+8).arrayBuffer();
+    if(buffer.byteLength!==8)throw new Error('Incomplete PNG chunk header');
+    const header=new Uint8Array(buffer),len=new DataView(buffer).getUint32(0);
+    const type=String.fromCharCode(...header.subarray(4,8));
+    const next=pos+12+len;
+    if(next>file.size)throw new Error('Incomplete PNG chunk');
+    // Skip compressed pixel chunks without reading/copying their payload.
+    if(type==='tEXt'||type==='iTXt'||type==='zTXt'){
+      textBytesRead+=len;
+      if(len>8*1024*1024||textBytesRead>16*1024*1024)throw new Error('PNG metadata exceeds the preview safety limit');
+      const data=new Uint8Array(await file.slice(pos+8,pos+8+len).arrayBuffer());
+      if(data.length!==len)throw new Error('Incomplete PNG text');
+      if(type==='tEXt'){
+        const z=data.indexOf(0);
+        texts.push({type,key:z>=0?dec.decode(data.subarray(0,z)):type,text:z>=0?dec.decode(data.subarray(z+1)):dec.decode(data)});
+      }else if(type==='iTXt'){
+        const parts=splitNullParts(data,5),compFlag=(parts[1]&&parts[1][0])||0;
+        texts.push({type,key:dec.decode(parts[0]||new Uint8Array()),text:compFlag?'[compressed iTXt is not supported in browser preview]':dec.decode(parts[5]||new Uint8Array())});
+      }else{
+        const z=data.indexOf(0);
+        texts.push({type,key:z>=0?dec.decode(data.subarray(0,z)):type,text:'[compressed zTXt is not supported in browser preview]'});
+      }
     }
-    if(type==='IEND') break;
+    pos=next;
+    if(type==='IEND')break;
   }
   const raw=texts.map(t=>`--- ${t.type} ${t.key} ---\n${t.text}`).join('\n\n');
   const parsed=parseDrawThingsMetadataText(raw);
-  return {metadataRaw:raw,meta:parsed.meta,prompt:parsed.prompt,negative:parsed.negative};
+  return {...dimensions,metadataRaw:raw,meta:parsed.meta,prompt:parsed.prompt,negative:parsed.negative};
 }
 function splitNullParts(data,maxSplits){
   const parts=[]; let start=0;
@@ -7458,7 +7785,7 @@ function renderPreviewImages(){
   const start=firstRow*columns, end=Math.min(filtered.length,lastRow*columns);
   const cards=filtered.slice(start,end).map(item=>`<div class="preview-card${item.id===activePreviewId?' active':''}${selectedPreviewImageIds.has(item.id)?' selected':''}${previewSelectionMode?' selection-mode':''}" onclick="handlePreviewCardClick('${escA(item.id)}',event)">
     <input class="preview-select-box" type="checkbox" ${selectedPreviewImageIds.has(item.id)?'checked':''} onclick="event.stopPropagation()" onchange="togglePreviewImageSelection('${escA(item.id)}',this.checked,event)">
-    <img src="${escA(item.url)}" alt="${escA(item.name)}">
+    <img ${previewThumbnailAttributes(item)} alt="${escA(item.name)}">
     <div class="preview-card-name" title="${escA(item.name)}">${escH(shortPreviewFileName(item.name))}</div>
     <div class="group-meta">${escH((item.meta?.size)||((item.width&&item.height)?`${item.width}x${item.height}`:''))} ${item.meta?.seed?`/ seed ${escH(item.meta.seed)}`:''}</div>
   </div>`).join('');
@@ -7570,7 +7897,7 @@ function renderPreviewDetail(){
   const box=document.getElementById('image-preview-detail');
   if(!box) return;
   const item=activePreviewImage();
-  if(!item){box.innerHTML='<div class="group-empty">画像を選択すると情報を表示します。</div>';return;}
+  if(!item){box.innerHTML='<div class="group-empty">画像を選択すると情報を表示します。</div>';prunePreviewOriginalUrls();return;}
   const detailNote=item.lazyLoaded&&!item.detailsLoaded?'<div class="group-empty">高速読み込み中: この画像のメタデータはまだ未解析です。必要なら下のボタンで読み込めます。</div>':'';
   const meta=item.meta||{};
   const loraEntries=Array.isArray(meta.lora)?meta.lora:(Array.isArray(meta.loras)?meta.loras:[]);
@@ -7584,7 +7911,7 @@ function renderPreviewDetail(){
   const promptEditing=previewPromptEditingId===item.id;
   const promptDraft=Object.prototype.hasOwnProperty.call(previewPromptEditDrafts,item.id)?previewPromptEditDrafts[item.id]:String(item.prompt||'');
   box.innerHTML=`<div class="preview-image-stage">
-      <img class="preview-detail-img" src="${escA(item.url)}" alt="${escA(item.name)}" onclick="openPreviewImageZoom()" title="クリックして拡大">
+      <img class="preview-detail-img" src="${escA(previewOriginalUrl(item))}" alt="${escA(item.name)}" onclick="openPreviewImageZoom()" title="クリックして拡大">
       <button class="btn sm preview-image-zoom-btn" onclick="openPreviewImageZoom()" title="画像を拡大表示">拡大</button>
     </div>
     ${detailNote}
@@ -7715,6 +8042,7 @@ function renderPreviewDetail(){
     </div>
     <div class="sl">Raw Metadata</div>
     <div class="preview-meta-box">${escH(item.metadataRaw||'メタデータなし / PNG以外は現在ファイル情報のみ表示します。')}</div>`;
+  prunePreviewOriginalUrls();
 }
 
 function previewImg2ImgIsOpen(){
@@ -8306,8 +8634,8 @@ function downloadActivePreviewImage(){
 }
 function openPreviewImageZoom(){
   const item=activePreviewImage();
-  if(!item?.url){toast('拡大する表示画像がないのだ');return;}
-  openPreviewZoomSource(item.url,item.name||'拡大画像');
+  if(!item||!previewOriginalUrl(item)){toast('拡大する表示画像がないのだ');return;}
+  openPreviewZoomSource(previewOriginalUrl(item),item.name||'拡大画像');
 }
 function openPreviewZoomSource(src,nameText,gallery=false){
   if(!gallery)topGalleryZoomIndex=-1;
@@ -8317,6 +8645,7 @@ function openPreviewZoomSource(src,nameText,gallery=false){
   const image=document.getElementById('preview-lightbox-image');
   if(!src||!lightbox||!image){toast('拡大する画像がないのだ');return;}
   image.src=src;
+  prunePreviewOriginalUrls();
   image.alt=nameText||'拡大画像';
   image.classList.remove('actual-size');
   lightbox.classList.remove('actual-size-mode');
@@ -8335,9 +8664,9 @@ function openPreviewImg2ImgZoom(){
 }
 function openPreviewImg2ImgSourceZoom(){
   const item=activePreviewImage();
-  if(!item?.url){toast('拡大する元画像がないのだ');return;}
+  if(!item||!previewOriginalUrl(item)){toast('拡大する元画像がないのだ');return;}
   closePreviewImg2ImgCompare();
-  openPreviewZoomSource(item.url,item.name||'Img2Img元画像');
+  openPreviewZoomSource(previewOriginalUrl(item),item.name||'Img2Img元画像');
 }
 function openPreviewImg2ImgCompare(){
   const item=activePreviewImage();
@@ -8345,8 +8674,9 @@ function openPreviewImg2ImgCompare(){
   const modal=document.getElementById('preview-img2img-compare');
   const source=document.getElementById('preview-img2img-compare-source');
   const result=document.getElementById('preview-img2img-compare-result');
-  if(!item?.url||!resultSrc.startsWith('data:image/')||!modal||!source||!result){toast('比較する元画像または生成結果がないのだ');return;}
-  source.src=item.url;
+  if(!item||!previewOriginalUrl(item)||!resultSrc.startsWith('data:image/')||!modal||!source||!result){toast('比較する元画像または生成結果がないのだ');return;}
+  source.src=previewOriginalUrl(item);
+  prunePreviewOriginalUrls();
   result.src=resultSrc;
   modal.classList.add('open');
   document.body.style.overflow='hidden';
@@ -8354,6 +8684,9 @@ function openPreviewImg2ImgCompare(){
 function closePreviewImg2ImgCompare(event){
   event?.stopPropagation();
   document.getElementById('preview-img2img-compare')?.classList.remove('open');
+  document.getElementById('preview-img2img-compare-source')?.removeAttribute('src');
+  document.getElementById('preview-img2img-compare-result')?.removeAttribute('src');
+  prunePreviewOriginalUrls();
   if(!document.getElementById('preview-lightbox')?.classList.contains('open')) document.body.style.overflow='';
 }
 function closePreviewImageZoom(event){
@@ -8362,6 +8695,8 @@ function closePreviewImageZoom(event){
   event?.stopPropagation();
   if(!lightbox) return;
   lightbox.classList.remove('open','actual-size-mode');
+  document.getElementById('preview-lightbox-image')?.removeAttribute('src');
+  prunePreviewOriginalUrls();
   document.getElementById('preview-lightbox-image')?.classList.remove('actual-size');
   document.body.style.overflow='';
 }
@@ -8401,7 +8736,12 @@ async function downloadSelectedPreviewImages(){
   }
   toast(`${started}件の選択画像をDownload開始したのだ`);
 }
-function clearPreviewObjectUrls(){previewImages.forEach(x=>{try{URL.revokeObjectURL(x.url);}catch(e){}});}
+function clearPreviewObjectUrls(){
+  clearPreviewImageCaches();
+  previewImages.forEach(item=>{if(item.url){try{URL.revokeObjectURL(item.url);}catch(e){} item.url='';}});
+  topScoreViewRows=[];topGalleryZoomItems=[];
+  clearGroupRelatedImagesPanel();
+}
 function clearPreviewImages(){cancelPreviewFileLoad();const progress=document.getElementById("preview-load-progress");if(progress) progress.textContent="";clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewShowSelectedOnly=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Previewをクリアしたのだ');}
 function registerPreviewLorasToLibrary(){
   const item=activePreviewImage();
@@ -8709,6 +9049,7 @@ renderSizePresetSelects();
 setupPreviewComposeOptions();
 renderPreviewGenerationIgnoreTags();
 setupPreviewImageZoom();
+setupPreviewThumbnailRendering();
 initDrawThingsApiUI();
 buildCode();
 updateComposeSummary();
