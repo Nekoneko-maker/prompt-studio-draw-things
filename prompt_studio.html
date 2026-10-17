@@ -245,7 +245,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .top-gallery-title{font-weight:600;margin:5px 0;overflow-wrap:anywhere}
 .top-gallery-image{display:block;width:100%;border:0;background:transparent;padding:0;margin:8px 0;cursor:zoom-in}
 .top-gallery-image img{display:block;width:100%;height:var(--top-gallery-size,320px);object-fit:contain;background:var(--surface);border-radius:8px}
-.top-gallery-score{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--muted);margin:-3px 0 8px;overflow-wrap:anywhere}
+.top-gallery-score{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--muted);margin:-3px 0 8px;overflow-wrap:anywhere}
 .top-gallery-card summary{cursor:pointer;margin-top:8px;font-size:12px}
 .top-gallery-prompt,.top-gallery-file{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;max-height:220px;overflow:auto}
 .top-score-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,300px);gap:12px;align-items:start;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface2);padding:10px}
@@ -6259,7 +6259,7 @@ function renderTopScoreGalleryPanel(preserveSelection=false){
         <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
         <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
         ${relatedPanelPromptCheckbox(p.id)}
-        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img loading="lazy" decoding="async" src="${escA(m.img.url)}" alt="${escA(m.img.name)}"></button><div class="top-gallery-score">#${i+1} score ${formatMatchScore(m)}</div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
+        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img loading="lazy" decoding="async" src="${escA(m.img.url)}" alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(${bases[start+k]+i},event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button></div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
         <details><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
           <div class="top-gallery-prompt">${escH(p.text||'')}</div>
           ${r.matches.map((m,i)=>`<div class="top-gallery-file">#${i+1} score ${formatMatchScore(m)}<br>${escH(m.img.name)}${m.missingTags?`<div>${GROUP_TRANSFER_EN?'Not exact: ':'完全一致しないタグ: '}${escH(m.missingTags.join(', ')||'—')}</div><div>${GROUP_TRANSFER_EN?'Extra: ':'画像側の追加タグ: '}${escH((m.extraDiffs||[]).join(', ')||'—')}</div>`:''}<button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>`).join('')}
@@ -6276,6 +6276,14 @@ function openTopGalleryImage(index){
   const entry=topGalleryZoomItems[index];if(!entry)return;
   topGalleryZoomIndex=index;
   openPreviewZoomSource(entry.img.url,(index+1)+' / '+topGalleryZoomItems.length+' — '+entry.title+' — '+entry.img.name,true);
+}
+function downloadTopGalleryImage(index,event){
+  event?.stopPropagation();
+  const entry=topGalleryZoomItems[index];
+  if(!entry){toast(GROUP_TRANSFER_EN?'Image not found.':'画像が見つかりません');return;}
+  if(downloadPreviewImageItem(entry.img)){
+    toast((GROUP_TRANSFER_EN?'Download started: ':'画像のDownloadを開始しました: ')+entry.img.name);
+  }
 }
 function navigateTopGalleryImage(delta,event){
   event?.stopPropagation();
