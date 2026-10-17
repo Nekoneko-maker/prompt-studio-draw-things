@@ -240,6 +240,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .related-tags{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.35;max-height:38px;overflow:hidden;max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .preview-group-match-card{max-width:100%;min-width:0;overflow:hidden}.preview-group-match-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;max-width:100%;min-width:0}.preview-group-match-main{min-width:0;max-width:100%;overflow:hidden}.preview-group-match-text{margin-top:6px;font-size:11px;line-height:1.55;max-height:96px;overflow:auto;white-space:normal;word-break:break-word;overflow-wrap:anywhere;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:7px 8px;max-width:100%;box-sizing:border-box}
 .top-score-board{display:grid;gap:10px;margin-top:10px}
+.top-score-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--top-gallery-size,320px)),1fr));gap:14px;margin:12px 0}
+.top-gallery-card{min-width:0;padding:10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface2);overflow:hidden}
+.top-gallery-title{font-weight:600;margin:5px 0;overflow-wrap:anywhere}
+.top-gallery-image{display:block;width:100%;border:0;background:transparent;padding:0;margin:8px 0;cursor:zoom-in}
+.top-gallery-image img{display:block;width:100%;height:var(--top-gallery-size,320px);object-fit:contain;background:var(--surface);border-radius:8px}
+.top-gallery-score{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--muted);margin:-3px 0 8px;overflow-wrap:anywhere}
+.top-gallery-card summary{cursor:pointer;margin-top:8px;font-size:12px}
+.top-gallery-prompt,.top-gallery-file{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;max-height:220px;overflow:auto}
 .top-score-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,300px);gap:12px;align-items:start;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface2);padding:10px}
 .top-score-prompt{font-size:12px;line-height:1.6;max-height:160px;overflow:auto;word-break:break-word}
 .top-score-img{border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface);padding:6px;min-width:0;overflow:hidden}
@@ -750,6 +758,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompareRemix()">Compare & Remixへ</button>
       </div></details>
       <details class="group-action-section" open><summary>画像で確認</summary><div class="row">
+        <label class="group-meta">検索方式 <select class="inp related-scoring-mode" style="width:auto" onchange="setRelatedScoringMode(this.value)"><option value="legacy">従来</option><option value="tags">タグ差分重視</option></select></label>
+        <label class="group-meta" style="display:inline-flex;align-items:center;gap:4px" title="近似検索のみ適用。登録済みの除外タグを使用し、一時入力は含みません。変更後は再検索してください。"><input type="checkbox" class="related-use-generation-ignore" onchange="setRelatedUseGenerationIgnore(this.checked)"> 生成済み照合の除外タグを適用</label>
         <button class="btn sm related" onclick="showRelatedImagesForSelectedPrompts()">選択順に関連画像</button>
         <button class="btn sm related" onclick="showTopScoreImagesForSelectedPrompts()">Topスコア画像</button>
       </div></details>
@@ -767,10 +777,10 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <details class="group-action-section"><summary>ランダム抽出・生成済み管理</summary>
         <div class="row" style="flex-wrap:wrap">
           <input class="inp" id="group-random-prompt-count" type="number" min="1" value="10" style="max-width:90px" aria-label="抽出件数">
-          <label><input type="checkbox" id="group-random-exclude-sampled" checked>今回の抽出済みを除外</label>
+          <label><input type="checkbox" id="group-random-exclude-sampled" checked onchange="updateGroupGenerationStatus()">今回の抽出済みを除外</label>
           <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(false,true)">残り全部をComposeへ</button>
-          <button class="btn" onclick="sampledGroupPrompts.clear();toast(GROUP_TRANSFER_EN?'Sampling history cleared.':'抽出履歴を解除しました')">抽出履歴を解除</button>
-          <label><input type="checkbox" id="group-random-only-pending" checked>未生成・変更ありのみ</label>
+          <button class="btn" onclick="sampledGroupPrompts.clear();updateGroupGenerationStatus();toast(GROUP_TRANSFER_EN?'Sampling history cleared.':'抽出履歴を解除しました')">抽出履歴を解除</button>
+          <label><input type="checkbox" id="group-random-only-pending" checked onchange="updateGroupGenerationStatus()">未生成・変更ありのみ</label>
           <label><input type="checkbox" id="group-random-use-sizes">ランダムサイズを使用</label>
           <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(false)">ランダム抽出→Compose</button>
           <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(true)">ランダム抽出→追記</button>
@@ -779,6 +789,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
           <button class="btn" onclick="markSelectedPromptsGenerated(false)">選択の生成済みを解除</button>
           <select class="inp" id="group-generation-filter" onchange="renderGroups()" style="max-width:200px"><option value="all">全状態を表示</option><option value="pending">未生成・変更あり</option><option value="done">生成済み</option></select>
         </div>
+        <div id="group-generation-status" class="group-meta" style="margin-top:8px;overflow-wrap:anywhere" aria-live="polite"></div>
       </details>
       <div id="group-cross-select-status" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px"></div>
       <div style="display:grid;grid-template-columns:minmax(150px,1.4fr) 80px 80px auto;gap:6px;margin-top:8px;align-items:center">
@@ -1011,11 +1022,15 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <div class="preview-toolbar">
     <button class="btn primary" onclick="selectPreviewFolder()">画像フォルダを選択</button>
     <button class="btn secondary" id="preview-load-cancel" hidden onclick="cancelPreviewFileLoad()">読み込み停止</button>
-    <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="loadPreviewFiles([...this.files])">
+    <button class="btn secondary" onclick="refreshPreviewFolder()" title="既存画像を残し、新規・更新分だけ追加。フォルダ選択が出た場合は同じフォルダを指定してください。">更新分を追加読込</button>
+    <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="previewDirectoryHandle=null;loadPreviewFiles([...this.files]);this.value=''">
+    <input id="image-preview-update-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="appendPreviewFiles([...this.files]);this.value=''">
     <div class="clearable-input" style="flex:1;min-width:220px">
-      <input class="inp" id="image-preview-search" placeholder="メタデータ検索: portrait / ramen / seed / model..." oninput="renderPreviewImages()">
+      <input class="inp" id="image-preview-search" placeholder="メタデータ検索 / タグAND検索: 1girl, solo, sitting" title="カンマ区切りはPositive Promptのタグ完全一致AND検索。カンマなしは従来のメタデータ検索。1タグだけの完全一致検索は末尾にカンマを付けてください。" oninput="renderPreviewImages()">
       <button class="input-clear-x" onclick="clearImagePreviewSearch()" title="検索欄をクリア" aria-label="検索欄をクリア">×</button>
     </div>
+    <label class="group-meta">検索方式 <select class="inp related-scoring-mode" style="width:auto" onchange="setRelatedScoringMode(this.value)"><option value="legacy">従来</option><option value="tags">タグ差分重視</option></select></label>
+    <label class="group-meta" style="display:inline-flex;align-items:center;gap:4px" title="近似検索のみ適用。登録済みの除外タグを使用し、一時入力は含みません。変更後は再検索してください。"><input type="checkbox" class="related-use-generation-ignore" onchange="setRelatedUseGenerationIgnore(this.checked)"> 生成済み照合の除外タグを適用</label>
     <select class="inp" id="image-preview-load-mode" style="max-width:180px" title="大量フォルダでは高速を選ぶと、画像だけ先に並べて選択時に詳細を読みます。">
       <option value="full">通常読込</option>
       <option value="lazy">高速:画像先行</option>
@@ -1182,6 +1197,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 <div id="preview-lightbox" class="preview-lightbox" role="dialog" aria-modal="true" aria-label="画像拡大表示" onclick="closePreviewImageZoom(event)">
   <div id="preview-lightbox-name" class="preview-lightbox-name"></div>
   <div class="preview-lightbox-toolbar">
+    <span id="top-gallery-zoom-nav" hidden><button class="btn sm" onclick="navigateTopGalleryImage(-1,event)">←</button><button class="btn sm" onclick="navigateTopGalleryImage(1,event)">→</button></span>
     <button id="preview-lightbox-size" class="btn sm" onclick="togglePreviewImageActualSize(event)">100%</button>
     <button class="btn sm secondary" onclick="closePreviewImageZoom(event)">閉じる</button>
   </div>
@@ -1290,6 +1306,7 @@ let previewRandomSizeOpen = false, previewRandomSizeSelected = new Set();
 let compareRemixEntries = [], compareRemixResult = '';
 let previewImages = [], activePreviewId = null;
 let previewFileLoadGeneration=0,previewFileLoading=false;
+let previewDirectoryHandle=null;
 let selectedPreviewImageIds = new Set();
 let previewSelectionMode = false, lastPreviewSelectedId = null;
 let previewShowSelectedOnly = false;
@@ -1301,6 +1318,13 @@ let previewNeighborCount = 10;
 let previewVirtualScrollTop = 0, previewVirtualRenderQueued = false;
 let previewForcedIds = null, previewForcedOrder = [], previewForcedLabel = "", previewForcedOrderMode = "score";
 let relatedSearchStrictness = "normal";
+const SK_RELATED_SCORING_MODE='prompt_studio_related_scoring_mode_v1';
+let relatedScoringMode='legacy';
+let relatedUseGenerationIgnore=false;
+const relatedTokenCache=new WeakMap();
+let topScoreViewMode='gallery',topScoreViewRows=[],topScoreViewTopN=1,topScoreGalleryPage=0;
+let topGalleryZoomItems=[],topGalleryZoomIndex=-1;
+let topScoreGallerySize=320;
 let topScoreImageCount = 1;
 let backupTimer = null;
 let backupSuppressed = false;
@@ -4036,6 +4060,7 @@ function updateGroupSelectionBadges(){
   updateGroupCrossSelectStatus();
 }
 function updateGroupCrossSelectStatus(){
+  updateGroupGenerationStatus();
   const el=document.getElementById('group-cross-select-status');
   if(!el) return;
   const ids=selectedGroupPromptIds();
@@ -4726,6 +4751,27 @@ function markSelectedPromptsGenerated(on){
 function togglePromptGenerated(id,on){
   setPromptGenerated(id,on);saveGroups();renderGroups();renderGroupSelectors();
 }
+function groupGenerationSelectionStats(entries,onlyPending=true,excludeSampled=true){
+  const stats={total:entries.length,done:0,pending:0,changed:0,eligible:0,sampled:0};
+  for(const {prompt} of entries){
+    const state=generationState(prompt);stats[state]++;
+    if(onlyPending&&state==='done')continue;
+    if(excludeSampled&&sampledGroupPrompts.get(prompt.id)===prompt.text){stats.sampled++;continue;}
+    stats.eligible++;
+  }
+  return stats;
+}
+function updateGroupGenerationStatus(){
+  const el=document.getElementById('group-generation-status');if(!el)return;
+  const byId=new Map();
+  promptGroups.forEach(group=>(group.prompts||[]).forEach(prompt=>{if(!byId.has(prompt.id))byId.set(prompt.id,{group,prompt});}));
+  const entries=selectedGroupPromptIds().map(id=>byId.get(id)).filter(Boolean);
+  if(!entries.length){el.textContent=GROUP_TRANSFER_EN?'Select prompts to see remaining counts.':'プロンプトを選択すると、選択内の未生成件数を表示します。';return;}
+  const stats=groupGenerationSelectionStats(entries,document.getElementById('group-random-only-pending')?.checked!==false,document.getElementById('group-random-exclude-sampled')?.checked!==false);
+  el.textContent=GROUP_TRANSFER_EN
+    ?`Selected: ${stats.total} / Generated: ${stats.done} / Not generated: ${stats.pending} / Changed: ${stats.changed} / Remaining to sample: ${stats.eligible} (excluded sampled: ${stats.sampled})`
+    :`選択内 ${stats.total}件 ／ 生成済み ${stats.done}件 ／ 未生成 ${stats.pending}件 ／ 変更あり ${stats.changed}件 ／ 抽出対象の残り ${stats.eligible}件（抽出済み除外 ${stats.sampled}件）`;
+}
 function samplePromptSubset(entries,count,rng=Math.random){
   const pool=entries.slice();
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -4758,6 +4804,7 @@ function sendRandomSelectedPromptsToCompose(append=false,allRemaining=false){
   }
   writeGroupPromptLinesToCompose(lines,chosen.map(e=>e.prompt),append);
   chosen.forEach(e=>sampledGroupPrompts.set(e.prompt.id,e.prompt.text));
+  updateGroupGenerationStatus();
   switchTab('compose');buildCode();updateComposeSummary();
   const remaining=entries.length-count;
   toast(GROUP_TRANSFER_EN?count+' prompts sent / '+remaining+' remaining':count+'件をComposeへ送りました ／ 残り'+remaining+'件');
@@ -4831,7 +4878,10 @@ async function matchSelectedPreviewGeneration(){
       });
     }
     previewGenerationMatchRows=[...rows.values()];
-    panel.innerHTML='<div class="group-meta">'+(GROUP_TRANSFER_EN?'Matches: ':'一致: ')+rows.size+(GROUP_TRANSFER_EN?' prompts; skipped images: ':'件 ／ Promptなし・読込中: ')+skipped+'</div>'+previewGenerationMatchRows.map((r,i)=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input class="preview-generation-match-check" type="checkbox" value="${i}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${escH(r.images.join(' / '))}</div></label>`).join('')+`<div class="row"><button class="btn primary" onclick="confirmPreviewGenerationMatches()">${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn" onclick="document.getElementById('preview-generation-matches').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
+    const actions=`<div class="row"><button class="btn primary" onclick="confirmPreviewGenerationMatches()" ${rows.size?'':'disabled'}>${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn" onclick="document.getElementById('preview-generation-matches').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
+    const pending=rows.size?`<div class="group-meta" style="margin-top:6px;color:var(--accent)">${GROUP_TRANSFER_EN?'Not yet confirmed — press the button to mark checked prompts as generated.':'未確定：ボタンを押すと、チェックしたプロンプトが生成済みになります。'}</div>`:'';
+    panel.innerHTML='<div class="group-meta">'+(GROUP_TRANSFER_EN?'Matches: ':'一致: ')+rows.size+(GROUP_TRANSFER_EN?' prompts; skipped images: ':'件 ／ Promptなし・読込中: ')+skipped+'</div>'+pending+actions+previewGenerationMatchRows.map((r,i)=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input class="preview-generation-match-check" type="checkbox" value="${i}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${escH(r.images.join(' / '))}</div></label>`).join('')+actions;
+    panel.scrollTop=0;
   }catch(e){panel.textContent=String(e.message||e);}finally{previewGenerationMatchBusy=false;}
 }
 function confirmPreviewGenerationMatches(){
@@ -5392,7 +5442,21 @@ function resetGroupRelatedSearchState(){
   if(previewSearch) previewSearch.value='';
   previewForcedIds=null; previewForcedOrder=[]; previewForcedLabel=''; previewForcedOrderMode='score';
 }
-function promptSearchTokens(text,mode){
+function relatedSearchSource(text){
+  const source=String(text||'');
+  if(!relatedUseGenerationIgnore)return source;
+  const ignored=new Set(normalizePreviewGenerationIgnoreTags(previewGenerationIgnoreTags));
+  if(!ignored.size)return source;
+  return source.split(/[,、，\r\n;]+/).map(tag=>tag.trim()).filter(tag=>tag&&!ignored.has(tag.toLowerCase().replace(/\s+/g,' '))).join(', ');
+}
+function setRelatedUseGenerationIgnore(on){
+  relatedUseGenerationIgnore=!!on;
+  try{localStorage.setItem(SK_RELATED_SCORING_MODE+'_apply_ignore',relatedUseGenerationIgnore?'true':'false');}catch(e){}
+  document.querySelectorAll('.related-use-generation-ignore').forEach(el=>{el.checked=relatedUseGenerationIgnore;});
+  toast(GROUP_TRANSFER_EN?'Ignore-tag option changed. Run search again to update results.':'除外タグの適用を変更しました。再検索すると結果に反映されます。');
+}
+function promptSearchTokens(text,mode,applyIgnore=false){
+  if(applyIgnore)text=relatedSearchSource(text);
   mode=mode||relatedSearchStrictness||'normal';
   const stop=new Set([
     'masterpiece','best quality','highres','absurdres','ultra-detailed','ultra detailed','score_9','score_8_up','score_7_up','1girl','solo','single image','one pose','full body','looking at viewer','intricate details',
@@ -5455,7 +5519,63 @@ function candidateOvermatchPenalty(item,queryTokens,mode){
   if(mode==='strict') penalty*=1.25;
   return {penalty,extra};
 }
+function setRelatedScoringMode(value){
+  relatedScoringMode=value==='tags'?'tags':'legacy';
+  try{localStorage.setItem(SK_RELATED_SCORING_MODE,relatedScoringMode);}catch(e){}
+  document.querySelectorAll('.related-scoring-mode').forEach(el=>{el.value=relatedScoringMode;});
+  toast(GROUP_TRANSFER_EN?'Search mode changed. Run search again to update results.':'検索方式を変更しました。再検索すると結果に反映されます。');
+}
+function initializeRelatedScoringMode(){
+  try{relatedScoringMode=localStorage.getItem(SK_RELATED_SCORING_MODE)==='tags'?'tags':'legacy';}catch(e){relatedScoringMode='legacy';}
+  document.querySelectorAll('.related-scoring-mode').forEach(el=>{el.value=relatedScoringMode;});
+  try{relatedUseGenerationIgnore=localStorage.getItem(SK_RELATED_SCORING_MODE+'_apply_ignore')==='true';}catch(e){relatedUseGenerationIgnore=false;}
+  document.querySelectorAll('.related-use-generation-ignore').forEach(el=>{el.checked=relatedUseGenerationIgnore;});
+}
 function scorePromptCandidates(tokens,candidates,mode){
+  if(relatedUseGenerationIgnore){
+    tokens=(tokens||[]).filter(tag=>relatedSearchSource(tag).trim());
+    candidates=candidates.map(item=>{
+      const source=relatedSearchSource(item.sourceText||item.promptText||item.hay||'');
+      return {...item,sourceText:source,promptText:source,hay:source.toLowerCase()};
+    });
+  }
+  return relatedScoringMode==='tags'?scorePromptCandidatesByTags(tokens,candidates,mode):scorePromptCandidatesLegacy(tokens,candidates,mode);
+}
+function relatedCandidateTags(item){
+  const source=String(item.sourceText||item.hay||'');
+  const candidateKey=item.img||item.prompt;
+  const key=candidateKey&&typeof candidateKey==='object'?candidateKey:item;
+  const cached=relatedTokenCache.get(key);
+  if(cached&&cached.source===source)return cached;
+  const tags=promptSearchTokens(source,'normal');
+  const value={source,tags,set:new Set(tags)};
+  relatedTokenCache.set(key,value);
+  return value;
+}
+function scorePromptCandidatesByTags(tokens,candidates,mode){
+  const query=[...new Set(tokens||[])];if(!query.length||!candidates.length)return [];
+  const prepared=candidates.map(item=>({item,...relatedCandidateTags(item)}));
+  const df=new Map();
+  prepared.forEach(({tags})=>tags.forEach(tag=>df.set(tag,(df.get(tag)||0)+1)));
+  const weights=new Map(),querySet=new Set(query);
+  const weight=tag=>{if(!weights.has(tag))weights.set(tag,promptTokenWeight(tag,df.get(tag)||1,candidates.length,'normal'));return weights.get(tag);};
+  const total=query.reduce((sum,t)=>sum+weight(t),0);
+  return prepared.map(({item,tags,set})=>{
+    const hits=[],missingTags=[];let score=0;
+    for(const tag of query){
+      if(set.has(tag)){hits.push(tag);score+=weight(tag);}
+      else if(tags.some(t=>(' '+t+' ').includes(' '+tag+' ')||(' '+tag+' ').includes(' '+t+' '))){
+        hits.push(tag);score+=weight(tag)*0.25;missingTags.push(tag);
+      }else missingTags.push(tag);
+    }
+    const extra=tags.filter(t=>!querySet.has(t));
+    const extraWeight=extra.reduce((sum,t)=>sum+weight(t),0);
+    const coverage=total?score/total:0;
+    const rankScore=100*score/(total+extraWeight*0.65);
+    return {...item,score,total,hits,rankScore,missingTags,extraDiffs:extra,overPenalty:extraWeight,tagCoverage:coverage};
+  }).filter(x=>x.tagCoverage>=(mode==='strict'?0.6:mode==='loose'?0.1:0.2)&&x.rankScore>0);
+}
+function scorePromptCandidatesLegacy(tokens,candidates,mode){
   const unique=[...new Set(tokens||[])];
   if(!unique.length||!candidates.length) return [];
   const docCount=candidates.length;
@@ -5483,12 +5603,12 @@ function scorePromptCandidates(tokens,candidates,mode){
 }
 function relatedImageMatchesForPrompt(promptText,limit,mode){
   mode=mode||relatedStrictnessValue();
-  const tokens=promptSearchTokens(promptText,mode);
+  const tokens=promptSearchTokens(promptText,relatedScoringMode==='tags'?'normal':mode,true);
   if(!tokens.length) return [];
   const candidates=previewImages.map(img=>({
     img,
-    sourceText:String(img.prompt||img.metadataRaw||''),
-    hay:String(img.prompt||img.metadataRaw||'').toLowerCase(),
+    sourceText:String(relatedScoringMode==='tags'?(img.prompt||''):(img.prompt||img.metadataRaw||'')),
+    hay:String(relatedScoringMode==='tags'?(img.prompt||''):(img.prompt||img.metadataRaw||'')).toLowerCase(),
     mode:'auto'
   }));
   const scored=scorePromptCandidates(tokens,candidates,mode);
@@ -5590,19 +5710,19 @@ function showRelatedImagesForSelectedPrompts(){
   toast(hitCount?`${entries.length}件の選択プロンプトに対する関連画像候補を表示したのだ`:'関連画像候補が見つからなかったのだ');
 }
 let relatedPanelPromptSelection=new Set();
-function relatedPanelSelectionTools(){
-  relatedPanelPromptSelection=new Set();
+function relatedPanelSelectionTools(preserve=false){
+  if(!preserve)relatedPanelPromptSelection=new Set();
   return `<div class="row" style="margin:8px 0;flex-wrap:wrap">
     <button class="btn sm" onclick="setRelatedPanelPromptSelection(true)">表示プロンプトを全選択</button>
     <button class="btn sm" onclick="setRelatedPanelPromptSelection(false)">選択解除</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('compose')">選択をComposeへ</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('append')">選択をComposeへ追記</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('group')">選択をGroupへ移動／コピー</button>
-    <span class="count-badge" id="related-panel-selected-count">0 selected</span>
+    <span class="count-badge" id="related-panel-selected-count">${relatedPanelPromptSelection.size} selected</span>
   </div>`;
 }
 function relatedPanelPromptCheckbox(id){
-  return `<label style="display:inline-flex;align-items:center;gap:6px"><input class="related-panel-prompt-check" type="checkbox" value="${escA(id)}" onchange="toggleRelatedPanelPromptSelection(this.value,this.checked)">このプロンプトを選択</label>`;
+  return `<label style="display:inline-flex;align-items:center;gap:6px"><input class="related-panel-prompt-check" type="checkbox" value="${escA(id)}" ${relatedPanelPromptSelection.has(id)?'checked':''} onchange="toggleRelatedPanelPromptSelection(this.value,this.checked)">このプロンプトを選択</label>`;
 }
 function toggleRelatedPanelPromptSelection(id,on){
   if(on) relatedPanelPromptSelection.add(id);else relatedPanelPromptSelection.delete(id);
@@ -5611,7 +5731,7 @@ function toggleRelatedPanelPromptSelection(id,on){
   if(count) count.textContent=relatedPanelPromptSelection.size+' selected';
 }
 function setRelatedPanelPromptSelection(on){
-  relatedPanelPromptSelection.clear();
+  if(!on)relatedPanelPromptSelection.clear();
   if(on) document.querySelectorAll('.related-panel-prompt-check').forEach(el=>relatedPanelPromptSelection.add(el.value));
   toggleRelatedPanelPromptSelection('',false);
 }
@@ -5635,6 +5755,8 @@ function sendRelatedPanelSelection(action){
   }
 }
 function renderSelectedRelatedImagesPanel(blocks,topN){
+  if(topScoreViewMode==='gallery'){renderTopScoreImagesPanel(blocks,topN);return;}
+  topScoreViewRows=blocks;topScoreViewTopN=topN||3;topScoreGalleryPage=0;
   const panel=document.getElementById('group-related-images-panel');
   if(!panel) return;
   const orderedIds=[];
@@ -5649,6 +5771,7 @@ function renderSelectedRelatedImagesPanel(blocks,topN){
       <button class="btn sm secondary" onclick="clearGroupRelatedImagesPanel()">閉じる</button>
     </div>
     <div class="group-meta" style="margin-top:4px">選択した順番ごとに、各プロンプトの近似画像候補を表示します。</div>
+    <div class="row">${topScoreViewControls()}${relatedScoringControl()}</div>
     <div class="related-manual-row">
       <select class="inp" id="group-related-strictness" onchange="relatedSearchStrictness=this.value" style="max-width:120px">
         <option value="loose" ${relatedSearchStrictness==='loose'?'selected':''}>ゆるめ</option>
@@ -6026,6 +6149,8 @@ function deleteTopScorePrompt(promptId){
 ${label}`)) return;
   rememberDeletedPrompt(promptId);
   found.group.prompts=(found.group.prompts||[]).filter(p=>p.id!==promptId);
+  topScoreViewRows=topScoreViewRows.filter(r=>r.entry.prompt.id!==promptId);
+  relatedPanelPromptSelection.delete(promptId);
   found.group.updatedAt=new Date().toISOString();
   if(editingGroupPromptId===promptId) editingGroupPromptId=null;
   groupPromptSelectionOrder=groupPromptSelectionOrder.filter(x=>x!==promptId);
@@ -6085,8 +6210,83 @@ function saveTopScorePromptEdit(promptId,asDiff){
   closeTopScorePromptEditor(promptId);
   toast('画像を見ながらプロンプトを保存したのだ');
 }
-function renderTopScoreImagesPanel(rows,topN){
+function relatedScoringControl(){
+  return `<label class="group-meta">${GROUP_TRANSFER_EN?'Search mode':'検索方式'} <select class="inp related-scoring-mode" style="width:auto" onchange="setRelatedScoringMode(this.value)">
+    <option value="legacy" ${relatedScoringMode==='legacy'?'selected':''}>${GROUP_TRANSFER_EN?'Legacy':'従来'}</option>
+    <option value="tags" ${relatedScoringMode==='tags'?'selected':''}>${GROUP_TRANSFER_EN?'Tag differences':'タグ差分重視'}</option>
+  </select></label> <label class="group-meta" style="display:inline-flex;align-items:center;gap:4px" title="近似検索のみ適用。登録済みの除外タグを使用し、一時入力は含みません。変更後は再検索してください。"><input type="checkbox" class="related-use-generation-ignore" ${relatedUseGenerationIgnore?'checked':''} onchange="setRelatedUseGenerationIgnore(this.checked)"> 生成済み照合の除外タグを適用</label>`;
+}
+function topScoreViewControls(){
+  return `<label class="group-meta">${GROUP_TRANSFER_EN?'View':'表示'} <select class="inp" style="width:auto" onchange="setTopScoreViewMode(this.value)">
+    <option value="gallery" ${topScoreViewMode==='gallery'?'selected':''}>${GROUP_TRANSFER_EN?'Gallery':'ギャラリー'}</option>
+    <option value="edit" ${topScoreViewMode==='edit'?'selected':''}>${GROUP_TRANSFER_EN?'Prompt / Edit':'Prompt・編集'}</option>
+  </select></label>`;
+}
+function setTopScoreViewMode(value){
+  topScoreViewMode=value==='edit'?'edit':'gallery';
+  renderTopScoreImagesPanel(topScoreViewRows,topScoreViewTopN,true);
+}
+function setTopScoreGalleryPage(page){
+  topScoreGalleryPage=Math.max(0,Math.min(Math.ceil(topScoreViewRows.length/20)-1,Number(page)||0));
+  renderTopScoreGalleryPanel(true);
+}
+function renderTopScoreGalleryPanel(preserveSelection=false){
+  const panel=document.getElementById('group-related-images-panel');if(!panel)return;
+  const rows=topScoreViewRows,topN=topScoreViewTopN;
+  const bases=[];topGalleryZoomItems=[];
+  rows.forEach(r=>{bases.push(topGalleryZoomItems.length);(r.matches||[]).forEach(m=>topGalleryZoomItems.push({img:m.img,title:r.entry.prompt.title||r.entry.prompt.memo||r.entry.group.name}));});
+  window.__groupRelatedImageIds=[...new Set(topGalleryZoomItems.map(e=>e.img.id))];
+  window.__groupRelatedImageLabel=GROUP_TRANSFER_EN?'Top Score Gallery':'Topスコア画像ギャラリー';
+  window.__groupRelatedImageOrderMode='sequence';
+  const pages=Math.max(1,Math.ceil(rows.length/20));
+  topScoreGalleryPage=Math.min(topScoreGalleryPage,pages-1);
+  const start=topScoreGalleryPage*20;
+  const pager=`<div class="row"><button class="btn sm secondary" onclick="setTopScoreGalleryPage(${topScoreGalleryPage-1})" ${topScoreGalleryPage===0?'disabled':''}>${GROUP_TRANSFER_EN?'Previous':'前のページ'}</button><span class="count-badge">${topScoreGalleryPage+1} / ${pages} — ${rows.length} prompts</span><button class="btn sm secondary" onclick="setTopScoreGalleryPage(${topScoreGalleryPage+1})" ${topScoreGalleryPage===pages-1?'disabled':''}>${GROUP_TRANSFER_EN?'Next':'次のページ'}</button></div>`;
+  panel.style.display='block';
+  panel.innerHTML=`
+    <div class="row" style="justify-content:space-between"><div class="sl">Top ${topN} / ${GROUP_TRANSFER_EN?'Gallery — selection order':'ギャラリー・選択順'}</div><button class="btn sm secondary" onclick="clearGroupRelatedImagesPanel()">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>
+    <div class="row">${topScoreViewControls()}${relatedScoringControl()}
+      <select class="inp" id="top-score-count" style="width:auto" onchange="topScoreImageCount=Number(this.value);showTopScoreImagesForSelectedPrompts()">${[1,2,3].map(n=>`<option value="${n}" ${topN===n?'selected':''}>Top ${n}</option>`).join('')}</select>
+      <button class="btn sm related" onclick="showTopScoreImagesForSelectedPrompts()">${GROUP_TRANSFER_EN?'Rerun search':'再検索'}</button>
+      <button class="btn sm related" onclick="openRelatedResultsInPreview()">Preview</button>
+      <label class="group-meta">${GROUP_TRANSFER_EN?'Image size':'画像サイズ'} <input type="range" min="220" max="600" step="20" value="${topScoreGallerySize}" oninput="setTopScoreGallerySize(this.value)"></label>
+    </div>
+    <div class="group-meta">${GROUP_TRANSFER_EN?'Click an image to enlarge; use arrows to browse. Selection is kept across pages and views.':'画像クリックで拡大・矢印で前後へ。ページ・表示切替でも選択を維持します。'}</div>
+    ${relatedPanelSelectionTools(preserveSelection)}${pager}
+    <div class="top-score-gallery">${rows.slice(start,start+20).map((r,k)=>{
+      const p=r.entry.prompt;
+      return `<article class="top-gallery-card">
+        <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
+        <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
+        ${relatedPanelPromptCheckbox(p.id)}
+        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img loading="lazy" decoding="async" src="${escA(m.img.url)}" alt="${escA(m.img.name)}"></button><div class="top-gallery-score">#${i+1} score ${formatMatchScore(m)}</div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
+        <details><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
+          <div class="top-gallery-prompt">${escH(p.text||'')}</div>
+          ${r.matches.map((m,i)=>`<div class="top-gallery-file">#${i+1} score ${formatMatchScore(m)}<br>${escH(m.img.name)}${m.missingTags?`<div>${GROUP_TRANSFER_EN?'Not exact: ':'完全一致しないタグ: '}${escH(m.missingTags.join(', ')||'—')}</div><div>${GROUP_TRANSFER_EN?'Extra: ':'画像側の追加タグ: '}${escH((m.extraDiffs||[]).join(', ')||'—')}</div>`:''}<button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>`).join('')}
+        </details>
+      </article>`;
+    }).join('')}</div>${pager}`;
+  setTopScoreGallerySize(topScoreGallerySize);
+}
+function setTopScoreGallerySize(value){
+  topScoreGallerySize=Math.max(220,Math.min(600,Number(value)||320));
+  document.getElementById('group-related-images-panel')?.style.setProperty('--top-gallery-size',topScoreGallerySize+'px');
+}
+function openTopGalleryImage(index){
+  const entry=topGalleryZoomItems[index];if(!entry)return;
+  topGalleryZoomIndex=index;
+  openPreviewZoomSource(entry.img.url,(index+1)+' / '+topGalleryZoomItems.length+' — '+entry.title+' — '+entry.img.name,true);
+}
+function navigateTopGalleryImage(delta,event){
+  event?.stopPropagation();
+  if(topGalleryZoomIndex<0)return;
+  openTopGalleryImage(Math.max(0,Math.min(topGalleryZoomItems.length-1,topGalleryZoomIndex+delta)));
+}
+function renderTopScoreImagesPanel(rows,topN,preserveSelection=false){
   captureTopScoreEditDrafts();
+  topScoreViewRows=rows;topScoreViewTopN=topN||topScoreImageCount||1;
+  if(!preserveSelection)topScoreGalleryPage=0;
+  if(topScoreViewMode==='gallery'){renderTopScoreGalleryPanel(preserveSelection);return;}
   const panel=document.getElementById('group-related-images-panel');
   if(!panel) return;
   topN=topN||topScoreImageCount||1;
@@ -6102,6 +6302,7 @@ function renderTopScoreImagesPanel(rows,topN){
       <button class="btn sm secondary" onclick="clearGroupRelatedImagesPanel()">閉じる</button>
     </div>
     <div class="group-meta" style="margin-top:4px">選択プロンプトごとに、上位画像を見ながらTITLEとPrompt本文を直接編集できます。</div>
+    <div class="row">${topScoreViewControls()}${relatedScoringControl()}</div>
     <div class="related-manual-row">
       <select class="inp" id="group-related-strictness" onchange="relatedSearchStrictness=this.value" style="max-width:120px">
         <option value="loose" ${relatedSearchStrictness==='loose'?'selected':''}>ゆるめ</option>
@@ -6116,7 +6317,7 @@ function renderTopScoreImagesPanel(rows,topN){
       <button class="btn sm secondary" onclick="showTopScoreImagesForSelectedPrompts()">再検索</button>
       <button class="btn sm related" onclick="openRelatedResultsInPreview()">Top画像をPreviewで表示</button>
     </div>
-    ${relatedPanelSelectionTools()}
+    ${relatedPanelSelectionTools(preserveSelection)}
     <div class="top-score-board">${rows.map(r=>{
       const p=r.entry.prompt;
       const title=p.memo||p.title||p.text.slice(0,80);
@@ -6819,6 +7020,7 @@ async function selectPreviewFolder(){
       const dir=await window.showDirectoryPicker();
       const files=[];
       await collectImageFilesFromDirectory(dir,files,'');
+      previewDirectoryHandle=dir;
       await loadPreviewFiles(files);
       return;
     }catch(e){
@@ -6829,15 +7031,126 @@ async function selectPreviewFolder(){
   }
   document.getElementById('image-preview-folder-input')?.click();
 }
-async function collectImageFilesFromDirectory(dir,files,prefix){
+async function collectImageFilesFromDirectory(dir,files,prefix,generation=null){
   for await(const [name,handle] of dir.entries()){
+    if(generation!==null&&generation!==previewFileLoadGeneration)return;
     if(handle.kind==='file'){
-      const file=await handle.getFile();
+      const file=await (generation===null?handle.getFile():previewReadWithTimeout(handle.getFile()));
+      if(generation!==null&&generation!==previewFileLoadGeneration)return;
       file._previewPath=prefix+name;
       if(isPreviewImageFile(file)) files.push(file);
     }else if(handle.kind==='directory'){
-      await collectImageFilesFromDirectory(handle,files,prefix+name+'/');
+      await collectImageFilesFromDirectory(handle,files,prefix+name+'/',generation);
     }
+  }
+}
+function previewFileIdentity(file){
+  if(file._previewPath)return file._previewPath;
+  const path=String(file.webkitRelativePath||'');
+  return path?path.split('/').slice(1).join('/')||file.name:file.name;
+}
+function createIncrementalPreviewItem(file,id,lazy){
+  return {
+    id:id||'img_'+Date.now()+'_'+Math.random().toString(36).slice(2),
+    file,name:file.name,path:file._previewPath||file.webkitRelativePath||file.name,
+    size:file.size,modified:file.lastModified||0,type:file.type||guessMime(file.name),
+    url:URL.createObjectURL(file),width:null,height:null,
+    prompt:'',negative:'',meta:{},metadataRaw:'',searchText:'',
+    detailsLoaded:false,detailsLoading:false,lazyLoaded:lazy
+  };
+}
+async function refreshPreviewFolder(){
+  if(!window.showDirectoryPicker){
+    toast(GROUP_TRANSFER_EN?'Select the same folder again to load new and changed images.':'同じ画像フォルダを選び直してください。新規・更新分だけ追加します。');
+    document.getElementById('image-preview-update-input')?.click();
+    return;
+  }
+  let generation=null;
+  const progress=document.getElementById('preview-load-progress');
+  const button=document.getElementById('preview-load-cancel');
+  try{
+    let dir=previewDirectoryHandle;
+    if(!dir)dir=await window.showDirectoryPicker();
+    else if(dir.requestPermission&&await dir.requestPermission({mode:'read'})!=='granted'){
+      toast(GROUP_TRANSFER_EN?'Folder access was not granted.':'フォルダへのアクセスが許可されませんでした');return;
+    }
+    previewDirectoryHandle=dir;
+    generation=++previewFileLoadGeneration;previewFileLoading=true;
+    if(button)button.hidden=false;
+    if(progress)progress.textContent=GROUP_TRANSFER_EN?'Checking folder for updates…':'フォルダの更新を確認中…';
+    const files=[];
+    await collectImageFilesFromDirectory(dir,files,'',generation);
+    if(generation!==previewFileLoadGeneration)return;
+    await appendPreviewFiles(files,generation);
+  }catch(e){
+    if(generation!==null&&generation!==previewFileLoadGeneration)return;
+    if(e?.name!=='AbortError'){
+      const message=(GROUP_TRANSFER_EN?'Could not check folder: ':'更新確認に失敗しました: ')+String(e.message||e);
+      if(progress)progress.textContent=message;toast(message);
+    }
+  }finally{
+    if(generation!==null&&generation===previewFileLoadGeneration){
+      previewFileLoading=false;if(button)button.hidden=true;
+    }
+  }
+}
+async function appendPreviewFiles(files,scanGeneration=null){
+  if(scanGeneration!==null&&scanGeneration!==previewFileLoadGeneration)return;
+  const generation=scanGeneration===null?++previewFileLoadGeneration:scanGeneration;
+  previewFileLoading=true;
+  const button=document.getElementById('preview-load-cancel');if(button)button.hidden=false;
+  const progress=document.getElementById('preview-load-progress');
+  const lazy=document.getElementById('image-preview-load-mode')?.value==='lazy';
+  const existing=new Map(previewImages.map(item=>[previewFileIdentity(item.file),item]));
+  const positions=new Map(previewImages.map((item,i)=>[item.id,i]));
+  const seen=new Set();
+  const incoming=(files||[]).filter(isPreviewImageFile).slice().sort((a,b)=>(b.lastModified||0)-(a.lastModified||0));
+  let added=0,updated=0,unchanged=0,deferred=0,lastRender=0;
+  try{
+    for(let i=0;i<incoming.length;i++){
+      if(generation!==previewFileLoadGeneration)return;
+      const file=incoming[i],key=previewFileIdentity(file);
+      if(seen.has(key))continue;seen.add(key);
+      if(progress)progress.textContent=(i+1)+' / '+incoming.length+' — '+file.name;
+      if(!file.size){deferred++;continue;}
+      const old=existing.get(key);
+      const changed=old&&(old.size!==file.size||old.modified!==(file.lastModified||0));
+      const retry=old&&(old.detailsError||(!lazy&&!old.detailsLoaded&&!old.detailsLoading));
+      if(old&&!changed&&!retry){unchanged++;continue;}
+      const item=createIncrementalPreviewItem(file,old?.id,lazy);
+      updatePreviewItemSearchText(item);
+      if(old){
+        previewImages[positions.get(old.id)]=item;
+        URL.revokeObjectURL(old.url);updated++;
+      }else{
+        positions.set(item.id,previewImages.length);previewImages.push(item);added++;
+      }
+      existing.set(key,item);
+      if(!activePreviewId)activePreviewId=item.id;
+      const now=Date.now();
+      if(now-lastRender>=200){renderPreviewImages();lastRender=now;}
+      if(!lazy)await loadPreviewItemDetails(item);
+      if(generation!==previewFileLoadGeneration){
+        if(!previewImages.includes(item))URL.revokeObjectURL(item.url);
+        return;
+      }
+      if(item.detailsError)deferred++;
+      if(i%24===0)await new Promise(r=>setTimeout(r,0));
+    }
+    if(generation!==previewFileLoadGeneration)return;
+    renderPreviewImages();renderPreviewDetail();
+    const message=GROUP_TRANSFER_EN
+      ?`Added ${added} / Updated or retried ${updated} / Unchanged ${unchanged} / Retry later ${deferred}`
+      :`新規 ${added}件 ／ 更新・再試行 ${updated}件 ／ 変更なし ${unchanged}件 ／ 次回再試行 ${deferred}件`;
+    if(progress)progress.textContent=message;toast(message);
+  }catch(e){
+    if(generation===previewFileLoadGeneration){
+      renderPreviewImages();renderPreviewDetail();
+      const message=(GROUP_TRANSFER_EN?'Update stopped; loaded images retained: ':'追加読み込みを中断しました（読込済みは保持）: ')+String(e.message||e);
+      if(progress)progress.textContent=message;toast(message);
+    }
+  }finally{
+    if(generation===previewFileLoadGeneration){previewFileLoading=false;if(button)button.hidden=true;}
   }
 }
 function isPreviewImageFile(file){
@@ -7089,6 +7402,10 @@ function shortPreviewFileName(name){
   const ext=dot>0?s.slice(dot):'';
   return s.slice(0,22)+'…'+ext;
 }
+function previewPromptHasAllTags(prompt,terms){
+  const tags=new Set(String(prompt||'').split(/[,、，\r\n]+/).map(t=>t.toLowerCase().replace(/\s+/g,' ').trim()).filter(Boolean));
+  return terms.every(t=>tags.has(t));
+}
 function previewFilteredImages(){
   const q=String(document.getElementById('image-preview-search')?.value||'').trim().toLowerCase();
   let base;
@@ -7098,7 +7415,15 @@ function previewFilteredImages(){
   }else{
     base=previewImages;
   }
-  if(q) base=base.filter(item=>q.split(/\s+/).filter(Boolean).every(t=>item.searchText.includes(t)));
+  if(q){
+    if(/[,、，]/.test(q)){
+      const terms=q.split(/[,、，\r\n]+/).map(t=>t.replace(/\s+/g,' ').trim()).filter(Boolean);
+      if(terms.length) base=base.filter(item=>previewPromptHasAllTags(item.prompt,terms));
+    }else{
+      const terms=q.split(/\s+/).filter(Boolean);
+      base=base.filter(item=>terms.every(t=>String(item.searchText||'').includes(t)));
+    }
+  }
   if(previewShowSelectedOnly) base=base.filter(item=>selectedPreviewImageIds.has(item.id));
   return previewForcedIds?base:sortedPreviewImages(base);
 }
@@ -7557,12 +7882,12 @@ function previewGroupMatchStrictnessValue(){
 }
 function groupPromptMatchesForImagePrompt(imagePrompt,limit,mode){
   mode=mode||previewGroupMatchStrictnessValue();
-  const tokens=promptSearchTokens(imagePrompt,mode);
+  const tokens=promptSearchTokens(imagePrompt,relatedScoringMode==='tags'?'normal':mode,true);
   if(!tokens.length) return [];
   const candidates=[];
   promptGroups.forEach(g=>{
     (g.prompts||[]).forEach(pr=>{
-      const sourceText=String([pr.title,pr.memo,pr.text,pr.negative].filter(Boolean).join('\n'));
+      const sourceText=relatedScoringMode==='tags'?String(pr.text||''):String([pr.title,pr.memo,pr.text,pr.negative].filter(Boolean).join('\n'));
       candidates.push({
         group:g,
         prompt:pr,
@@ -7976,7 +8301,10 @@ function openPreviewImageZoom(){
   if(!item?.url){toast('拡大する表示画像がないのだ');return;}
   openPreviewZoomSource(item.url,item.name||'拡大画像');
 }
-function openPreviewZoomSource(src,nameText){
+function openPreviewZoomSource(src,nameText,gallery=false){
+  if(!gallery)topGalleryZoomIndex=-1;
+  const galleryNav=document.getElementById('top-gallery-zoom-nav');
+  if(galleryNav)galleryNav.hidden=!gallery;
   const lightbox=document.getElementById('preview-lightbox');
   const image=document.getElementById('preview-lightbox-image');
   if(!src||!lightbox||!image){toast('拡大する画像がないのだ');return;}
@@ -8042,6 +8370,9 @@ function togglePreviewImageActualSize(event){
 }
 function setupPreviewImageZoom(){
   document.addEventListener('keydown',event=>{
+    if(topGalleryZoomIndex>=0&&document.getElementById('preview-lightbox')?.classList.contains('open')&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){
+      event.preventDefault();navigateTopGalleryImage(event.key==='ArrowLeft'?-1:1,event);return;
+    }
     if(event.key==='Escape'&&document.getElementById('preview-img2img-compare')?.classList.contains('open')){
       closePreviewImg2ImgCompare();
       return;
@@ -8352,6 +8683,7 @@ load();
 groupsInitializationPromise=initializeGroupsPersistence();
 groupsInitializationPromise.then(()=>autoImportOnStartup());
 loadTheme();
+initializeRelatedScoringMode();
 setupTabShortcuts();
 renderCatBar();
 renderTags();
