@@ -6,7 +6,7 @@ Usage:
   python3 prompt_studio_local_server.py
 
 Open:
-  http://127.0.0.1:8765/prompt_studio_10_5.html
+  http://127.0.0.1:8765/prompt_studio.html
 
 Proxy:
   /dtapi/* -> http://127.0.0.1:7860/*
@@ -212,7 +212,7 @@ class PromptStudioHandler(SimpleHTTPRequestHandler):
 def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     httpd = ThreadingHTTPServer((HOST, PORT), PromptStudioHandler)
-    print(f"Prompt Studio: http://{HOST}:{PORT}/prompt_studio_10_5.html")
+    print(f"Prompt Studio: http://{HOST}:{PORT}/prompt_studio.html")
     print(f"Draw Things proxy: /dtapi -> {DT_TARGET}")
     print(f"Prompt Studio backups: {BACKUP_DIR} (latest {BACKUP_LIMIT})")
     try:

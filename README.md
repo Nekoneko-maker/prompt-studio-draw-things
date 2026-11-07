@@ -6,14 +6,23 @@ It is designed for workflows where you generate or edit many prompts, group them
 
 ## Contents
 
-- `prompt_studio.html` — Japanese edition of Prompt Studio 10.5.
-- `prompt_studio_en.html` — English edition of Prompt Studio 10.5. Its browser data and backups are kept separate from the Japanese edition.
+- `prompt_studio.html` — Japanese edition of Prompt Studio 11.0.
+- `prompt_studio_en.html` — English edition of Prompt Studio 11.0. Its browser data and backups are kept separate from the Japanese edition.
 - `prompt_studio_local_server.py` — optional local server for Draw Things API relay and Mac-side automatic backups.
-- `scripts/prompt-runner-unlimited.js` — current Draw Things batch runner with inpaint, per-prompt size, and per-prompt LoRA OFF support.
+- `scripts/prompt-runner-unlimited.js` — current Draw Things batch runner with inpaint, per-prompt size, per-prompt LoRA overrides, and trigger-based LoRA addition.
 - `scripts/draw-things-batch-prompt-runner-inpaint-size.js` — Draw Things batch runner script with inpaint support and optional per-prompt size syntax.
 - `docs/draw-things-script.md` — usage notes for the Draw Things script.
 - `docs/manual-ja.md` — Japanese user manual for Prompt Studio.
 - `docs/manual-en.md` — English user manual for Prompt Studio.
+
+## What’s new in 11.0
+
+- Faster tab revisits and paginated Groups, with selection across pages.
+- Multiple Preview folders, with optional folder-level exclusion from generation checks.
+- Gallery Top 1–5, per-prompt refresh and image counts, collapsible extra images, and per-image Compose sending.
+- Negative LoRA weights, trigger-based LoRA addition, and probability controls for Compose bulk editing.
+
+Existing data and backup formats are unchanged. Use the updated runner to apply trigger-based LoRA rules in Draw Things scripts.
 
 ## Manuals
 
@@ -77,7 +86,7 @@ python3 prompt_studio_local_server.py
 1. Open Draw Things.
 2. Open Scripts.
 3. Create a new script.
-4. Paste the contents of `scripts/draw-things-batch-prompt-runner-inpaint-size.js`.
+4. Paste the contents of `scripts/prompt-runner-unlimited.js`.
 5. Run the script.
 6. Paste prompts into the popup.
 

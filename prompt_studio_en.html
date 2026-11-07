@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prompt Studio</title>
+<title>Prompt Studio 11.0</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
@@ -172,6 +172,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-card.folder-dragging{opacity:.5;border-style:dashed}
 .group-folder{margin-bottom:9px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface2);overflow:hidden}
 .group-folder.drag-over{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.category-root-drop{padding:7px;margin-bottom:8px;border:1px dashed var(--border2);border-radius:var(--r2);font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.category-drop-over{outline:2px solid var(--accent);outline-offset:-2px;background:var(--tag-sel)}
+.group-folder-head[draggable="true"]{cursor:grab}
+.group-parent-folder{border:1px solid var(--border2);border-radius:var(--r2);margin-bottom:10px;min-width:0;overflow:hidden}
+.group-parent-body{padding:6px;min-width:0}
+.group-folder-parent-assign{display:flex;align-items:center;gap:5px;padding:4px 8px;font-size:10px;min-width:0}
+.group-folder-parent-assign>select{flex:1;min-width:0;width:auto;font-size:11px;padding:4px}
+.group-folder-create>.inp{grid-column:1 / -1;min-width:0}
 .group-folder-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 8px;cursor:pointer;user-select:none;background:var(--surface2)}
 .group-folder-head:hover{background:var(--surface3)}
 .group-folder-toggle{width:16px;color:var(--accent);font-family:var(--mono);font-size:11px;flex:0 0 auto}
@@ -183,7 +191,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 .group-folder-body{padding:7px 7px 1px}
 .group-folder-body .group-card{margin-bottom:6px;padding:8px}
 .group-folder-assign{width:100%;margin-top:5px;padding:3px 5px!important;font-size:9px!important;color:var(--muted)}
-.group-folder-create{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:8px}
+.group-folder-create{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
 .group-name{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text)}
 .group-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px;max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .group-select-badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:999px;background:var(--accent);color:#071014;font-family:var(--mono);font-size:10px;font-weight:700}
@@ -381,6 +389,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 
 /* Responsive operation panels: wrap controls instead of clipping them. */
 .workspace-grid>*,.compose-grid>*,.preview-grid>*,.settings-grid>*{min-width:0}
+.group-transfer-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
+.group-transfer-actions>.btn{min-width:0;width:100%;height:100%;padding:6px 4px;line-height:1.4}
 .group-search-controls,.group-send-size-fields{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .group-search-controls>.clearable-input{flex:2 1 220px}
 .group-search-controls>select{flex:1 1 140px;width:auto}
@@ -395,7 +405,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
 <div class="hd">
   <div class="hd-dot"></div>
   <div class="hd-title">Prompt Studio</div>
-  <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">Prompt Studio 10.5 · English</span>
+  <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">Prompt Studio 11.0 · English</span>
 </div>
 
 <!-- Tabs -->
@@ -522,7 +532,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">WEIGHT</span>
       <span class="lora-weight-val" id="lora-w-val">1.00</span>
     </div>
-    <input type="range" id="lora-w-inp" min="0" max="2" step="0.05" value="1"
+    <input type="range" id="lora-w-inp" min="-2" max="2" step="0.05" value="1"
       oninput="document.getElementById('lora-w-val').textContent=parseFloat(this.value).toFixed(2)">
   </div>
   <input class="inp" id="lora-memo-inp" placeholder="Memo (optional)" style="margin-top:6px">
@@ -565,6 +575,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     <span style="color:var(--muted);font-size:11px;font-style:italic;align-self:center">Register LoRA in the Library and then choose.</span>
   </div>
 
+  <details class="group-action-section" style="margin-top:8px"><summary>Trigger LoRAs (experimental)</summary>
+    <label><input type="checkbox" id="compose-trigger-loras" onchange="buildCode()">Add registered LoRAs when trigger tags match</label>
+    <div class="mini-help">Configure triggers in Library → LoRA. Comma-separated tags match exactly (case-insensitive); any trigger matches. Selected Compose LoRAs form the base; otherwise the captured app settings are used. Base LoRAs and their weights stay unchanged. Explicit per-row overrides/OFF take priority. Script output requires the updated runner.</div>
+    <button class="btn sm" onclick="captureTriggerLoraApiBase()">Capture / Refresh Draw Things Base LoRAs</button>
+    <div class="mini-help" id="trigger-lora-base-status">No base set captured yet.</div>
+    <div class="mini-help">API: the base is remembered for this page session. Refresh after changing app settings. The app may retain the final row’s LoRAs; reload clears the remembered base.</div>
+  </details>
+
   <div class="sl">Category Tag Selection</div>
   <div class="cat-bar" id="builder-cat-bar"></div>
   <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
@@ -597,6 +615,11 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <input class="inp" id="compose-bulk-find" placeholder="Tag or text to add, delete, or find">
       <input class="inp" id="compose-bulk-replace" placeholder="Replacement (blank deletes it)">
     </div>
+    <div class="row" style="margin-top:7px;flex-wrap:wrap">
+      <label style="display:inline-flex;align-items:center;gap:6px">Operation probability <input class="inp" id="compose-bulk-add-probability" type="number" min="0" max="100" step="1" value="100" style="width:80px" aria-label="Operation probability"> %</label>
+      <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="compose-bulk-force-100" onchange="document.getElementById('compose-bulk-add-probability').disabled=this.checked">Always 100%</label>
+    </div>
+    <div class="group-meta">Applies to prepend, append, delete and replace, independently per prompt. Always 100% overrides the number without changing it. Undo is never randomized.</div>
     <div class="row" style="margin-top:7px;flex-wrap:wrap">
       <button class="btn sm" onclick="composeBulkEdit('prepend')">Prepend to Each Line</button>
       <button class="btn sm" onclick="composeBulkEdit('append')">Append to Each Line</button>
@@ -704,12 +727,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       </div>
       <div class="row" style="margin:-2px 0 8px;flex-wrap:wrap">
         <button class="btn sm primary" onclick="duplicateSelectedGroups()">Duplicate Selected Groups</button>
+        <button class="btn sm danger" id="delete-selected-groups" onclick="deleteSelectedGroups()">Delete Selected Groups</button>
         <button class="btn sm" onclick="clearSelectedGroups()">Clear Group Selection</button>
         <span class="count-badge" id="selected-group-count">0 Groups selected</span>
       </div>
       <div class="group-folder-create">
-        <input class="inp" id="group-folder-label-inp" name="ps_folder_label" placeholder="Folder Name (e.g., Characters)" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
+        <input class="inp" id="group-folder-label-inp" name="ps_folder_label" placeholder="Folder / Category Name" autocomplete="one-time-code" aria-autocomplete="none" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
         <button class="btn secondary" onclick="createGroupFolder()">Create Folder</button>
+        <button class="btn secondary" onclick="createGroupFolder(true)">Create Category</button>
       </div>
       <div style="margin-bottom:10px;padding:8px;border:1px solid var(--border2);border-radius:var(--r2);background:var(--surface2)">
         <div class="sl" style="margin-top:0">Extract All Group Tags</div>
@@ -719,17 +744,21 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         </div>
         <div class="row" style="margin-top:6px">
           <button class="btn sm secondary" onclick="selectGroupPromptsByTagQuery()">Extraction → Selection</button>
+          <button class="btn sm secondary" onclick="selectPromptsByTagsInSelectedGroups()">Checked Groups → Select by Tags</button>
           <button class="btn sm secondary" onclick="createGroupFromCurrentSelection()">Selection → Grouping</button>
         </div>
+        <div class="group-meta">Checked-Group extraction searches Positive text only, using AND substring matching. It replaces previous prompt selections.</div>
+        <div id="group-tag-selection-preview" style="display:none;margin-top:8px;min-width:0"></div>
+        <button class="btn sm danger delete-selected-prompts-btn" style="margin-top:8px" onclick="deleteSelectedGroupPrompts()">Delete Selected Prompts</button>
         <div class="group-meta">Comma-separated is AND search. Extract prompts from all groups.</div>
       </div>
-      <div class="row" style="margin-bottom:8px;flex-wrap:wrap">
+      <div class="group-transfer-actions">
         <button class="btn sm secondary" onclick="openGroupPromptTransfer('tags')">Tag Matches → Group</button>
         <button class="btn sm secondary" onclick="openGroupPromptTransfer('selected')">Selected Prompts → Group</button>
         <button class="btn sm secondary" onclick="openGroupPromptTransfer('group')">Entire Active Group → Group</button>
+        <button class="btn sm secondary" onclick="exportSelectedGroups()">Export Selected Groups JSON</button>
       </div>
       <div id="group-transfer-panel" hidden style="padding:10px;margin-bottom:10px;border:1px solid var(--border2);border-radius:var(--r2)"></div>
-      <button class="btn sm secondary" onclick="exportSelectedGroups()" style="margin-bottom:8px">Export Selected Groups JSON</button>
       <div class="group-meta" style="margin-bottom:8px">Group-only files import as copies; existing data is retained.</div>
       <div id="group-list"></div>
     </section>
@@ -768,8 +797,10 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <div class="row">
         <button class="btn sm" onclick="selectAllGroupPrompts(true)">Select All</button>
         <button class="btn sm secondary" onclick="selectGeneratedActiveGroupPrompts()" title="Replace prompt selection with generated prompts in the active Group only">Select Generated Only</button>
+        <button class="btn sm secondary" onclick="keepSelectedGeneratedGroupPrompts()" title="Applies to currently selected prompts only. Select generated prompts across Groups while preserving selection order">Select Generated Across Groups</button>
         <button class="btn sm" onclick="selectAllGroupPrompts(false)">Deselect</button>
         <button class="btn sm" onclick="clearAllGroupPromptSelections()">Deselect all Groups</button>
+        <button class="btn sm danger delete-selected-prompts-btn" onclick="deleteSelectedGroupPrompts()">Delete Selected Prompts</button>
       </div>
       <details class="group-action-section" open><summary>Send to Compose</summary><div class="row">
         <button class="btn sm secondary" onclick="sendSelectedGroupPromptsToCompose()">Send selections to Compose</button>
@@ -800,6 +831,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
           <input class="inp" id="group-random-prompt-count" type="number" min="1" value="10" style="max-width:90px" aria-label="Count">
           <label><input type="checkbox" id="group-random-exclude-sampled" checked onchange="updateGroupGenerationStatus()">Exclude sampled this session</label>
           <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(false,true)">All Remaining → Compose</button>
+          <button class="btn secondary" onclick="sendRandomSelectedPromptsToCompose(true,true)">All Remaining → Append to Compose</button>
           <button class="btn" onclick="sampledGroupPrompts.clear();updateGroupGenerationStatus();toast(GROUP_TRANSFER_EN?'Sampling history cleared.':'抽出履歴を解除しました')">Reset Sampling</button>
           <label><input type="checkbox" id="group-random-only-pending" checked onchange="updateGroupGenerationStatus()">Not generated / changed only</label>
           <label><input type="checkbox" id="group-random-use-sizes">Random sizes</label>
@@ -812,10 +844,12 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         </div>
         <div id="group-generation-status" class="group-meta" style="margin-top:8px;overflow-wrap:anywhere" aria-live="polite"></div>
         <div class="row">
+<label class="group-meta">Match condition <select class="inp generation-match-mode" id="group-generation-match-mode" style="width:auto" onchange="syncGenerationMatchMode(this.value)"><option value="exact">Exact match</option><option value="max">Score MAX</option></select></label>
           <button class="btn secondary" id="group-folder-generation-start" onclick="matchSelectedGroupsAgainstAllPreviewImages()">Check Selected Prompts Against All Loaded Images</button>
           <button class="btn secondary" id="group-folder-generation-stop" hidden onclick="stopGroupFolderGenerationMatch()">Stop Check</button>
         </div>
         <div class="group-meta">Uses every image loaded in Preview, regardless of image selection or search filters. Positive Prompt matching uses generation-check ignore tags. Confirm matches below; prompts with no match are left unchanged.</div>
+        <div class="group-meta">Score MAX uses the current image search method, ignores its standard stop tags, and allows extra image tags. Review candidates before confirming.</div>
         <div id="group-folder-generation-progress" class="group-meta" style="margin-top:6px" aria-live="polite"></div>
         <div id="group-folder-generation-results" hidden style="padding:8px;margin-top:6px;border:1px solid var(--border2);border-radius:var(--r2)"></div>
       </details>
@@ -1049,10 +1083,12 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
   <div class="panel-intro">This is where you load generated images from a folder, search for Draw Things PNG metadata.</div>
   <div class="preview-toolbar">
     <button class="btn primary" onclick="selectPreviewFolder()">Select image folder</button>
+    <button class="btn secondary" onclick="selectPreviewFolder(true)">Add Folder</button>
     <button class="btn secondary" id="preview-load-cancel" hidden onclick="cancelPreviewFileLoad()">Stop Loading</button>
     <button class="btn secondary" onclick="refreshPreviewFolder()" title="Keep existing images and load only new or changed files. Select the same folder if prompted.">Load Folder Updates</button>
-    <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="previewDirectoryHandle=null;loadPreviewFiles([...this.files]);this.value=''">
-    <input id="image-preview-update-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="appendPreviewFiles([...this.files]);this.value=''">
+    <input id="image-preview-folder-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="handlePreviewFolderInput(this,'replace')">
+    <input id="image-preview-add-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="handlePreviewFolderInput(this,'append')">
+    <input id="image-preview-update-input" type="file" accept="image/*" webkitdirectory multiple style="display:none" onchange="handlePreviewFolderInput(this,'update')">
     <div class="clearable-input" style="flex:1;min-width:220px">
       <input class="inp" id="image-preview-search" placeholder="Metadata / all tags: 1girl, solo, sitting" title="Comma-separated: exact whole-tag AND search in Positive Prompt only. Without commas: metadata search. For one exact tag, add a trailing comma." oninput="renderPreviewImages()">
       <button class="input-clear-x" onclick="clearImagePreviewSearch()" title="Clear search" aria-label="Clear search">×</button>
@@ -1079,6 +1115,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
       <span class="group-meta" id="preview-load-progress" aria-live="polite" style="display:block;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
     </div>
   </div>
+  <details style="margin:8px 0" open><summary>Loaded Folders</summary><div class="mini-help">Add only the folders you need. Exclude from generation checks affects only generated-status matching, not image display or similarity search. Unload releases their images from memory, not from disk. Normal folder selection replaces the list. Select folders again after reloading the page.</div><div id="preview-folder-sources" style="font-size:12px;min-width:0"></div></details>
   <div class="preview-toolbar" style="margin-top:-2px">
     <span class="count-badge">Thumb</span>
     <input id="image-preview-thumb-size" type="range" min="80" max="220" step="10" value="120" oninput="setPreviewThumbSize(this.value)" style="width:180px">
@@ -1094,6 +1131,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
         <summary id="preview-generation-ignore-summary" style="cursor:pointer">Saved Ignore Tags</summary>
         <div id="preview-generation-ignore-tags" class="row" style="margin-top:6px;overflow-wrap:anywhere" aria-live="polite"></div>
       </details>
+<label class="group-meta">Match condition <select class="inp generation-match-mode" id="preview-generation-match-mode" style="width:auto" onchange="syncGenerationMatchMode(this.value)"><option value="exact">Exact match</option><option value="max">Score MAX</option></select></label>
       <button class="btn secondary" onclick="matchSelectedPreviewGeneration()">Match Selected Images</button>
       <div class="group-meta">Saved tags plus input tags are ignored only when matching, at any position. Prompt text is unchanged. Saved tags persist; use × to remove. Remaining tag order must match. Review before marking.</div>
       <div id="preview-generation-matches" hidden style="max-height:450px;overflow:auto"></div>
@@ -1132,6 +1170,30 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px}
     </section>
     <section class="workspace-card">
       <div class="sl" style="margin-top:0">File Info / Metadata</div>
+      <details class="preview-img2img-card" id="preview-upscale-card">
+        <summary><b>Upscale API</b><span class="mini-help">Upscale displayed or selected images</span></summary>
+        <div class="preview-img2img-body">
+          <div class="row" style="margin-top:8px;flex-wrap:wrap">
+            <label style="flex:1;min-width:0">Upscaler<select class="inp" id="preview-upscale-model" onchange="updatePreviewUpscaleScale()"><option value="realesrgan_x2plus_f16.ckpt">Real-ESRGAN X2+ (2×)</option><option value="realesrgan_x4plus_anime_6b_f16.ckpt">Real-ESRGAN X4+ Anime</option><option value="4x_ultrasharp_f16.ckpt">4x UltraSharp</option></select></label>
+            <label>Output scale<select class="inp" id="preview-upscale-scale" style="width:auto"><option value="2">200% (2×)</option><option value="4" disabled>400% (4×)</option></select></label>
+            <label>Strength <input class="inp" id="preview-upscale-strength" type="number" min="0" max="1" step="0.05" value="0" style="width:80px"></label>
+          </div>
+          <div class="mini-help">0% upscales without diffusion. Above 0%, each image is redrawn using its Prompt; faces and clothing may change. Model, LoRA, Steps, CFG and Seed use current Draw Things settings, not the source image settings.</div>
+          <details style="margin-top:8px"><summary>Style / Prompt Editing (processing only)</summary>
+            <div class="group-meta" id="preview-upscale-prompt-source" style="overflow-wrap:anywhere"></div>
+            <label>Positive Prompt for displayed image<textarea class="preview-prompt-box" id="preview-upscale-prompt" rows="4" oninput="updatePreviewUpscalePromptDraft()"></textarea></label>
+            <label>Negative Prompt<textarea class="preview-prompt-box" id="preview-upscale-negative" rows="2" oninput="updatePreviewUpscalePromptDraft()"></textarea></label>
+            <button class="btn sm" onclick="resetPreviewUpscalePromptDraft()">Reset Displayed Image Prompts</button>
+            <div class="mini-help">Full-text edits apply only to Upscale Displayed Image. Batch processing uses each image’s original Prompts. Drafts are kept per image in this session; source PNGs and Groups are unchanged.</div>
+            <div class="row" style="margin-top:8px;flex-wrap:wrap"><label style="flex:1;min-width:0">Common tags: prepend<input class="inp" id="preview-upscale-prefix" placeholder="(anime style painting:1.3)"></label><label style="flex:1;min-width:0">Common tags: append<input class="inp" id="preview-upscale-suffix" placeholder="soft lighting"></label></div>
+            <div class="mini-help">Common tags apply to both displayed and selected images. At 0% strength, Prompt edits do not redraw the image.</div>
+          </details>
+          <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm related" data-upscale-start onclick="runPreviewUpscale(false)">Upscale Displayed Image</button><button class="btn sm related" data-upscale-start onclick="runPreviewUpscale(true)">Upscale Selected Images</button><button class="btn sm" id="preview-upscale-stop" hidden onclick="stopPreviewUpscale()">Stop After Current Image</button></div>
+          <div class="group-meta" id="preview-upscale-status" aria-live="polite" style="overflow-wrap:anywhere">Not started</div>
+          <div class="mini-help">Install the selected upscaler in Draw Things first. Configure “Save Generated Media to” in Draw Things to automatically save every result. Only the latest result is retained in the browser; source files are not overwritten. Input dimensions must be at least 128 px and multiples of 64; output dimensions must not exceed 8192 px.</div>
+          <div id="preview-upscale-result" hidden style="margin-top:8px"><div class="group-meta" id="preview-upscale-result-label" style="overflow-wrap:anywhere"></div><img id="preview-upscale-result-image" alt="Upscale result" style="display:block;max-width:100%;max-height:440px;object-fit:contain;cursor:zoom-in" onclick="openPreviewUpscaleZoom()"><div class="row"><button class="btn sm related" onclick="openPreviewUpscaleZoom()">Enlarge</button><button class="btn sm related" onclick="downloadPreviewUpscaleResult()">Download Latest Result</button><button class="btn sm" onclick="clearPreviewUpscaleResult()">Clear</button></div></div>
+        </div>
+      </details>
       <div id="image-preview-detail"><div class="group-empty">Select an image to display information.</div></div>
     </section>
   </div>
@@ -1260,7 +1322,7 @@ const SK_CATS   = 'prompt_studio_en_cats_v1';      // {tagName: category}
 const SK_CATDEF = 'prompt_studio_en_catdefs_v1';   // [catName, ...]
 const SK_STOCK  = 'prompt_studio_en_stock_v1';     // [string, ...]
 const SK_GROUPS = 'prompt_studio_en_prompt_groups_v1'; // [{id,name,prompts}]
-const SK_GROUP_FOLDERS = 'prompt_studio_en_group_folders_v1'; // [{id,name,collapsed}]
+const SK_GROUP_FOLDERS = 'prompt_studio_en_group_folders_v1'; // folders + one parent level: [{id,name,collapsed,type,parentId}]
 const SK_GROUP_UNFILED_COLLAPSED = 'prompt_studio_en_group_unfiled_collapsed_v1';
 const SK_GROUP_SEARCH_TERMS = 'prompt_studio_en_group_search_terms_v1';
 const SK_PREVIEW_GENERATION_IGNORE_TAGS = 'prompt_studio_en_preview_generation_ignore_tags_v1';
@@ -1321,6 +1383,8 @@ let draggingGroupFolderGroupId = null;
 let editingGroupPromptId = null;
 let groupPromptSelectionOrder = [];
 let groupFindCursor = -1;
+let groupPromptPage=0,groupPromptPageSize=50,groupPromptPageKey='',groupPromptPageEditingId=null;
+let uiDataRevision=0;const tabRenderRevisions=new Map();
 let draggingGroupPromptId = null;
 let groupOrderEdit = null;
 let groupPromptSendSizes = {}; // {promptId:{width,height}} temporary compose-send overrides
@@ -1339,6 +1403,7 @@ let compareRemixEntries = [], compareRemixResult = '';
 let previewImages = [], activePreviewId = null;
 let previewFileLoadGeneration=0,previewFileLoading=false;
 let previewDirectoryHandle=null;
+let previewFolderSources=new Map(),previewPendingFolderAction=null;
 let selectedPreviewImageIds = new Set();
 let previewSelectionMode = false, lastPreviewSelectedId = null;
 let previewShowSelectedOnly = false;
@@ -1395,7 +1460,7 @@ function load(){
   try{
     groupFolders=JSON.parse(localStorage.getItem(SK_GROUP_FOLDERS)||'[]');
     if(!Array.isArray(groupFolders)) groupFolders=[];
-    groupFolders=groupFolders.filter(f=>f&&f.id).map(f=>({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()}));
+    groupFolders=groupFolders.filter(f=>f&&f.id).map(normalizeGroupFolderRecord);
   }catch(e){groupFolders=[];}
   groupUnfiledCollapsed=localStorage.getItem(SK_GROUP_UNFILED_COLLAPSED)==='true';
   try{
@@ -1442,8 +1507,8 @@ function loadGroupTombstones(){
 }
 function saveGroupTombstones(t){
   localStorage.setItem(SK_GROUP_TOMBSTONES,JSON.stringify({
-    prompts:[...new Set(t.prompts||[])].slice(-5000),
-    groups:[...new Set(t.groups||[])].slice(-1000)
+    prompts:[...new Set(t.prompts||[])],
+    groups:[...new Set(t.groups||[])]
   }));
 }
 function rememberDeletedPrompt(id){
@@ -1697,10 +1762,10 @@ function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',TAB_NAMES[i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  if(name==='library'){ renderCatBar(); renderTags(); renderLoras(); renderLoraSets(); }
-  if(name==='compose'){ renderBuilderLoras(); renderBuilderCatBar(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary(); renderGroupSelectors(); initDrawThingsApiUI(); }
-  if(name==='groups'){ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); renderGroupSearchTerms(); renderGroupLibraryPaletteShell(); }
-  if(name==='assist'){ renderCatSelTags(); renderStock(); renderGroupSelectors(); renderSizePresetSelects(); }
+  if(name==='library'){ renderTabIfChanged('library',()=>{ renderCatBar(); renderTags(); renderLoras(); renderLoraSets(); }); }
+  if(name==='compose'){ renderTabIfChanged('compose',()=>{ renderBuilderLoras(); renderBuilderCatBar(); renderBuilderTags(); renderSizePresetSelects(); buildCode(); updateComposeSummary(); renderGroupSelectors(); initDrawThingsApiUI(); }); }
+  if(name==='groups'){ renderTabIfChanged('groups',()=>{ renderGroups(); renderGroupSelectors(); renderSizePresetSelects(); renderGroupSearchTerms(); renderGroupLibraryPaletteShell(); }); }
+  if(name==='assist'){ renderTabIfChanged('assist',()=>{ renderCatSelTags(); renderStock(); renderGroupSelectors(); renderSizePresetSelects(); }); }
   if(name==='preview'){ setupPreviewComposeOptions(); renderPreviewRandomSizePanel(); renderPreviewImages(); renderPreviewDetail(); }
   if(name==='settings'){ setBackend(currentBackend); refreshGroupsStorageStatus(); refreshBackupLists(); }
 }
@@ -1771,6 +1836,7 @@ function loadTheme(){
 // ═══════════════════════════════════════════════════════════
 //  LORA TAB
 // ═══════════════════════════════════════════════════════════
+let editingLoraTriggerFields=null;
 function addLora(){
   const name=document.getElementById('lora-name-inp').value.trim();
   const file=document.getElementById('lora-file-inp').value.trim();
@@ -1779,11 +1845,12 @@ function addLora(){
   const memo=document.getElementById('lora-memo-inp').value.trim();
   if(!file){toast('Enter a file name.');return;}
   const id=Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  loraList.push({id,name:name||file,file,weight,memo});
+  loraList.push({id,name:name||file,file,weight,memo,...(editingLoraTriggerFields||{})});
   saveLoras(); clearLoraForm(); renderLoras();
   toast('LoRA added.');
 }
 function clearLoraForm(){
+  editingLoraTriggerFields=null;
   ['lora-name-inp','lora-file-inp','lora-memo-inp'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lora-w-inp').value=1;
   document.getElementById('lora-w-val').textContent='1.00';
@@ -1798,9 +1865,13 @@ function renderLoras(){
       ${l.memo?`<div style="font-size:11px;color:var(--muted2);margin-top:3px">${escH(l.memo)}</div>`:''}
       <div class="lora-weight-row">
         <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">WEIGHT</span>
-        <input type="range" min="0" max="2" step="0.05" value="${l.weight}"
+        <input type="range" min="-2" max="2" step="0.05" value="${l.weight}"
           oninput="updateLoraWeight('${l.id}',this.value)">
         <span class="lora-weight-val" id="lw-${l.id}">${l.weight.toFixed(2)}</span>
+      </div>
+      <div style="margin-top:8px;min-width:0">
+        <label><input type="checkbox" ${l.autoTriggerEnabled?'checked':''} onchange="updateLoraTrigger('${l.id}','autoTriggerEnabled',this.checked)">Trigger-based addition</label>
+        <input class="inp" style="width:100%;min-width:0;margin-top:5px" value="${escH(l.triggerTags||'').replace(/"/g,'&quot;')}" placeholder="Trigger tags (any match): line art, expression trigger" aria-label="LoRA trigger tags" onchange="updateLoraTrigger('${l.id}','triggerTags',this.value)">
       </div>
       <div class="lora-actions">
         <button class="btn sm" onclick="editLora('${l.id}')">Edit</button>
@@ -1813,7 +1884,7 @@ function updateLoraWeight(id,val){
   if(!l) return;
   l.weight=parseFloat(val);
   document.getElementById('lw-'+id).textContent=l.weight.toFixed(2);
-  saveLoras();
+  saveLoras();buildCode();
 }
 function editLora(id){
   const l=loraList.find(x=>x.id===id);
@@ -1823,6 +1894,7 @@ function editLora(id){
   document.getElementById('lora-w-inp').value=l.weight;
   document.getElementById('lora-w-val').textContent=l.weight.toFixed(2);
   document.getElementById('lora-memo-inp').value=l.memo||'';
+  editingLoraTriggerFields={triggerTags:l.triggerTags||'',autoTriggerEnabled:!!l.autoTriggerEnabled};
   deleteLora(id,true);
 }
 function deleteLora(id,silent=false){
@@ -2228,6 +2300,7 @@ function backupFingerprint(text){
   return `${text.length}-${(h>>>0).toString(16)}`;
 }
 function scheduleAutoBackup(reason){
+  uiDataRevision++;
   if(backupSuppressed) return;
   backupQueuedReason=reason||backupQueuedReason||'auto';
   clearTimeout(backupTimer);
@@ -2401,7 +2474,7 @@ async function applyBackupData(data){
     loraSets=Array.isArray(data.loraSets)?data.loraSets:[];
     stock=Array.isArray(data.stock)?data.stock:[];
     promptGroups=data.promptGroups.map(normalizeGroupRecord);
-    groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(f=>({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()})):[];
+    groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(normalizeGroupFolderRecord):[];
     groupSearchTerms=Array.isArray(data.groupSearchTerms)?data.groupSearchTerms:[];
     if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags(data.previewGenerationIgnoreTags);
     activeGroupId=promptGroups[0]?.id||null;
@@ -2426,6 +2499,7 @@ function exportSelectedGroups(){
   const groups=promptGroups.filter(g=>selectedGroupIds.has(g.id));
   if(!groups.length){toast("Select Groups using the left checkboxes.");return;}
   const folderIds=new Set(groups.map(g=>g.folderId).filter(Boolean));
+  groupFolders.filter(f=>folderIds.has(f.id)).forEach(f=>{const id=validGroupParentFolderId(f.parentId);if(id)folderIds.add(id);});
   const refs=JSON.stringify(groups);
   const sets=loraSets.filter(s=>refs.includes('set:'+s.id));
   const loraIds=new Set(sets.flatMap(s=>(s.loras||[]).map(l=>l.id)));
@@ -2440,8 +2514,12 @@ function importSelectedGroupsPackage(data,log){
   if(!Array.isArray(data.promptGroups)||!data.promptGroups.length) throw new Error("No Groups in this file.");
   if(!confirm("This is a Group-only file. Add its Groups as copies? Existing data will be retained.")) return;
   const now=nowIso(),folders=new Map(),loras=new Map(),sets=new Map();
-  (data.groupFolders||[]).filter(f=>f&&f.id).forEach(f=>{
-    const id=uid('folder');folders.set(f.id,id);groupFolders.push({...f,id});
+  const incomingFolders=(data.groupFolders||[]).filter(f=>f&&f.id);
+  incomingFolders.forEach(f=>{if(!folders.has(f.id))folders.set(f.id,uid('folder'));});
+  const importedFolderIds=new Set();
+  incomingFolders.forEach(f=>{
+    if(importedFolderIds.has(f.id))return;importedFolderIds.add(f.id);
+    groupFolders.push(normalizeGroupFolderRecord({...f,id:folders.get(f.id),parentId:folders.get(f.parentId)||''}));
   });
   (data.loraList||[]).filter(l=>l&&l.id).forEach(l=>{
     const id=uid('lora');loras.set(l.id,id);loraList.push({...l,id});
@@ -2475,6 +2553,83 @@ function exportData(){
   a.download=`prompt_studio_en_${new Date().toISOString().slice(0,10)}.json`; a.click();
   URL.revokeObjectURL(a.href); toast('Exported!');
 }
+function planImportedGroupHierarchy(data){
+  // Import hierarchy explicitly, without replacing existing prompt text or other Group content.
+  const folders=groupFolders.map(f=>({...f}));
+  const byId=new Map(folders.map(f=>[String(f.id),f]));
+  const incoming=new Map();
+  for(const raw of (Array.isArray(data.groupFolders)?data.groupFolders:[])){
+    if(!raw||!raw.id)continue;
+    const id=String(raw.id);
+    if(incoming.has(id))throw new Error(GROUP_TRANSFER_EN?'Duplicate folder IDs in JSON.':'JSON内に重複したフォルダIDがあります');
+    incoming.set(id,raw);
+  }
+  let added=0;
+  for(const [id,raw] of incoming){
+    const current=byId.get(id);
+    if(current){
+      if(Object.hasOwn(raw,'type')&&(raw.type==='parent')!==(current.type==='parent'))
+        throw new Error(GROUP_TRANSFER_EN?'A folder ID conflicts with a category ID.':'同じIDがカテゴリとフォルダで競合しています');
+    }else{
+      const folder=normalizeGroupFolderRecord(raw);folders.push(folder);byId.set(id,folder);added++;
+    }
+  }
+  let folderMoves=0;
+  for(const [id,raw] of incoming){
+    const folder=byId.get(id);
+    if(folder.type==='parent'||!Object.hasOwn(raw,'parentId'))continue;
+    const parentId=String(raw.parentId||'');
+    if(parentId&&byId.get(parentId)?.type!=='parent')
+      throw new Error(GROUP_TRANSFER_EN?'A folder refers to a missing category.':'フォルダの所属先カテゴリがJSONにも現在のデータにもありません');
+    if(folder.parentId!==parentId){
+      if(groupFolders.some(f=>String(f.id)===id))folderMoves++;
+      folder.parentId=parentId;
+    }
+  }
+  const groupMoves=[];
+  for(const incomingGroup of (Array.isArray(data.promptGroups)?data.promptGroups:[])){
+    if(!incomingGroup?.id||!Object.hasOwn(incomingGroup,'folderId'))continue;
+    const current=promptGroups.find(g=>g.id===incomingGroup.id);if(!current)continue;
+    const folderId=String(incomingGroup.folderId||'');
+    if(folderId&&(!byId.has(folderId)||byId.get(folderId).type==='parent'))
+      throw new Error(GROUP_TRANSFER_EN?'A Group refers to a missing folder.':'Groupの所属先フォルダが見つかりません');
+    if(String(current.folderId||'')!==folderId)groupMoves.push({id:current.id,folderId});
+  }
+  return {folders,added,folderMoves,groupMoves};
+}
+function groupHierarchyImportSignature(){
+  return JSON.stringify([groupFolders,promptGroups.map(g=>[g.id,g.folderId,g.updatedAt])]);
+}
+async function prepareImportedGroupHierarchy(data){
+  await groupsInitializationPromise;
+  await groupsSaveQueue;
+  if(groupsLastSaveError)throw groupsLastSaveError;
+  const plan=planImportedGroupHierarchy(data);
+  if(plan.folderMoves||plan.groupMoves.length){
+    const message=GROUP_TRANSFER_EN?
+      `Update existing hierarchy from JSON?\nFolders changing category: ${plan.folderMoves}\nGroups changing folder: ${plan.groupMoves.length}\nExisting prompt text, titles and generation checks will not be replaced. A backup will be created first.`:
+      `JSONの所属情報を反映しますか？\nカテゴリを変更する既存フォルダ: ${plan.folderMoves}件\nフォルダを変更する既存Group: ${plan.groupMoves.length}件\n既存プロンプトの本文・タイトル・生成済み情報は置き換えません。先にバックアップを作成します。`;
+    if(!confirm(message))return null;
+    const signature=groupHierarchyImportSignature();
+    const backup=await performBackup('before-import-hierarchy',{force:true,silent:true});
+    if(!backup||(!backup.browserOk&&!backup.serverOk))
+      throw new Error(GROUP_TRANSFER_EN?'Backup failed. Import cancelled.':'バックアップに失敗したためインポートを中止しました');
+    if(signature!==groupHierarchyImportSignature())
+      throw new Error(GROUP_TRANSFER_EN?'Data changed during backup. Please retry the import.':'バックアップ中にデータが変更されました。再度インポートしてください');
+  }
+  return plan;
+}
+function applyImportedGroupHierarchy(plan){
+  groupFolders=plan.folders;
+  for(const move of plan.groupMoves){
+    const group=promptGroups.find(g=>g.id===move.id);
+    // Mark the intentional move newer than stored records, including future-dated JSON.
+    const stored=lastPersistedGroups.find(g=>g.id===move.id);
+    group.folderId=move.folderId;
+    group.updatedAt=new Date(Math.max(Date.now(),groupTimeValue(group)+1,stored?groupTimeValue(stored)+1:0)).toISOString();
+  }
+}
+
 function importData(input){
   const file=input.files[0]; if(!file) return;
   const log=document.getElementById('imp-log');
@@ -2497,6 +2652,8 @@ function importData(input){
         await replaceImportedData(data,{mode,importTags,importGroups,input,log});
         return;
       }
+      const hierarchyPlan=importGroups?await prepareImportedGroupHierarchy(data):null;
+      if(importGroups&&!hierarchyPlan){input.value='';return;}
       let added=0,metaAdded=0,catAdded=0,loraAdded=0,setAdded=0,stockAdded=0,groupAdded=0,folderAdded=0,searchTermAdded=0;
       if(importTags){
         if(Array.isArray(data.tags)) data.tags.forEach(t=>{if(typeof t==='string'&&!tags.includes(t)){tags.push(t);added++;}});
@@ -2508,20 +2665,19 @@ function importData(input){
         if(data.stock&&Array.isArray(data.stock)) data.stock.forEach(s=>{if(typeof s==='string'&&!stock.includes(s)){stock.push(s);stockAdded++;}});
       }
       if(importGroups){
-        if(Array.isArray(data.groupFolders)) data.groupFolders.forEach(f=>{
-          if(f&&f.id&&!groupFolders.find(x=>x.id===f.id)){
-            groupFolders.push({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()});
-            folderAdded++;
-          }
-        });
+        applyImportedGroupHierarchy(hierarchyPlan);
+        folderAdded=hierarchyPlan.added;
         data.promptGroups.forEach(g=>{if(g&&g.id&&!promptGroups.find(x=>x.id===g.id)){promptGroups.push(g);groupAdded++;}});
         if(Array.isArray(data.groupSearchTerms)) data.groupSearchTerms.forEach(t=>{if(typeof t==='string'&&!groupSearchTerms.includes(t)){groupSearchTerms.push(t);searchTermAdded++;}});
         if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags([...previewGenerationIgnoreTags,...data.previewGenerationIgnoreTags]);
       }
       if(promptGroups.length && !activeGroupId) activeGroupId=promptGroups[0].id;
       saveTags();saveMeta();saveCats();saveLoras();saveSets();saveStock();saveGroups();saveGroupFolders();saveGroupSearchTerms();
+      if(importGroups){await groupsSaveQueue;if(groupsLastSaveError)throw groupsLastSaveError;}
       renderTags(); renderCatBar(); renderLoras(); renderLoraSets(); renderStock(); renderGroups(); renderGroupSelectors(); renderGroupSearchTerms();
       log.innerHTML=`<span style="color:var(--accent)">Import ${escH(mode)}: +${added} tags, ${metaAdded} notes, ${catAdded} categories, ${loraAdded} LoRA, ${setAdded} sets, ${stockAdded} stock, ${groupAdded} Groups, ${folderAdded} Folders, ${searchTermAdded} search terms</span>`;
+      if(hierarchyPlan&&(hierarchyPlan.folderMoves||hierarchyPlan.groupMoves.length))
+        log.appendChild(document.createTextNode(` Hierarchy updated: ${hierarchyPlan.folderMoves} Folders / ${hierarchyPlan.groupMoves.length} Groups`));
       toast(`Import ${mode}: ${added} tags / ${groupAdded} Groups`);
     }catch(err){ log.innerHTML=`<span style="color:var(--danger)">Error: ${escH(err.message)}</span>`; }
     input.value='';
@@ -2559,7 +2715,7 @@ async function replaceImportedData(data,{mode,importTags,importGroups,input,log}
     }
     if(importGroups){
       promptGroups=(Array.isArray(data.promptGroups)?data.promptGroups:[]).map(normalizeGroupRecord);
-      groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(f=>({id:String(f.id),name:String(f.name||'Folder'),collapsed:!!f.collapsed,createdAt:f.createdAt||nowIso()})):[];
+      groupFolders=Array.isArray(data.groupFolders)?data.groupFolders.filter(f=>f&&f.id).map(normalizeGroupFolderRecord):[];
       groupSearchTerms=Array.isArray(data.groupSearchTerms)?data.groupSearchTerms.filter(t=>typeof t==='string'):[];
       // Older JSON files have no exclusion settings: preserve the local registry.
       if(Array.isArray(data.previewGenerationIgnoreTags)) setPreviewGenerationIgnoreTags(data.previewGenerationIgnoreTags);
@@ -2666,6 +2822,86 @@ function composeOutputLines(){
   if(!pos) return [];
   return pos.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(applyComposeTriggerToLine);
 }
+function loraTriggerTagKey(value){
+  var tag=String(value||'').toLowerCase().replace(/\s+/g,' ').trim();
+  var weighted=tag.match(/^\((.*):[+-]?(?:\d+(?:\.\d*)?|\.\d+)\)$/);
+  return (weighted?weighted[1]:tag).trim();
+}
+function addTriggeredLoras(base,prompt,rules){
+  var result=JSON.parse(JSON.stringify(base||[]));
+  var tags=String(prompt||'').split(/[,\r\n]+/).map(loraTriggerTagKey);
+  (rules||[]).forEach(function(rule){
+    if(!rule.triggers.some(function(tag){return tags.indexOf(loraTriggerTagKey(tag))>=0;}))return;
+    // Existing base entries, including their weight and mode, always win.
+    if(result.some(function(lora){return lora.file===rule.file;}))return;
+    result.push({mode:'all',file:rule.file,weight:rule.weight});
+  });
+  return result;
+}
+function triggerLoraRules(){
+  if(!document.getElementById('compose-trigger-loras')?.checked)return [];
+  return loraList.filter(l=>l.autoTriggerEnabled).map(l=>{
+    const triggers=String(l.triggerTags||'').split(/[,、，\r\n]+/).map(loraTriggerTagKey).filter(Boolean);
+    if(!String(l.file||'').trim()||!triggers.length||!Number.isFinite(Number(l.weight)))
+      throw new Error(GROUP_TRANSFER_EN?'Check enabled LoRA trigger tags, filename and weight.':'自動追加対象LoRAのトリガータグ・ファイル名・強度を確認してください');
+    return {file:l.file,weight:Number(l.weight),triggers:[...new Set(triggers)]};
+  });
+}
+function updateLoraTrigger(id,field,value){
+  const l=loraList.find(l=>l.id===id);if(!l)return;
+  if(field==='triggerTags')l.triggerTags=String(value);
+  if(field==='autoTriggerEnabled')l.autoTriggerEnabled=!!value;
+  saveLoras();buildCode();
+}
+let triggerLoraApiBase=null;
+let triggerLoraApiBaseUrl='';
+async function captureTriggerLoraApiBase(){
+  if(dtApiSending){toast(GROUP_TRANSFER_EN?'Generation is running.':'生成中は基本LoRAを変更できません');return;}
+  try{
+    const base=await readTriggerLoraApiBase();
+    const summary=base.map(l=>l.file+' ('+l.weight+')').join('\n')||(GROUP_TRANSFER_EN?'No LoRAs':'LoRAなし');
+    if(!confirm((GROUP_TRANSFER_EN?'Use this as the base LoRA set?\n':'この構成を基本LoRAとして記憶しますか？\n')+summary))return;
+    triggerLoraApiBase=base;triggerLoraApiBaseUrl=normalizeDrawThingsApiUrl();
+    document.getElementById('trigger-lora-base-status').textContent=(GROUP_TRANSFER_EN?'Base LoRAs captured: ':'基本LoRAを記憶: ')+base.length;
+  }catch(err){toast(err.message);}
+}
+async function readTriggerLoraApiBase(){
+  let response;
+  const url=normalizeDrawThingsApiUrl();
+  try{response=await fetchDrawThingsOptionsForTest(url);}
+  catch(err){const proxy=drawThingsProxyFallbackUrl();if(url===proxy)throw err;response=await fetchDrawThingsOptionsForTest(proxy);}
+  const base=response.data?.loras;
+  if(!Array.isArray(base)||base.some(l=>!l||typeof l.file!=='string'||!l.file||!Number.isFinite(l.weight)))
+    throw new Error(GROUP_TRANSFER_EN?'Cannot read the base LoRAs. Nothing was generated.':'基本LoRAを取得できません。生成は開始していません');
+  return JSON.parse(JSON.stringify(base));
+}
+async function prepareTriggerLoraPayloads(items,globalSize){
+  // Freeze all payloads before the first generation; later requests never inherit a previous row.
+  const payloads=items.map(item=>buildDrawThingsApiPayload(item,globalSize));
+  const rules=triggerLoraRules();if(!rules.length)return payloads;
+  const eligible=items.map((item,i)=>!item.clearLoras&&!Array.isArray(item.lorasOverride)?i:-1).filter(i=>i>=0);
+  if(!eligible.length)return payloads;
+  if(eligible.some(i=>!Array.isArray(payloads[i].loras))){
+    if(!triggerLoraApiBase||triggerLoraApiBaseUrl!==normalizeDrawThingsApiUrl()){
+      const base=await readTriggerLoraApiBase();
+      const summary=base.map(l=>l.file+' ('+l.weight+')').join('\n')||(GROUP_TRANSFER_EN?'No LoRAs':'LoRAなし');
+      if(!confirm((GROUP_TRANSFER_EN?'Remember this base set for trigger additions?\n':'トリガー追加用の基本LoRAをこの構成で記憶しますか？\n')+summary))return null;
+      triggerLoraApiBase=base;triggerLoraApiBaseUrl=normalizeDrawThingsApiUrl();
+      document.getElementById('trigger-lora-base-status').textContent=(GROUP_TRANSFER_EN?'Base LoRAs captured: ':'基本LoRAを記憶: ')+base.length;
+    }
+  }
+  let changed=0;
+  eligible.forEach(i=>{
+    const base=payloads[i].loras||triggerLoraApiBase;
+    payloads[i].loras=addTriggeredLoras(base,items[i].prompt,rules);
+    if(payloads[i].loras.length>base.length)changed++;
+  });
+  if(!confirm(GROUP_TRANSFER_EN?
+    `Trigger LoRAs: additions on ${changed}/${items.length} prompts. Explicit row overrides/OFF are preserved. Start?`:
+    `トリガーLoRA: ${items.length}件中${changed}件に追加します。行別指定・OFFは優先します。開始しますか？`))return null;
+  return payloads;
+}
+
 function buildCode(){
   const pos=document.getElementById('b-pos').value.trim();
   const neg=document.getElementById('b-neg').value.trim();
@@ -2691,6 +2927,9 @@ function buildCode(){
     code+=`  ],\n`;
   }
   code+=`  // Per-prompt LoRA control:\n  //   --no-lora | prompt\n  //   --loras:<encoded JSON> | prompt\n  //   WIDTHxHEIGHT | --no-lora / --loras marker | prompt\n`;
+  let autoRules=[];
+  try{autoRules=triggerLoraRules();}catch(err){document.getElementById('code-out').textContent=err.message;return;}
+  code+=`  triggerLoraRules: ${JSON.stringify(autoRules)},\n`;
   code+=`};\n`;
   const promptLines=composeOutputLines();
   if(promptLines.length){
@@ -2861,13 +3100,13 @@ function buildDrawThingsApiPayload(item,globalSize){
   if(width&&height){ payload.width=width; payload.height=height; }
 
   if(Array.isArray(item.lorasOverride)){
-    payload.loras=item.lorasOverride.map(l=>({mode:String(l.mode||'all'),file:String(l.file||''),weight:Number(l.weight)||1})).filter(l=>l.file);
+    payload.loras=item.lorasOverride.map(l=>({mode:String(l.mode||'all'),file:String(l.file||''),weight:Number.isFinite(Number(l.weight))?Number(l.weight):1})).filter(l=>l.file);
   }else if(item.clearLoras){
     payload.loras=[];
   }else{
     const activeLoras=loraList.filter(l=>builderLoraOn.has(l.id));
     if(activeLoras.length){
-      payload.loras=activeLoras.map(l=>({mode:'all',file:String(l.file||''),weight:Number(l.weight)||1})).filter(l=>l.file);
+      payload.loras=activeLoras.map(l=>({mode:'all',file:String(l.file||''),weight:Number.isFinite(Number(l.weight))?Number(l.weight):1})).filter(l=>l.file);
     }
   }
   return payload;
@@ -2964,6 +3203,7 @@ async function sendDrawThingsApiPayload(payload,index,total){
   return text;
 }
 async function sendPromptsToDrawThingsApi(limit=null){
+  if(previewUpscaleBusy){toast(previewUpscaleText('アップスケールが実行中です','Upscaling is running.'));return;}
   if(dtApiSending){toast('Already sending');return;}
   let pack;
   try{ pack=composeDrawThingsApiItems(); }catch(err){toast(err.message);drawThingsApiStatus(err.message,'err');return;}
@@ -2976,13 +3216,15 @@ async function sendPromptsToDrawThingsApi(limit=null){
   dtApiStopRequested=false;
   drawThingsApiLog(`Starting Draw Things API send: ${items.length} items`,false);
   try{
+    const payloads=await prepareTriggerLoraPayloads(items,pack.globalSize);
+    if(!payloads){drawThingsApiStatus(GROUP_TRANSFER_EN?'Cancelled.':'キャンセルしました');return;}
     for(let i=0;i<items.length;i++){
       if(dtApiStopRequested){
         drawThingsApiStatus(`Stopped: ${i}/${items.length} items completed`,'err');
         drawThingsApiLog(`STOP ${i}/${items.length}`,true);
         return;
       }
-      const payload=buildDrawThingsApiPayload(items[i],pack.globalSize);
+      const payload=payloads[i];
       await sendDrawThingsApiPayload(payload,i+1,items.length);
       drawThingsApiLog(`[${i+1}/${items.length}] Completed`,true);
     }
@@ -3497,23 +3739,106 @@ function clearStock(){ if(!confirm('Should we delete all stock?')) return; stock
 //  PROMPT GROUPS
 // ═══════════════════════════════════════════════════════════
 function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
-function validGroupFolderId(id){ return groupFolders.some(f=>f.id===id)?id:''; }
-function groupFolderOptions(selectedId){
-  return `<option value=""${!selectedId?' selected':''}>Unsorted</option>`+groupFolders.map(f=>`<option value="${escA(f.id)}"${f.id===selectedId?' selected':''}>${escH(f.name)}</option>`).join('');
+let draggingFolderForCategory=null;
+function materializeUnfiledFolder(parentId){
+  const target=validGroupParentFolderId(parentId);if(!target)return;
+  const groups=promptGroups.filter(g=>!validGroupFolderId(g.folderId||''));
+  if(!groups.length){toast(GROUP_TRANSFER_EN?'There are no unsorted Groups.':'未整理のGroupがありません。');return;}
+  const base=GROUP_TRANSFER_EN?'Unsorted Folder':'未整理フォルダ';
+  let name=base,n=2;while(groupFolders.some(f=>String(f.name).toLowerCase()===name.toLowerCase()))name=base+' '+n++;
+  const now=nowIso(),folder={id:uid('folder'),name,type:'folder',parentId:target,collapsed:false,createdAt:now};
+  groupFolders.push(folder);
+  groups.forEach(g=>{g.folderId=folder.id;g.updatedAt=now;});
+  const category=groupFolders.find(f=>f.id===target);category.collapsed=false;
+  saveGroups();saveGroupFolders();renderGroups();renderGroupSelectors();
+  toast(GROUP_TRANSFER_EN?`${groups.length} Groups moved into "${name}".`:`未整理の${groups.length} Groupを「${name}」にまとめました。`);
 }
-function createGroupFolder(){
+function clearCategoryDropMarks(){
+  document.querySelectorAll('.category-drop-over').forEach(el=>el.classList.remove('category-drop-over'));
+}
+function startFolderCategoryDrag(event,folderId){
+  if(event.target?.closest?.('button,input,select,label')){event.preventDefault();return;}
+  if(folderId&&!groupFolders.some(f=>f.id===folderId&&f.type!=='parent'))return;
+  event.stopPropagation();draggingFolderForCategory=folderId;draggingGroupFolderGroupId=null;
+  event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('application/x-prompt-studio-folder',folderId||'__unfiled__');
+  clearCategoryDropMarks();
+}
+function endFolderCategoryDrag(){draggingFolderForCategory=null;clearCategoryDropMarks();}
+function allowCategoryFolderDrop(event){
+  if(draggingFolderForCategory===null)return;
+  event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='move';event.currentTarget.classList.add('category-drop-over');
+}
+function leaveCategoryFolderDrop(event){
+  if(!event.currentTarget.contains(event.relatedTarget))event.currentTarget.classList.remove('category-drop-over');
+}
+function dropFolderIntoCategory(event,parentId){
+  if(draggingFolderForCategory===null)return;
+  event.preventDefault();event.stopPropagation();const folderId=draggingFolderForCategory;
+  endFolderCategoryDrag();assignGroupFolderParent(folderId,parentId);
+}
+function normalizeGroupFolderRecord(folder){
+  return {id:String(folder.id),name:String(folder.name||'Folder'),collapsed:!!folder.collapsed,createdAt:folder.createdAt||nowIso(),type:folder.type==='parent'?'parent':'folder',parentId:folder.type==='parent'?'':String(folder.parentId||'')};
+}
+function validGroupParentFolderId(id){return groupFolders.some(f=>f.id===id&&f.type==='parent')?id:'';}
+function groupParentFolderOptions(selected){
+  return `<option value=""${!selected?' selected':''}>${GROUP_TRANSFER_EN?'No category':'カテゴリなし'}</option>`+groupFolders.filter(f=>f.type==='parent').map(f=>`<option value="${escA(f.id)}"${f.id===selected?' selected':''}>${escH(f.name)}</option>`).join('');
+}
+function assignGroupFolderParent(folderId,parentId){
+  if(!folderId){materializeUnfiledFolder(parentId);return;}
+  const folder=groupFolders.find(f=>f.id===folderId&&f.type!=='parent');if(!folder)return;
+  folder.parentId=validGroupParentFolderId(parentId);
+  const parent=groupFolders.find(f=>f.id===folder.parentId);if(parent)parent.collapsed=false;
+  saveGroupFolders();renderGroups();
+}
+function deleteGroupParentFolder(id){
+  const parent=groupFolders.find(f=>f.id===id&&f.type==='parent');if(!parent)return;
+  const children=groupFolders.filter(f=>f.type!=='parent'&&f.parentId===id);
+  if(!confirm(GROUP_TRANSFER_EN?`Delete category "${parent.name}"? Its ${children.length} folders and all Groups/prompts will be kept without a category.`:`カテゴリ「${parent.name}」を削除しますか？\n中の${children.length}フォルダと全Group・プロンプトは削除せず、カテゴリなしに戻します。`))return;
+  children.forEach(f=>{f.parentId='';});groupFolders=groupFolders.filter(f=>f.id!==id);
+  saveGroupFolders();renderGroups();
+}
+function renderGroupParentFolder(parent,children,visibleGroups,query){
+  const ids=new Set(children.map(f=>f.id)),groups=visibleGroups.filter(g=>ids.has(g.folderId));
+  const count=groups.reduce((n,g)=>n+(g.prompts||[]).length,0),collapsed=parent.collapsed&&!query;
+  return `<div class="group-parent-folder" data-parent-folder-id="${escA(parent.id)}" ondragover="allowCategoryFolderDrop(event)" ondragleave="leaveCategoryFolderDrop(event)" ondrop="dropFolderIntoCategory(event,'${escA(parent.id)}')">
+    <div class="group-folder-head" onclick="toggleGroupFolder('${escA(parent.id)}')">
+      <span class="group-folder-toggle">${collapsed?'▶':'▼'}</span><span class="group-folder-name">🗂 ${escH(parent.name)}</span>
+      <span class="group-folder-count">${children.length}F / ${groups.length}G / ${count}P</span>
+      <span class="group-folder-actions"><button class="btn sm" onclick="event.stopPropagation();moveGroupFolderPosition('${escA(parent.id)}',-1)" title="${GROUP_TRANSFER_EN?'Move category up':'カテゴリを上へ'}">↑</button><button class="btn sm" onclick="event.stopPropagation();moveGroupFolderPosition('${escA(parent.id)}',1)" title="${GROUP_TRANSFER_EN?'Move category down':'カテゴリを下へ'}">↓</button><button class="btn sm" onclick="event.stopPropagation();renameGroupFolder('${escA(parent.id)}')">${GROUP_TRANSFER_EN?'Rename':'改名'}</button><button class="btn sm danger" onclick="event.stopPropagation();deleteGroupParentFolder('${escA(parent.id)}')" aria-label="${GROUP_TRANSFER_EN?'Delete category only':'カテゴリのみ削除'}">×</button></span>
+    </div>
+    <div class="group-parent-body" style="${collapsed?'display:none':''}">${children.length?children.map(f=>renderGroupFolderSection(f,visibleGroups.filter(g=>g.folderId===f.id),query)).join(''):`<div class="group-meta">${GROUP_TRANSFER_EN?'Drop a folder here or choose this category in its Category menu.':'フォルダをここへドラッグするか、各フォルダの「カテゴリ」欄でまとめられます。'}</div>`}</div>
+  </div>`;
+}
+function renderGroupFolderTree(visibleGroups,query){
+  const sections=[],leaves=groupFolders.filter(f=>f.type!=='parent');
+  if(!query&&groupFolders.some(f=>f.type==='parent'))sections.push(`<div class="category-root-drop" ondragover="allowCategoryFolderDrop(event)" ondragleave="leaveCategoryFolderDrop(event)" ondrop="dropFolderIntoCategory(event,'')">${GROUP_TRANSFER_EN?'No category — drop a folder here':'カテゴリなしへ：フォルダをここへドロップ'}</div>`);
+  const matches=f=>!query||visibleGroups.some(g=>g.folderId===f.id)||String(f.name).toLowerCase().includes(query)||String(groupFolders.find(p=>p.id===validGroupParentFolderId(f.parentId))?.name||'').toLowerCase().includes(query);
+  groupFolders.filter(f=>f.type==='parent').forEach(parent=>{
+    const children=leaves.filter(f=>validGroupParentFolderId(f.parentId)===parent.id&&matches(f));
+    if(!query||children.length||String(parent.name).toLowerCase().includes(query))sections.push(renderGroupParentFolder(parent,children,visibleGroups,query));
+  });
+  leaves.filter(f=>!validGroupParentFolderId(f.parentId)&&matches(f)).forEach(f=>sections.push(renderGroupFolderSection(f,visibleGroups.filter(g=>g.folderId===f.id),query)));
+  const unfiled=visibleGroups.filter(g=>!validGroupFolderId(g.folderId||''));
+  if(unfiled.length||(!query&&!leaves.length))sections.push(renderGroupFolderSection(null,unfiled,query));
+  return sections.join('');
+}
+function validGroupFolderId(id){ return groupFolders.some(f=>f.id===id&&f.type!=='parent')?id:''; }
+function groupFolderOptions(selectedId){
+  return `<option value=""${!selectedId?' selected':''}>Unsorted</option>`+groupFolders.filter(f=>f.type!=='parent').map(f=>`<option value="${escA(f.id)}"${f.id===selectedId?' selected':''}>${escH(f.name)}</option>`).join('');
+}
+function createGroupFolder(asParent=false){
   const input=document.getElementById('group-folder-label-inp');
   const name=String(input?.value||'').trim();
-  if(!name){toast('Please input the folder name.');return;}
+  if(!name){toast(GROUP_TRANSFER_EN?'Enter a folder or category name.':'Folderまたはカテゴリ名を入力してください');return;}
   if(groupFolders.some(f=>f.name.toLowerCase()===name.toLowerCase())){toast("A folder with the same name already exists.");return;}
-  groupFolders.push({id:uid('folder'),name,collapsed:false,createdAt:nowIso()});
+  groupFolders.push({id:uid('folder'),name,collapsed:false,createdAt:nowIso(),type:asParent?'parent':'folder',parentId:''});
   if(input) input.value='';
   saveGroupFolders(); renderGroups();
   toast(`Created folder "${name}".`);
 }
 function renameGroupFolder(id){
   const folder=groupFolders.find(f=>f.id===id); if(!folder) return;
-  const name=prompt('New Folder Name',folder.name);
+  const name=prompt(folder.type==='parent'?(GROUP_TRANSFER_EN?'New category name':'新しいカテゴリ名'):(GROUP_TRANSFER_EN?'New folder name':'新しいFolder名'),folder.name);
   if(!name||!name.trim()) return;
   folder.name=name.trim(); saveGroupFolders(); renderGroups();
 }
@@ -3540,6 +3865,7 @@ function duplicateGroupFolder(id){
   toast(`Duplicated folder "${folder.name}" as "${clonedFolder.name}".`);
 }
 function deleteGroupFolder(id){
+  if(groupFolders.some(f=>f.id===id&&f.type==='parent')){deleteGroupParentFolder(id);return;}
   const folder=groupFolders.find(f=>f.id===id); if(!folder) return;
   const count=promptGroups.filter(g=>g.folderId===id).length;
   if(!confirm(`Delete the folder named "${folder.name}"?\nMoving ${count} Group to 'Unsorted' without deletion.`)) return;
@@ -3550,10 +3876,11 @@ function deleteGroupFolder(id){
   toast(`Deleted the folder and moved ${count} Group to 'Unsorted'.`);
 }
 function moveGroupFolderPosition(id,delta){
-  const index=groupFolders.findIndex(f=>f.id===id); const next=index+delta;
-  if(index<0||next<0||next>=groupFolders.length) return;
-  [groupFolders[index],groupFolders[next]]=[groupFolders[next],groupFolders[index]];
-  saveGroupFolders(); renderGroups();
+  const folder=groupFolders.find(f=>f.id===id);if(!folder)return;
+  const siblings=groupFolders.filter(f=>folder.type==='parent'?f.type==='parent':f.type!=='parent'&&validGroupParentFolderId(f.parentId)===validGroupParentFolderId(folder.parentId));
+  const index=siblings.findIndex(f=>f.id===id),other=siblings[index+delta];if(!other)return;
+  const a=groupFolders.indexOf(folder),b=groupFolders.indexOf(other);[groupFolders[a],groupFolders[b]]=[groupFolders[b],groupFolders[a]];
+  saveGroupFolders();renderGroups();
 }
 function toggleGroupFolder(id){
   if(id){
@@ -3605,6 +3932,7 @@ function leaveGroupOrderDrop(event){
   if(!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drop-before','drop-after');
 }
 function dropGroupAtPosition(event,targetId){
+  if(draggingFolderForCategory!==null)return;
   event.preventDefault(); event.stopPropagation();
   const sourceId=draggingGroupFolderGroupId;
   draggingGroupFolderGroupId=null;
@@ -3619,6 +3947,7 @@ function dropGroupAtPosition(event,targetId){
   finishGroupOrderMove(sourceId);
 }
 function startGroupFolderDrag(event,groupId){
+  endFolderCategoryDrag();
   draggingGroupFolderGroupId=groupId;
   event.dataTransfer.effectAllowed='move';
   event.dataTransfer.setData('text/plain',groupId);
@@ -3631,6 +3960,7 @@ function endGroupFolderDrag(event){
   document.querySelectorAll('.group-folder.drag-over').forEach(el=>el.classList.remove('drag-over'));
 }
 function allowGroupFolderDrop(event){
+  if(draggingFolderForCategory!==null)return;
   event.preventDefault(); event.dataTransfer.dropEffect='move';
   event.currentTarget.classList.add('drag-over');
 }
@@ -3638,11 +3968,24 @@ function leaveGroupFolderDrop(event){
   if(!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over');
 }
 function dropGroupIntoFolder(event,folderId){
+  if(draggingFolderForCategory!==null)return;
   event.preventDefault(); event.stopPropagation();
   event.currentTarget.classList.remove('drag-over');
   const groupId=draggingGroupFolderGroupId||event.dataTransfer.getData('text/plain');
   draggingGroupFolderGroupId=null;
   if(groupId) moveGroupToFolder(groupId,folderId);
+}
+function groupSelectionTargetsInFolder(folderId){
+  if(folderId&&!validGroupFolderId(folderId))return [];
+  return promptGroups.filter(g=>folderId?g.folderId===folderId:!validGroupFolderId(g.folderId||''));
+}
+function toggleGroupsInFolder(folderId){
+  const groups=groupSelectionTargetsInFolder(folderId);
+  if(!groups.length){toast(GROUP_TRANSFER_EN?'There are no Groups in this folder.':'このフォルダにGroupがありません');return;}
+  const clear=groups.every(g=>selectedGroupIds.has(g.id));
+  groups.forEach(g=>{if(clear)selectedGroupIds.delete(g.id);else selectedGroupIds.add(g.id);});
+  renderGroups();
+  toast(GROUP_TRANSFER_EN?`${clear?'Deselected':'Selected'} ${groups.length} Groups in this folder.`:`フォルダ内の${groups.length} Groupを${clear?'選択解除':'全選択'}しました`);
 }
 function toggleAllPromptsInFolder(folderId){
   const groups=promptGroups.filter(g=>(g.folderId||'')===(folderId||''));
@@ -3747,6 +4090,49 @@ function duplicateSelectedGroups(){
   const clones=sources.map(g=>({...JSON.parse(JSON.stringify(g)),id:uid('group'),name:uniqueDuplicatedGroupName(g.name,reserved),folderId:validGroupFolderId(g.folderId||''),prompts:(g.prompts||[]).map(p=>({...JSON.parse(JSON.stringify(p)),id:uid('prompt'),createdAt:now,updatedAt:now,source:p.source||'duplicated-group'})),createdAt:now,updatedAt:now}));
   promptGroups.unshift(...clones); activeGroupId=clones[0]?.id||activeGroupId; selectedGroupIds.clear();
   saveGroups(); renderGroups(); renderGroupSelectors(); toast(`Duplicated ${clones.length} Group(s).`);
+}
+let deletingSelectedGroups=false;
+async function deleteSelectedGroups(){
+  if(deletingSelectedGroups)return;
+  const sources=promptGroups.filter(g=>selectedGroupIds.has(g.id));
+  if(!sources.length){toast(GROUP_TRANSFER_EN?'Select Groups using the checkboxes on the left.':'削除するGroupを左のチェック欄で選択してください');return;}
+  const ids=new Set(sources.map(g=>g.id)),signature=JSON.stringify(sources);
+  const count=sources.reduce((n,g)=>n+(g.prompts||[]).length,0);
+  const names=sources.slice(0,10).map(g=>'・'+g.name).join('\n')+(sources.length>10?`\n… +${sources.length-10} Groups`:'');
+  const message=GROUP_TRANSFER_EN?`Delete ${sources.length} selected Groups and ${count} prompts?\n\n${names}\n\nIncludes selected Groups hidden by search. Unsaved edits in these Groups will be lost. Folders, categories and image files are kept. A backup of saved data must succeed before deletion.`:`選択した${sources.length} Groupと、中の${count}件のプロンプトを削除しますか？\n\n${names}\n\n検索で非表示の選択Groupも対象です。対象内の未保存の編集内容は失われます。フォルダ・カテゴリ・画像ファイルは削除しません。登録済みデータを削除前にバックアップします。`;
+  if(!confirm(message))return;
+  deletingSelectedGroups=true;
+  const button=document.getElementById('delete-selected-groups');if(button)button.disabled=true;
+  let removed=false;
+  try{
+    await groupsInitializationPromise;await groupsSaveQueue;
+    if(groupsLastSaveError)throw groupsLastSaveError;
+    if(JSON.stringify(promptGroups.filter(g=>ids.has(g.id)))!==signature)throw new Error(GROUP_TRANSFER_EN?'Targets changed. Review your selection and try again.':'対象が更新されました。選択内容を確認してやり直してください。');
+    const backup=await performBackup('before-delete-groups',{force:true,silent:true});
+    if(!backup||(!backup.browserOk&&!backup.serverOk))throw new Error(GROUP_TRANSFER_EN?'Backup failed. No Groups were deleted.':'バックアップに失敗したため削除を中止しました。');
+    if(JSON.stringify(promptGroups.filter(g=>ids.has(g.id)))!==signature)throw new Error(GROUP_TRANSFER_EN?'Targets changed during backup. Please review again.':'バックアップ中に対象が更新されました。確認してやり直してください。');
+    const promptIds=new Set(sources.flatMap(g=>(g.prompts||[]).map(p=>p.id)));
+    // Persist all deletion markers in one write before removing records from memory.
+    const tomb=loadGroupTombstones();
+    tomb.groups=[...new Set([...tomb.groups,...ids])];tomb.prompts=[...new Set([...tomb.prompts,...promptIds])];
+    saveGroupTombstones(tomb);
+    removed=true;
+    promptGroups=promptGroups.filter(g=>!ids.has(g.id));
+    ids.forEach(id=>selectedGroupIds.delete(id));
+    groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!promptIds.has(id));
+    promptIds.forEach(id=>{delete groupPromptSendSizes[id];delete groupPromptLoraOff[id];delete groupPromptLoraOverrides[id];delete groupPromptEditDrafts[id];delete topScoreEditDrafts[id];sampledGroupPrompts.delete(id);relatedPanelPromptSelection.delete(id);});
+    if(promptIds.has(editingGroupPromptId))editingGroupPromptId=null;
+    if(ids.has(groupOrderEdit?.groupId))groupOrderEdit=null;
+    if(ids.has(activeGroupId))activeGroupId=promptGroups[0]?.id||null;
+    topScoreViewRows=topScoreViewRows.filter(r=>!ids.has(r.entry?.group?.id));topGalleryZoomItems=[];topGalleryZoomIndex=-1;
+    clearGroupImageResultsOnSelectionChange();
+    saveGroups();renderGroups();renderGroupSelectors();
+    await groupsSaveQueue;
+    if(groupsLastSaveError)throw groupsLastSaveError;
+    toast(GROUP_TRANSFER_EN?`Deleted ${sources.length} Groups (${count} prompts). Pre-deletion backup saved.`:`${sources.length} Group（${count}件のプロンプト）を削除しました。削除前バックアップを保存済みです。`);
+  }catch(error){
+    toast((removed?(GROUP_TRANSFER_EN?'Deletion save failed. The pre-deletion backup is available: ':'削除後の保存に問題があります。削除前バックアップから復元できます: '):(GROUP_TRANSFER_EN?'Deletion cancelled: ':'削除を中止しました: '))+String(error.message||error));
+  }finally{deletingSelectedGroups=false;if(button)button.disabled=false;}
 }
 function renameActiveGroup(){
   const g=activeGroup(); if(!g){toast('No Group found.');return;}
@@ -3945,10 +4331,11 @@ function clearTopScoreEditDraft(id){
 }
 function startEditGroupPrompt(id){
   const g=activeGroup(); const p=g?.prompts?.find(x=>x.id===id); if(!p) return;
+  captureGroupPromptEditDrafts();
   editingGroupPromptId=id;
   renderGroups();
   setTimeout(()=>{
-    document.getElementById(`group-edit-text-${id}`)?.focus();
+    document.getElementById(`group-edit-text-${id}`)?.focus({preventScroll:true});
     selectGroupEditSearchHit(id,0);
   },0);
 }
@@ -4138,6 +4525,7 @@ function updateGroupSelectionBadges(){
     const el=document.getElementById(`group-folder-selected-${folderId||'unfiled'}`);
     if(el){el.textContent=count?`${count} selected`:'';el.style.display=count?'inline-block':'none';}
   });
+  document.querySelectorAll?.('.tag-extracted-prompt-check').forEach(box=>{box.checked=groupPromptSelectionOrder.includes(box.value);});
   updateGroupCrossSelectStatus();
 }
 function updateGroupCrossSelectStatus(){
@@ -4149,7 +4537,15 @@ function updateGroupCrossSelectStatus(){
   const groups=new Set(ids.map(id=>findGroupPromptById(id)?.group?.id).filter(Boolean));
   el.textContent=`Selected ${ids.length} items out of ${groups.size} groups / ${groups.size} Group`;
 }
+function restoreGroupPromptViewport(id,top){
+  const row=document.getElementById('group-prompt-row-'+id);
+  if(!row||top===null)return;
+  const delta=row.getBoundingClientRect().top-top;
+  if(Math.abs(delta)>1)window.scrollBy({top:delta,left:0,behavior:'instant'});
+}
 function toggleGroupPromptSelection(id,on){
+  const row=document.getElementById('group-prompt-row-'+id);
+  const top=row?row.getBoundingClientRect().top:null;
   if(on){
     if(!groupPromptSelectionOrder.includes(id)) groupPromptSelectionOrder.push(id);
   }else{
@@ -4157,6 +4553,7 @@ function toggleGroupPromptSelection(id,on){
   }
   clearGroupImageResultsOnSelectionChange();
   updateGroupCrossSelectStatus(); updateGroupSelectionBadges();
+  restoreGroupPromptViewport(id,top);
 }
 function selectGeneratedActiveGroupPrompts(){
   const g=activeGroup();
@@ -4164,6 +4561,18 @@ function selectGeneratedActiveGroupPrompts(){
   clearGroupImageResultsOnSelectionChange();
   renderGroups(); updateGroupCrossSelectStatus(); updateGroupSelectionBadges(); updateGroupGenerationStatus();
   toast(GROUP_TRANSFER_EN?`${groupPromptSelectionOrder.length} generated prompts selected in the active Group.`:`表示中Groupの生成済み${groupPromptSelectionOrder.length}件のみ選択しました`);
+}
+function keepSelectedGeneratedGroupPrompts(){
+  if(!groupPromptSelectionOrder.length){
+    toast(GROUP_TRANSFER_EN?'Select prompts first.':'先にプロンプトを選択してください');
+    return;
+  }
+  const generatedIds=new Set();
+  promptGroups.forEach(g=>(g.prompts||[]).forEach(p=>{if(generationState(p)==='done') generatedIds.add(p.id);}));
+  groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>generatedIds.has(id));
+  clearGroupImageResultsOnSelectionChange();
+  renderGroups(); updateGroupCrossSelectStatus(); updateGroupSelectionBadges(); updateGroupGenerationStatus();
+  toast(GROUP_TRANSFER_EN?`${groupPromptSelectionOrder.length} generated prompts kept across Groups.`:`Groupをまたぐ選択から生成済み${groupPromptSelectionOrder.length}件を残しました`);
 }
 function selectAllGroupPrompts(on){
   const g=activeGroup();
@@ -4305,14 +4714,14 @@ function resolvePromptLoraOverride(id){
   if(value==='off') return [];
   if(value.startsWith('lora:')){
     const l=loraList.find(x=>x.id===value.slice(5));
-    return l?[{mode:'all',file:String(l.file||''),weight:Number(l.weight)||1}]:null;
+    return l?[{mode:'all',file:String(l.file||''),weight:Number.isFinite(Number(l.weight))?Number(l.weight):1}]:null;
   }
   if(value.startsWith('set:')){
     const set=loraSets.find(x=>x.id===value.slice(4));
     if(!set) return null;
     return (set.loras||[]).map(sl=>{
       const l=loraList.find(x=>x.id===sl.id);
-      return l?{mode:'all',file:String(l.file||''),weight:Number(sl.weight??l.weight)||1}:null;
+      return l?{mode:'all',file:String(l.file||''),weight:Number.isFinite(Number(sl.weight??l.weight))?Number(sl.weight??l.weight):1}:null;
     }).filter(Boolean);
   }
   return null;
@@ -4805,6 +5214,34 @@ function commitGroupPromptTransfer(){
   saveGroups();renderGroups();renderGroupSelectors();
   toast(GROUP_TRANSFER_EN?`${copies.length} prompts ${move?'moved':'copied'} to "${targetName}".`:`「${targetName}」へ${copies.length}件を${move?'移動':'コピーして追加'}しました`);
 }
+function createGenerationMatcher(keys,ignored,mode){
+  const exact=new Set(keys);
+  if(mode!=='max') return text=>{const key=generationPromptKey(text,ignored);return key&&exact.has(key)?[key]:[];};
+  const scoring=relatedScoringMode,strictness=relatedSearchStrictness||'normal';
+  const queries=[...exact].filter(Boolean).map(key=>({key,tokens:promptSearchTokens(key,strictness)})).filter(q=>q.tokens.length);
+  // Index queries by their rarest token to avoid testing every Group prompt for every image.
+  const frequency=new Map(),anchors=new Map();
+  if(scoring==='tags'){
+    queries.forEach(q=>q.tokens.forEach(t=>frequency.set(t,(frequency.get(t)||0)+1)));
+    queries.forEach(q=>{
+      const anchor=q.tokens.reduce((a,t)=>frequency.get(t)<frequency.get(a)?t:a,q.tokens[0]);
+      if(!anchors.has(anchor))anchors.set(anchor,[]);anchors.get(anchor).push(q);
+    });
+  }
+  // Full query coverage is score MAX; ranking penalties for extra tags do not affect coverage.
+  return text=>{
+    const source=generationPromptKey(text,ignored);if(!source)return [];
+    const tags=scoring==='tags'?new Set(promptSearchTokens(source,'normal')):null;
+    const candidates=tags?[...tags].flatMap(t=>anchors.get(t)||[]):queries;
+    return candidates.filter(q=>q.tokens.every(t=>tags?tags.has(t):source.includes(t))).map(q=>q.key);
+  };
+}
+function generationMatchModeLabel(mode){
+  return mode==='max'?(GROUP_TRANSFER_EN?'Score MAX':'スコアMAX'):(GROUP_TRANSFER_EN?'Exact match':'完全一致');
+}
+function syncGenerationMatchMode(value){
+  document.querySelectorAll('.generation-match-mode').forEach(el=>{el.value=value==='max'?'max':'exact';});
+}
 function generationPromptKey(text,ignored=[]){
   const skip=new Set(ignored.map(t=>String(t).toLowerCase().replace(/\s+/g,' ').trim()));
   return String(text||'').split(/[,\r\n]+/).map(t=>t.toLowerCase().replace(/\s+/g,' ').trim()).filter(t=>t&&!skip.has(t)).join(', ');
@@ -4936,7 +5373,8 @@ function previewGenerationIgnoredTags(){
 let previewGenerationMatchRows=[],previewGenerationMatchBusy=false;
 async function matchSelectedPreviewGeneration(){
   if(previewGenerationMatchBusy)return;
-  const items=selectedPreviewImages();if(!items.length){toast(GROUP_TRANSFER_EN?'Select images first.':'Preview画像を選択してください');return;}
+  const items=previewGenerationEligibleImages(selectedPreviewImages());if(!items.length){toast(GROUP_TRANSFER_EN?'Select images outside excluded folders.':'照合対象の画像を選択してください（除外フォルダの画像は対象外です）');return;}
+  const sourceScope=previewGenerationFolderScopeKey();
   previewGenerationMatchBusy=true;
   const panel=document.getElementById('preview-generation-matches');
   panel.hidden=false;panel.textContent=GROUP_TRANSFER_EN?'Matching…':'照合中…';
@@ -4947,13 +5385,16 @@ async function matchSelectedPreviewGeneration(){
       const key=generationPromptKey(prompt.text,ignored);if(!key)return;
       if(!index.has(key))index.set(key,[]);index.get(key).push({group,prompt,key});
     }));
+    const matchMode=document.getElementById('preview-generation-match-mode')?.value||'exact';
+    const matchKeys=createGenerationMatcher(index.keys(),ignored,matchMode);
     const rows=new Map();let skipped=0;
     for(const item of items){
       await loadPreviewItemDetails(item);
+      if(sourceScope!==previewGenerationFolderScopeKey())throw new Error(GROUP_TRANSFER_EN?'Folder exclusions changed. Run the check again.':'照合対象フォルダが変更されました。再度照合してください');
       if(item.detailsLoading){skipped++;continue;}
       const key=generationPromptKey(item.prompt,ignored);
       if(!key){skipped++;continue;}
-      (index.get(key)||[]).forEach(e=>{
+      matchKeys(item.prompt).flatMap(k=>index.get(k)||[]).forEach(e=>{
         if(!rows.has(e.prompt.id))rows.set(e.prompt.id,{...e,text:e.prompt.text,images:[]});
         rows.get(e.prompt.id).images.push(item.name);
       });
@@ -4961,7 +5402,7 @@ async function matchSelectedPreviewGeneration(){
     previewGenerationMatchRows=[...rows.values()];
     const actions=`<div class="row"><button class="btn primary" onclick="confirmPreviewGenerationMatches()" ${rows.size?'':'disabled'}>${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn" onclick="document.getElementById('preview-generation-matches').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
     const pending=rows.size?`<div class="group-meta" style="margin-top:6px;color:var(--accent)">${GROUP_TRANSFER_EN?'Not yet confirmed — press the button to mark checked prompts as generated.':'未確定：ボタンを押すと、チェックしたプロンプトが生成済みになります。'}</div>`:'';
-    panel.innerHTML='<div class="group-meta">'+(GROUP_TRANSFER_EN?'Matches: ':'一致: ')+rows.size+(GROUP_TRANSFER_EN?' prompts; skipped images: ':'件 ／ Promptなし・読込中: ')+skipped+'</div>'+pending+actions+previewGenerationMatchRows.map((r,i)=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input class="preview-generation-match-check" type="checkbox" value="${i}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${escH(r.images.join(' / '))}</div></label>`).join('')+actions;
+    panel.innerHTML='<div class="group-meta">'+generationMatchModeLabel(matchMode)+' — '+(GROUP_TRANSFER_EN?'Matches: ':'一致: ')+rows.size+(GROUP_TRANSFER_EN?' prompts; skipped images: ':'件 ／ Promptなし・読込中: ')+skipped+'</div>'+pending+actions+previewGenerationMatchRows.map((r,i)=>`<label style="display:block;padding:8px;border-bottom:1px solid var(--border2);overflow-wrap:anywhere"><input class="preview-generation-match-check" type="checkbox" value="${i}" checked> ${escH(r.group.name)} / ${escH(r.prompt.title||r.prompt.memo||'')}<div>${escH(r.text)}</div><div class="group-meta">${escH(r.images.join(' / '))}</div></label>`).join('')+actions;
     panel.scrollTop=0;
   }catch(e){panel.textContent=String(e.message||e);}finally{previewGenerationMatchBusy=false;}
 }
@@ -4987,8 +5428,9 @@ async function matchSelectedGroupsAgainstAllPreviewImages(){
   if(groupFolderGenerationBusy)return;
   const entries=selectedGroupPromptEntries().map(e=>({...e,text:String(e.prompt.text||'')}));
   if(!entries.length){toast(GROUP_TRANSFER_EN?'Select prompts in Groups first.':'Groupsで照合するプロンプトを選択してください');return;}
-  const images=previewImages.slice();
-  if(!images.length){toast(GROUP_TRANSFER_EN?'Load an image folder in Preview first.':'先にPreviewで画像フォルダを読み込んでください');return;}
+  const images=previewGenerationEligibleImages(previewImages);
+  const sourceScope=previewGenerationFolderScopeKey();
+  if(!images.length){toast(GROUP_TRANSFER_EN?'Load a folder that is not excluded from generation checks.':'照合対象のフォルダを読み込んでください（全フォルダ除外時は照合できません）');return;}
   if(previewFileLoading){toast(GROUP_TRANSFER_EN?'Wait for Preview loading to finish or stop it first.':'Previewの画像読み込みを完了するか停止してから照合してください');return;}
   const run=++groupFolderGenerationRun,folderVersion=previewFileLoadGeneration;
   groupFolderGenerationBusy=true;groupFolderGenerationRows=[];
@@ -5001,21 +5443,22 @@ async function matchSelectedGroupsAgainstAllPreviewImages(){
   const ignored=previewGenerationIgnoredTags();
   const targets=entries.map(e=>({...e,key:generationPromptKey(e.text,ignored)}));
   const keys=new Set(targets.map(e=>e.key).filter(Boolean)),found=new Map();
+  const matchMode=document.getElementById('group-generation-match-mode')?.value||'exact';
+  const matchKeys=createGenerationMatcher(keys,ignored,matchMode);
   let noPrompt=0,readFailed=0,checked=0;
   try{
     for(const image of images){
       if(run!==groupFolderGenerationRun)return;
-      if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+      if(folderVersion!==previewFileLoadGeneration||sourceScope!==previewGenerationFolderScopeKey())throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
       let readError=false;
       try{await loadPreviewItemDetails(image);}catch(e){readFailed++;readError=true;}
       if(run!==groupFolderGenerationRun)return;
-      if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+      if(folderVersion!==previewFileLoadGeneration||sourceScope!==previewGenerationFolderScopeKey())throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
       if(readError){/* Counted above; do not use stale metadata after a read error. */}
       else if(image.detailsError&&!image.prompt)readFailed++;
       else if(!image.prompt)noPrompt++;
       else{
-        const key=generationPromptKey(image.prompt,ignored);
-        if(key&&keys.has(key)){
+        for(const key of matchKeys(image.prompt)){
           if(!found.has(key))found.set(key,{count:0,names:[]});
           const hit=found.get(key);hit.count++;
           if(hit.names.length<3)hit.names.push(image.name);
@@ -5028,9 +5471,9 @@ async function matchSelectedGroupsAgainstAllPreviewImages(){
       }
     }
     if(run!==groupFolderGenerationRun)return;
-    if(folderVersion!==previewFileLoadGeneration)throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
+    if(folderVersion!==previewFileLoadGeneration||sourceScope!==previewGenerationFolderScopeKey())throw new Error(GROUP_TRANSFER_EN?'Preview files changed. Run the check again.':'Previewの読込ファイルが変更されました。照合をやり直してください。');
     groupFolderGenerationRows=targets.map(e=>({...e,match:e.key?found.get(e.key)||null:null}));
-    renderGroupFolderGenerationResults(images.length,noPrompt,readFailed,ignored);
+    renderGroupFolderGenerationResults(images.length,noPrompt,readFailed,ignored,matchMode);
     if(progress)progress.textContent=GROUP_TRANSFER_EN?'Check complete — review and confirm below.':'照合完了 — 下の結果を確認し、生成済みを確定してください。';
   }catch(e){
     if(run===groupFolderGenerationRun){
@@ -5040,13 +5483,13 @@ async function matchSelectedGroupsAgainstAllPreviewImages(){
     if(run===groupFolderGenerationRun){groupFolderGenerationBusy=false;if(stop)stop.hidden=true;if(start)start.disabled=false;}
   }
 }
-function renderGroupFolderGenerationResults(imageCount,noPrompt,readFailed,ignored){
+function renderGroupFolderGenerationResults(imageCount,noPrompt,readFailed,ignored,matchMode='exact'){
   const panel=document.getElementById('group-folder-generation-results');if(!panel)return;
   const matched=groupFolderGenerationRows.filter(r=>r.match);
   const unmatched=groupFolderGenerationRows.filter(r=>!r.match);
   const actions=`<div class="row"><button class="btn primary" onclick="confirmGroupFolderGenerationMatches()" ${matched.length?'':'disabled'}>${GROUP_TRANSFER_EN?'Mark Checked as Generated':'確認したプロンプトを生成済みにする'}</button><button class="btn secondary" onclick="document.getElementById('group-folder-generation-results').hidden=true">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>`;
   panel.hidden=false;
-  panel.innerHTML=`<div class="group-meta">${GROUP_TRANSFER_EN?'Selected prompts':'選択プロンプト'} ${groupFolderGenerationRows.length} / ${GROUP_TRANSFER_EN?'All loaded images':'読込画像全体'} ${imageCount}<br>
+  panel.innerHTML=`<div class="group-meta">${generationMatchModeLabel(matchMode)}<br>${GROUP_TRANSFER_EN?'Selected prompts':'選択プロンプト'} ${groupFolderGenerationRows.length} / ${GROUP_TRANSFER_EN?'Eligible loaded images':'照合対象の読込画像'} ${imageCount}<br>
     ${GROUP_TRANSFER_EN?'Matched':'一致'} ${matched.length} / ${GROUP_TRANSFER_EN?'No match':'一致なし'} ${unmatched.length} / ${GROUP_TRANSFER_EN?'Images without Prompt':'Promptなし画像'} ${noPrompt} / ${GROUP_TRANSFER_EN?'Read failures':'読込失敗'} ${readFailed}</div>
     <div class="group-meta" style="margin-top:6px">${GROUP_TRANSFER_EN?'Unconfirmed. Existing checks are kept for unmatched prompts. No match does not prove a prompt has never been generated.':'未確定です。一致なしの既存チェックは解除しません。一致なし＝未生成の確定ではありません。'}</div>
     <details><summary>${GROUP_TRANSFER_EN?'Ignore tags used':'今回適用した除外タグ'} (${ignored.length})</summary><div class="group-meta" style="overflow-wrap:anywhere">${escH(ignored.join(', ')||'—')}</div></details>
@@ -5066,6 +5509,73 @@ function confirmGroupFolderGenerationMatches(){
   groupFolderGenerationRows=[];
   toast(GROUP_TRANSFER_EN?'Generation checks saved.':'生成済みチェックを保存しました');
 }
+function closeGroupTagSelectionPreview(){
+  const panel=document.getElementById('group-tag-selection-preview');
+  if(panel){panel.style.display='none';panel.innerHTML='';}
+  // Closing the result view must not clear prompt selections or the search input.
+}
+function selectPromptsByTagsInSelectedGroups(){
+  const groups=promptGroups.filter(g=>selectedGroupIds.has(g.id));
+  if(!groups.length){toast(GROUP_TRANSFER_EN?'Check the target Groups on the left first.':'左側で対象Groupの「選択」にチェックを入れてください');return;}
+  const terms=String(document.getElementById('group-tag-extract-query')?.value||'').split(/[,、，\r\n]+/).map(t=>t.trim().toLowerCase()).filter(Boolean);
+  if(!terms.length){toast(GROUP_TRANSFER_EN?'Enter tags to find.':'抽出タグを入力してください');return;}
+  const entries=groups.flatMap(group=>(group.prompts||[]).filter(p=>terms.every(t=>String(p.text||'').toLowerCase().includes(t))).map(prompt=>({group,prompt})));
+  // Replace the prompt selection, so unrelated previous selections cannot be deleted accidentally.
+  groupPromptSelectionOrder=entries.map(e=>e.prompt.id);
+  clearGroupImageResultsOnSelectionChange();renderGroups();updateGroupSelectionBadges();
+  const panel=document.getElementById('group-tag-selection-preview');
+  if(panel){
+    panel.style.display='block';
+    panel.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="btn sm" onclick="closeGroupTagSelectionPreview()">${GROUP_TRANSFER_EN?'Close results':'検索結果を閉じる'}</button></div><div class="group-meta">${groups.length} Groups / ${entries.length} prompts — ${GROUP_TRANSFER_EN?'Selection replaced. Uncheck anything you want to keep.':'プロンプト選択を置き換えました。残したいものはチェックを外してください。'}</div>
+      <div style="max-height:360px;overflow:auto;min-width:0">${entries.map(e=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere">
+        <label><input type="checkbox" class="tag-extracted-prompt-check" value="${escV(e.prompt.id)}" checked onchange="toggleExtractedPromptSelection(this.value,this.checked)"> ${escH(e.group.name)} / ${escH(e.prompt.title||e.prompt.memo||'Prompt')}</label>
+        <div style="white-space:pre-wrap;overflow-wrap:anywhere">${escH(e.prompt.text)}</div></div>`).join('')}</div>`;
+  }
+  toast(GROUP_TRANSFER_EN?`Selected ${entries.length} prompts in checked Groups.`:`選択Groupから${entries.length}件を抽出・選択しました`);
+}
+function toggleExtractedPromptSelection(id,on){
+  if(on){if(!groupPromptSelectionOrder.includes(id))groupPromptSelectionOrder.push(id);}
+  else groupPromptSelectionOrder=groupPromptSelectionOrder.filter(x=>x!==id);
+  document.querySelectorAll('.group-prompt-check').forEach(box=>{if(box.value===id)box.checked=on;});
+  clearGroupImageResultsOnSelectionChange();updateGroupSelectionBadges();
+}
+let deletingSelectedGroupPrompts=false;
+async function deleteSelectedGroupPrompts(){
+  if(deletingSelectedGroupPrompts)return;
+  const entries=selectedGroupPromptIds().map(findGroupPromptById).filter(Boolean);
+  if(!entries.length){toast(GROUP_TRANSFER_EN?'Select prompts first.':'削除するプロンプトを選択してください');return;}
+  const ids=new Set(entries.map(e=>e.prompt.id));
+  const targets=()=>promptGroups.flatMap(g=>(g.prompts||[]).filter(p=>ids.has(p.id)).map(p=>({groupId:g.id,prompt:p})));
+  const signature=JSON.stringify(targets());
+  const groups=new Set(entries.map(e=>e.group.id));
+  const names=entries.slice(0,12).map(e=>'・'+e.group.name+' / '+String(e.prompt.title||e.prompt.memo||e.prompt.text).slice(0,90)).join('\n');
+  if(!confirm(GROUP_TRANSFER_EN?
+    `Delete ${entries.length} selected prompts across ${groups.size} Groups?\n\n${names}\n\nAll selected prompts, including those hidden by search, are included. Groups and image files remain. Unsaved edits to deleted prompts will be lost. A backup must succeed first.`:
+    `選択中の${entries.length}件のプロンプト（${groups.size} Group）を削除しますか？\n\n${names}\n\n検索で非表示の選択プロンプトも対象です。Group自体と画像ファイルは削除しません。対象の未保存の編集内容は失われます。先にバックアップを作成します。`))return;
+  deletingSelectedGroupPrompts=true;let removed=false;
+  document.querySelectorAll('.delete-selected-prompts-btn').forEach(b=>b.disabled=true);
+  try{
+    await groupsInitializationPromise;await groupsSaveQueue;if(groupsLastSaveError)throw groupsLastSaveError;
+    if(signature!==JSON.stringify(targets()))throw new Error(GROUP_TRANSFER_EN?'Targets changed. Review and retry.':'対象が更新されました。確認してやり直してください');
+    const backup=await performBackup('before-delete-prompts',{force:true,silent:true});
+    if(!backup||(!backup.browserOk&&!backup.serverOk))throw new Error(GROUP_TRANSFER_EN?'Backup failed. Nothing was deleted.':'バックアップに失敗したため削除しませんでした');
+    if(signature!==JSON.stringify(targets()))throw new Error(GROUP_TRANSFER_EN?'Targets changed during backup.':'バックアップ中に対象が更新されました');
+    const tomb=loadGroupTombstones();tomb.prompts=[...new Set([...tomb.prompts,...ids])];saveGroupTombstones(tomb);
+    removed=true;
+    promptGroups.forEach(g=>{if((g.prompts||[]).some(p=>ids.has(p.id))){g.prompts=g.prompts.filter(p=>!ids.has(p.id));g.updatedAt=nowIso();}});
+    groupPromptSelectionOrder=groupPromptSelectionOrder.filter(id=>!ids.has(id));
+    ids.forEach(id=>{delete groupPromptSendSizes[id];delete groupPromptLoraOff[id];delete groupPromptLoraOverrides[id];delete groupPromptEditDrafts[id];delete topScoreEditDrafts[id];sampledGroupPrompts.delete(id);relatedPanelPromptSelection.delete(id);});
+    if(ids.has(editingGroupPromptId))editingGroupPromptId=null;
+    if(groupOrderEdit&&groups.has(groupOrderEdit.groupId))groupOrderEdit=null;
+    topScoreViewRows=topScoreViewRows.filter(r=>!ids.has(r.entry?.prompt?.id));topGalleryZoomItems=[];topGalleryZoomIndex=-1;
+    clearGroupImageResultsOnSelectionChange();
+    const panel=document.getElementById('group-tag-selection-preview');if(panel){panel.innerHTML='';panel.style.display='none';}
+    saveGroups();renderGroups();renderGroupSelectors();await groupsSaveQueue;if(groupsLastSaveError)throw groupsLastSaveError;
+    toast(GROUP_TRANSFER_EN?`Deleted ${entries.length} prompts. Backup saved.`:`${entries.length}件のプロンプトを削除しました。削除前バックアップを保存済みです`);
+  }catch(err){toast((removed?(GROUP_TRANSFER_EN?'Save failed; restore from backup: ':'保存に問題があります。削除前バックアップから復元できます: '):(GROUP_TRANSFER_EN?'Deletion cancelled: ':'削除を中止しました: '))+String(err.message||err));}
+  finally{deletingSelectedGroupPrompts=false;document.querySelectorAll('.delete-selected-prompts-btn').forEach(b=>b.disabled=false);}
+}
+
 function groupTagQueryTerms(){
   const raw=String(document.getElementById('group-tag-extract-query')?.value||document.getElementById('group-find')?.value||'').trim();
   if(!raw) return [];
@@ -5382,7 +5892,7 @@ function selectGroupEditSearchHit(id,dir,notify){
   const next=(prev+dir+hits.length)%hits.length;
   groupEditFindCursor[id]=next;
   const start=hits[next];
-  ta.focus();
+  ta.focus({preventScroll:true});
   ta.setSelectionRange(start,start+q.length);
   const approxLine=textLineNumberAt(ta.value,start);
   ta.scrollTop=Math.max(0,(approxLine-2)*parseFloat(getComputedStyle(ta).lineHeight||20));
@@ -5589,16 +6099,17 @@ function getGroupFindHitItems(){
     .filter(item=>item.querySelector('.prompt-hit'));
 }
 function jumpGroupFindHit(dir){
-  refreshGroupPromptHighlights(false);
-  const hits=getGroupFindHitItems();
-  if(!hits.length){toast('No search hits have been found.');return;}
-  groupFindCursor=(groupFindCursor+dir+hits.length)%hits.length;
-  document.querySelectorAll('.prompt-item.hit-current').forEach(el=>el.classList.remove('hit-current'));
-  const target=hits[groupFindCursor];
-  target.classList.add('hit-current');
-  target.scrollIntoView({behavior:'smooth',block:'center'});
-  toast(`Moved to the ${groupFindCursor+1}/${hits.length}th item.`);
+  const query=String(document.getElementById('group-find')?.value||'').trim().toLowerCase();
+  const hits=query?groupVisiblePromptEntries().filter(e=>String(e.p.text||'').toLowerCase().includes(query)):[];
+  if(!hits.length){toast(GROUP_TRANSFER_EN?'No search hits.':'検索ヒットがありません');return;}
+  groupFindCursor=groupFindCursor<0?(dir<0?hits.length-1:0):(groupFindCursor+dir+hits.length)%hits.length;
+  const id=hits[groupFindCursor].p.id;
+  revealGroupPromptPage(id);renderGroups();
+  const target=document.getElementById('group-prompt-row-'+id);
+  if(target){target.classList.add('hit-current');target.scrollIntoView({behavior:'smooth',block:'center'});}
+  toast((groupFindCursor+1)+'/'+hits.length);
 }
+
 function relatedStrictnessValue(){return document.getElementById('group-related-strictness')?.value||relatedSearchStrictness||'normal';}
 function resetGroupRelatedSearchState(){
   // New group-related searches should not inherit manual query, prior preview forced filters, or strict mode.
@@ -5897,6 +6408,7 @@ async function runGroupRelatedImageSearch(kind='top'){
   if(!entries.length){clearGroupRelatedImagesPanel();toast(GROUP_TRANSFER_EN?'Select prompts first.':'画像検索するプロンプトを選択してください');return;}
   if(!previewImages.length){toast(GROUP_TRANSFER_EN?'Load an image folder in Preview first.':'先にPreviewで画像フォルダを読み込んでください');return;}
   const topN=kind==='top'?topScoreCountValue():3;
+  const galleryOverrides=new Map(topScoreViewRows.map(row=>[row.entry.prompt.id,{count:row.galleryTopN??null,open:!!row.galleryExtraOpen}]));
   resetGroupRelatedSearchState();
   const run=++groupRelatedImageSearchRun,folderVersion=previewFileLoadGeneration,settings=relatedImageSearchSettingsKey();
   groupRelatedImageSearchBusy=true;
@@ -5917,7 +6429,8 @@ async function runGroupRelatedImageSearch(kind='top'){
       if(!valid())return;
       const {entry,text}=entries[i];
       if(String(entry.prompt.text||'')!==text)throw new Error(GROUP_TRANSFER_EN?'A prompt changed. Run the search again.':'プロンプトが変更されました。検索をやり直してください。');
-      rows.push({entry,idx:i,matches:relatedImageMatchesForPrompt(text,topN,'normal',session)});
+      const gallery=kind==='top'?galleryOverrides.get(entry.prompt.id):null;
+      rows.push({entry,idx:i,matches:relatedImageMatchesForPrompt(text,gallery?.count??topN,'normal',session),galleryTopN:gallery?.count??null,galleryExtraOpen:gallery?.open||false});
       if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Searching selected prompts: ':'選択プロンプトを検索中: ')+(i+1)+' / '+entries.length;
       // Drop each query's temporary allocations before the next one; allow painting and cancellation.
       await new Promise(resolve=>setTimeout(resolve,0));
@@ -5957,6 +6470,7 @@ function relatedPanelSelectionTools(preserve=false){
     <button class="btn sm" onclick="setRelatedPanelPromptSelection(true)">Select All</button>
     <button class="btn sm" onclick="setRelatedPanelPromptSelection(false)">Deselect</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('compose')">Selected → Compose</button>
+    <button class="btn sm secondary" onclick="sendRelatedPanelSelection('random')" title="Uses the random size candidates selected in Groups (select at least two).">Random Sizes → Compose</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('append')">Append to Compose</button>
     <button class="btn sm secondary" onclick="sendRelatedPanelSelection('group')">Move / Copy to Group</button>
     <span class="count-badge" id="related-panel-selected-count">${relatedPanelPromptSelection.size} selected</span>
@@ -5988,6 +6502,7 @@ function sendRelatedPanelSelection(action){
   boxes.forEach(el=>{el.checked=ids.includes(el.value);});
   try{
     if(action==='group') openGroupPromptTransfer('selected');
+    else if(action==='random') sendSelectedGroupPromptsToComposeRandomSize();
     else if(action==='append') sendSelectedGroupPromptsToComposeAppend();
     else sendSelectedGroupPromptsToCompose();
   }finally{
@@ -6337,7 +6852,7 @@ function clearGroupDuplicateCheck(){
 function topScoreCountValue(){
   const el=document.getElementById('top-score-count');
   const n=Math.floor(Number(el?.value||topScoreImageCount||1));
-  topScoreImageCount=Math.min(3,Math.max(1,n||1));
+  topScoreImageCount=Math.min(5,Math.max(1,n||1));
   return topScoreImageCount;
 }
 async function showTopScoreImagesForSelectedPrompts(){return runGroupRelatedImageSearch('top');}
@@ -6454,14 +6969,126 @@ function setTopScoreGalleryPage(page){
   topScoreGalleryPage=Math.max(0,Math.min(Math.ceil(topScoreViewRows.length/20)-1,Number(page)||0));
   renderTopScoreGalleryPanel(true);
 }
-function renderTopScoreGalleryPanel(preserveSelection=false){
-  const panel=document.getElementById('group-related-images-panel');if(!panel)return;
-  const rows=topScoreViewRows,topN=topScoreViewTopN;
-  const bases=[];topGalleryZoomItems=[];
-  rows.forEach(r=>{bases.push(topGalleryZoomItems.length);(r.matches||[]).forEach(m=>topGalleryZoomItems.push({img:m.img,title:r.entry.prompt.title||r.entry.prompt.memo||r.entry.group.name}));});
+function topGalleryImageIndex(promptId,matchIndex){
+  let base=0;
+  for(const row of topScoreViewRows){
+    if(row.entry.prompt.id===promptId)return matchIndex>=0&&matchIndex<row.matches.length?base+matchIndex:-1;
+    base+=row.matches.length;
+  }
+  return -1;
+}
+function rebuildTopGalleryImageIndex(){
+  const prior=topGalleryZoomItems[topGalleryZoomIndex];
+  topGalleryZoomItems=[];
+  topScoreViewRows.forEach(r=>(r.matches||[]).forEach(m=>topGalleryZoomItems.push({img:m.img,promptId:r.entry.prompt.id,title:r.entry.prompt.title||r.entry.prompt.memo||r.entry.group.name})));
+  topGalleryZoomIndex=prior?topGalleryZoomItems.findIndex(e=>e.img.id===prior.img.id&&e.promptId===prior.promptId):-1;
   window.__groupRelatedImageIds=[...new Set(topGalleryZoomItems.map(e=>e.img.id))];
   window.__groupRelatedImageLabel=GROUP_TRANSFER_EN?'Top Score Gallery':'Topスコア画像ギャラリー';
   window.__groupRelatedImageOrderMode='sequence';
+}
+async function refreshTopGalleryPrompt(promptId,event,requestedCount=undefined){
+  event?.stopPropagation();
+  if(groupRelatedImageSearchBusy){toast(GROUP_TRANSFER_EN?'An image search is already running.':'画像検索中です。完了するか停止してから再検索してください');return;}
+  const rows=topScoreViewRows,row=rows.find(r=>r.entry.prompt.id===promptId),found=findGroupPromptById(promptId);
+  if(!row||!found||topScoreViewMode!=='gallery')return;
+  if(!previewImages.length){toast(GROUP_TRANSFER_EN?'Load an image folder first.':'先に画像フォルダを読み込んでください');return;}
+  const text=String(found.prompt.text||''),topN=topGalleryPromptImageCount(row,requestedCount===undefined?row.galleryTopN:requestedCount);
+  const run=++groupRelatedImageSearchRun,version=previewFileLoadGeneration,settings=relatedImageSearchSettingsKey();
+  const valid=()=>run===groupRelatedImageSearchRun&&version===previewFileLoadGeneration&&settings===relatedImageSearchSettingsKey()&&rows===topScoreViewRows&&topScoreViewMode==='gallery';
+  const button=event?.currentTarget,progress=document.getElementById('group-image-search-progress'),stop=document.getElementById('group-image-search-stop');
+  groupRelatedImageSearchBusy=true;if(button)button.disabled=true;if(stop)stop.hidden=false;
+  let session=null;
+  try{
+    const count=previewImages.length;
+    for(let offset=0;offset<count;offset+=256){
+      if(!valid())return;
+      session=createRelatedImageSearchSession(previewImages.slice(offset,offset+256),'normal',session);
+      if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Refreshing this prompt: ':'このプロンプトを再検索中: ')+Math.min(count,offset+256)+' / '+count;
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    if(!valid())return;
+    const matches=relatedImageMatchesForPrompt(text,topN,'normal',session);session=null;
+    const current=findGroupPromptById(promptId);
+    if(!valid())return;
+    if(!current||String(current.prompt.text||'')!==text)throw new Error(GROUP_TRANSFER_EN?'The prompt changed. Run the search again.':'プロンプトが変更されました。再検索してください');
+    const card=[...document.querySelectorAll('.top-gallery-card[data-top-gallery-prompt-id]')].find(el=>el.dataset.topGalleryPromptId===promptId);
+    const top=card?.getBoundingClientRect().top,open=!!card?.querySelector('.top-gallery-prompt-info')?.open;
+    row.entry=current;row.matches=matches;
+    if(requestedCount!==undefined)row.galleryTopN=requestedCount;
+    rebuildTopGalleryImageIndex();
+    if(card){
+      const replacement=document.createElement('div');replacement.innerHTML=renderTopScoreGalleryCard(row);
+      const next=replacement.firstElementChild;
+      const details=next.querySelector('.top-gallery-prompt-info');if(details)details.open=open;
+      card.replaceWith(next);
+      const delta=next.getBoundingClientRect().top-top;if(Math.abs(delta)>1)window.scrollBy({top:delta,left:0,behavior:'instant'});
+    }
+    const message=GROUP_TRANSFER_EN?'Refreshed this prompt: '+matches.length+' images.':'このプロンプトのみ更新しました: '+matches.length+'枚';
+    if(progress)progress.textContent=message;toast(message);
+  }catch(error){if(run===groupRelatedImageSearchRun){const message=String(error.message||error);if(progress)progress.textContent=message;toast(message);}}
+  finally{
+    session=null;if(button)button.disabled=false;
+    if(run===groupRelatedImageSearchRun){groupRelatedImageSearchBusy=false;if(stop)stop.hidden=true;
+      if(!valid()&&progress)progress.textContent=GROUP_TRANSFER_EN?'Search cancelled because images, view or settings changed.':'読込画像・表示・検索設定の変更により再検索を中止しました';}
+  }
+}
+
+function renderTopGalleryMatch(r,m,i){
+  const p=r.entry.prompt;
+  return `<button class="top-gallery-image" onclick="openTopGalleryImage(topGalleryImageIndex('${escA(p.id)}',${i}))" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(topGalleryImageIndex('${escA(p.id)}',${i}),event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button><button class="btn sm secondary" onclick="sendTopGalleryImageToCompose(topGalleryImageIndex('${escA(p.id)}',${i}),event)" title="${GROUP_TRANSFER_EN?'Send this image’s metadata prompt as one line; replace Compose':'この画像のメタデータPromptを1行化してComposeへ（上書き）'}">${GROUP_TRANSFER_EN?'Compose':'Composeへ'}</button></div>`;
+}
+
+function topGalleryPromptImageCount(row,override=row.galleryTopN){
+  const value=override==null?topScoreViewTopN:override;
+  return Math.max(1,Math.min(5,Math.floor(Number(value)||1)));
+}
+async function setTopGalleryPromptImageCount(promptId,value,event){
+  const row=topScoreViewRows.find(r=>r.entry.prompt.id===promptId);if(!row)return;
+  const count=value===''?null:Number(value);
+  if(count!==null&&(!Number.isInteger(count)||count<1||count>5))return;
+  const control=event?.currentTarget;
+  await refreshTopGalleryPrompt(promptId,event,count);
+  // A cancelled search must not leave the select showing an unapplied value.
+  if(control)control.value=row.galleryTopN==null?'':String(row.galleryTopN);
+}
+function renderTopGalleryCardImages(row){
+  if(!row.matches.length)return '<div class="group-empty">'+(GROUP_TRANSFER_EN?'No matching image':'候補画像なし')+'</div>';
+  const first=renderTopGalleryMatch(row,row.matches[0],0);
+  if(row.matches.length===1)return first;
+  const count=row.matches.length-1,open=!!row.galleryExtraOpen;
+  return first+'<details class="top-gallery-extra-images" '+(open?'open':'')+' ontoggle="toggleTopGalleryExtraImages(\''+escA(row.entry.prompt.id)+'\',this)"><summary>'+(GROUP_TRANSFER_EN?(open?'Hide extra images':'Show '+count+' more images'):(open?'追加画像を閉じる':'残り'+count+'枚を表示'))+'</summary><div class="top-gallery-extra-body">'+(open?row.matches.slice(1).map((m,i)=>renderTopGalleryMatch(row,m,i+1)).join(''):'')+'</div></details>';
+}
+function toggleTopGalleryExtraImages(promptId,details){
+  const row=topScoreViewRows.find(r=>r.entry.prompt.id===promptId);if(!row||!details||!details.isConnected)return;
+  row.galleryExtraOpen=!!details.open;
+  const body=details.querySelector('.top-gallery-extra-body'),summary=details.querySelector('summary');
+  if(body)body.innerHTML=details.open?row.matches.slice(1).map((m,i)=>renderTopGalleryMatch(row,m,i+1)).join(''):'';
+  if(summary)summary.textContent=GROUP_TRANSFER_EN?(details.open?'Hide extra images':'Show '+Math.max(0,row.matches.length-1)+' more images'):(details.open?'追加画像を閉じる':'残り'+Math.max(0,row.matches.length-1)+'枚を表示');
+}
+
+function renderTopScoreGalleryCard(r){
+  const p=r.entry.prompt;
+      return `<article class="top-gallery-card" data-top-gallery-prompt-id="${escV(p.id)}">
+        <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
+        <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
+        <div class="row" style="align-items:center;margin:6px 0">
+          ${relatedPanelPromptCheckbox(p.id)}
+          <button class="btn sm related" onclick="refreshTopGalleryPrompt('${escA(p.id)}',event)">${GROUP_TRANSFER_EN?'Refresh this prompt':'このプロンプトを再検索'}</button>
+          <label class="group-meta" style="display:inline-flex;align-items:center;gap:4px">${GROUP_TRANSFER_EN?'Images':'表示枚数'} <select class="inp top-gallery-count-select" style="width:auto" onchange="setTopGalleryPromptImageCount('${escA(p.id)}',this.value,event)" aria-label="${GROUP_TRANSFER_EN?'Image count for this prompt':'このプロンプトの画像枚数'}"><option value="" ${r.galleryTopN==null?'selected':''}>${GROUP_TRANSFER_EN?'Global setting':'全体設定'} (${topScoreViewTopN})</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${r.galleryTopN===n?'selected':''}>${n}${GROUP_TRANSFER_EN?' images':'枚'}</option>`).join('')}</select></label>
+          <button class="btn sm secondary" onclick="openGroupPromptFromPreviewMatch('${escA(r.entry.group.id)}','${escA(p.id)}')">${GROUP_TRANSFER_EN?'Open in Groups':'Groupsで開く'}</button>
+        </div>
+        ${renderTopGalleryCardImages(r)}
+        <details class="top-gallery-prompt-info"><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
+          <div class="top-gallery-prompt">${escH(p.text||'')}</div>
+          ${r.matches.map((m,i)=>`<div class="top-gallery-file">#${i+1} score ${formatMatchScore(m)}<br>${escH(m.img.name)}${m.missingTags?`<div>${GROUP_TRANSFER_EN?'Not exact: ':'完全一致しないタグ: '}${escH(m.missingTags.join(', ')||'—')}</div><div>${GROUP_TRANSFER_EN?'Extra: ':'画像側の追加タグ: '}${escH((m.extraDiffs||[]).join(', ')||'—')}</div>`:''}<button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>`).join('')}
+        </details>
+      </article>`;
+}
+
+function renderTopScoreGalleryPanel(preserveSelection=false){
+  const panel=document.getElementById('group-related-images-panel');if(!panel)return;
+  const rows=topScoreViewRows,topN=topScoreViewTopN;
+  rebuildTopGalleryImageIndex();
   const pages=Math.max(1,Math.ceil(rows.length/20));
   topScoreGalleryPage=Math.min(topScoreGalleryPage,pages-1);
   const start=topScoreGalleryPage*20;
@@ -6470,29 +7097,14 @@ function renderTopScoreGalleryPanel(preserveSelection=false){
   panel.innerHTML=`
     <div class="row" style="justify-content:space-between"><div class="sl">Top ${topN} / ${GROUP_TRANSFER_EN?'Gallery — selection order':'ギャラリー・選択順'}</div><button class="btn sm secondary" onclick="clearGroupRelatedImagesPanel()">${GROUP_TRANSFER_EN?'Close':'閉じる'}</button></div>
     <div class="row">${topScoreViewControls()}${relatedScoringControl()}
-      <select class="inp" id="top-score-count" style="width:auto" onchange="topScoreImageCount=Number(this.value);showTopScoreImagesForSelectedPrompts()">${[1,2,3].map(n=>`<option value="${n}" ${topN===n?'selected':''}>Top ${n}</option>`).join('')}</select>
+      <select class="inp" id="top-score-count" style="width:auto" onchange="topScoreImageCount=Number(this.value);showTopScoreImagesForSelectedPrompts()">${[1,2,3,4,5].map(n=>`<option value="${n}" ${topN===n?'selected':''}>Top ${n}</option>`).join('')}</select>
       <button class="btn sm related" onclick="showTopScoreImagesForSelectedPrompts()">${GROUP_TRANSFER_EN?'Rerun search':'再検索'}</button>
       <button class="btn sm related" onclick="openRelatedResultsInPreview()">Preview</button>
       <label class="group-meta">${GROUP_TRANSFER_EN?'Image size':'画像サイズ'} <input type="range" min="220" max="600" step="20" value="${topScoreGallerySize}" oninput="setTopScoreGallerySize(this.value)"></label>
     </div>
     <div class="group-meta">${GROUP_TRANSFER_EN?'Click an image to enlarge; use arrows to browse. Selection is kept across pages and views.':'画像クリックで拡大・矢印で前後へ。ページ・表示切替でも選択を維持します。'}</div>
     ${relatedPanelSelectionTools(preserveSelection)}${pager}
-    <div class="top-score-gallery">${rows.slice(start,start+20).map((r,k)=>{
-      const p=r.entry.prompt;
-      return `<article class="top-gallery-card">
-        <div class="group-meta">#${r.idx+1} / ${escH(r.entry.group.name)}</div>
-        <div class="top-gallery-title">${escH(p.title||p.memo||p.text.slice(0,70))}</div>
-        <div class="row" style="align-items:center;margin:6px 0">
-          ${relatedPanelPromptCheckbox(p.id)}
-          <button class="btn sm secondary" onclick="openGroupPromptFromPreviewMatch('${escA(r.entry.group.id)}','${escA(p.id)}')">${GROUP_TRANSFER_EN?'Open in Groups':'Groupsで開く'}</button>
-        </div>
-        ${r.matches.length?r.matches.map((m,i)=>`<button class="top-gallery-image" onclick="openTopGalleryImage(${bases[start+k]+i})" aria-label="${GROUP_TRANSFER_EN?'Enlarge image':'画像を拡大'} ${i+1}"><img ${previewThumbnailAttributes(m.img)} alt="${escA(m.img.name)}"></button><div class="top-gallery-score"><span>#${i+1} score ${formatMatchScore(m)}</span><button class="btn sm related" onclick="downloadTopGalleryImage(${bases[start+k]+i},event)" title="${GROUP_TRANSFER_EN?'Save original file, including embedded metadata':'メタデータを含む元ファイルをそのまま保存'}">Download</button></div>`).join(''):`<div class="group-empty">${GROUP_TRANSFER_EN?'No matching image':'候補画像なし'}</div>`}
-        <details><summary>${GROUP_TRANSFER_EN?'Prompt / Scores / Files':'Prompt・スコア・ファイル情報'}</summary>
-          <div class="top-gallery-prompt">${escH(p.text||'')}</div>
-          ${r.matches.map((m,i)=>`<div class="top-gallery-file">#${i+1} score ${formatMatchScore(m)}<br>${escH(m.img.name)}${m.missingTags?`<div>${GROUP_TRANSFER_EN?'Not exact: ':'完全一致しないタグ: '}${escH(m.missingTags.join(', ')||'—')}</div><div>${GROUP_TRANSFER_EN?'Extra: ':'画像側の追加タグ: '}${escH((m.extraDiffs||[]).join(', ')||'—')}</div>`:''}<button class="btn sm secondary" onclick="openRelatedImageInPreview('${escA(m.img.id)}')">Preview</button></div>`).join('')}
-        </details>
-      </article>`;
-    }).join('')}</div>${pager}`;
+    <div class="top-score-gallery">${rows.slice(start,start+20).map(renderTopScoreGalleryCard).join('')}</div>${pager}`;
   setTopScoreGallerySize(topScoreGallerySize);
 }
 function setTopScoreGallerySize(value){
@@ -6504,6 +7116,28 @@ function openTopGalleryImage(index){
   topGalleryZoomIndex=index;
   openPreviewZoomSource(previewOriginalUrl(entry.img),(index+1)+' / '+topGalleryZoomItems.length+' — '+entry.title+' — '+entry.img.name,true);
 }
+async function sendTopGalleryImageToCompose(index,event){
+  event?.stopPropagation();
+  const item=topGalleryZoomItems[index]?.img;
+  if(!item){toast(GROUP_TRANSFER_EN?'Image not found.':'画像が見つかりません');return;}
+  const button=event?.currentTarget;if(button)button.disabled=true;
+  // Capture the clicked image, never change Preview's active image or selection.
+  const includeSize=!!document.getElementById('preview-compose-include-size')?.checked;
+  const positiveOnly=previewComposePositiveOnly();
+  try{
+    if(!item.detailsLoaded)await loadPreviewItemDetails(item);
+    if(!previewImages.includes(item)){toast(GROUP_TRANSFER_EN?'This image was unloaded.':'この画像は読み込み一覧から外されています');return;}
+    const line=previewOneLinePrompt(item,includeSize);
+    if(!line){toast(GROUP_TRANSFER_EN?'No prompt metadata found in this image.':'この画像にPromptメタデータが見つかりません');return;}
+    writePreviewLinesToCompose([line],positiveOnly?'':String(item.negative||''),false);
+    const width=document.getElementById('batch-width'),height=document.getElementById('batch-height');
+    if(width)width.value='';if(height)height.value='';
+    switchTab('compose');renderSizePresetSelects();buildCode();updateComposeSummary();
+    toast(GROUP_TRANSFER_EN?'Image prompt sent to Compose as one line.':'この画像のPromptを1行化してComposeへ送りました');
+  }catch(error){toast((GROUP_TRANSFER_EN?'Could not send prompt: ':'送信できませんでした: ')+String(error.message||error));}
+  finally{if(button)button.disabled=false;}
+}
+
 function downloadTopGalleryImage(index,event){
   event?.stopPropagation();
   const entry=topGalleryZoomItems[index];
@@ -6548,6 +7182,8 @@ function renderTopScoreImagesPanel(rows,topN,preserveSelection=false){
         <option value="1" ${topN===1?'selected':''}>Top 1 Image</option>
         <option value="2" ${topN===2?'selected':''}>Top 2 Images</option>
         <option value="3" ${topN===3?'selected':''}>Top 3 Images</option>
+        <option value="4" ${topN===4?'selected':''}>Top 4 Images</option>
+        <option value="5" ${topN===5?'selected':''}>Top 5 Images</option>
       </select>
       <button class="btn sm secondary" onclick="showTopScoreImagesForSelectedPrompts()">Rerun search</button>
       <button class="btn sm related" onclick="openRelatedResultsInPreview()">Display Top Image in Preview</button>
@@ -6717,6 +7353,8 @@ function renderGroupFolderSection(folder,groups,query){
   const forceOpen=!!query;
   const selected=groups.reduce((sum,g)=>sum+selectedCountForGroup(g),0);
   const promptCount=groups.reduce((sum,g)=>sum+(g.prompts||[]).length,0);
+  const folderGroupTargets=groupSelectionTargetsInFolder(id);
+  const folderGroupsSelected=folderGroupTargets.length>0&&folderGroupTargets.every(g=>selectedGroupIds.has(g.id));
   const folderIndex=folder?groupFolders.findIndex(f=>f.id===id):-1;
   const actions=folder?`<button class="btn sm" onclick="event.stopPropagation();moveGroupFolderPosition('${escA(id)}',-1)" title="Move folder up">↑</button>
       <button class="btn sm" onclick="event.stopPropagation();moveGroupFolderPosition('${escA(id)}',1)" title="Move folder down">↓</button>
@@ -6726,20 +7364,83 @@ function renderGroupFolderSection(folder,groups,query){
   const body=groups.length?groups.map(renderGroupFolderCard).join(''):'<div class="group-empty" style="padding:5px 2px 9px">Drag a group here.</div>';
   return `<div class="group-folder" data-folder-id="${escA(id)}"
       ondragover="allowGroupFolderDrop(event)" ondragleave="leaveGroupFolderDrop(event)" ondrop="dropGroupIntoFolder(event,'${escA(id)}')">
-    <div class="group-folder-head" onclick="toggleGroupFolder('${escA(id)}')">
+    <div class="group-folder-head" draggable="${folder||groups.length?'true':'false'}" ondragstart="startFolderCategoryDrag(event,'${escA(id)}')" ondragend="endFolderCategoryDrag()" title="${GROUP_TRANSFER_EN?'Drag this folder to a category':'フォルダをドラッグしてカテゴリへ移動'}" onclick="toggleGroupFolder('${escA(id)}')">
       <span class="group-folder-toggle">${collapsed&&!forceOpen?'▶':'▼'}</span>
       <span class="group-folder-name">${folder?'📁 ':'📂 '}${escH(name)}</span>
       <span class="group-folder-count">${groups.length}G / ${promptCount}P</span>
       <span class="group-folder-selected" id="group-folder-selected-${escA(id||'unfiled')}" style="${selected?'':'display:none'}">${selected?`${selected} selected`:''}</span>
       <span class="group-folder-actions" style="${collapsed&&!forceOpen?'display:none':''}">
-        <button class="btn sm secondary" onclick="event.stopPropagation();toggleAllPromptsInFolder('${escA(id)}')">${promptCount>0&&selected===promptCount?'Clear':'Select all'}</button>
+        <button class="btn sm secondary" onclick="event.stopPropagation();toggleGroupsInFolder('${escA(id)}')" title="Select Group checkboxes for every Group in this folder, including search-hidden Groups. Prompt selection is unchanged." ${folderGroupTargets.length?'':'disabled'}>${folderGroupsSelected?'Deselect Groups':'Select All Groups'}</button>
+        <button class="btn sm secondary" onclick="event.stopPropagation();toggleAllPromptsInFolder('${escA(id)}')">${promptCount>0&&selected===promptCount?'Deselect Prompts':'Select All Prompts'}</button>
         ${actions}
       </span>
     </div>
+    ${folder||groups.length?`<label class="group-folder-parent-assign">Category <select class="inp" onclick="event.stopPropagation()" onchange="assignGroupFolderParent('${escA(id)}',this.value)" aria-label="${escA(name)} Category">${groupParentFolderOptions(validGroupParentFolderId(folder?.parentId))}</select></label>`:''}
     <div class="group-folder-body" style="${collapsed&&!forceOpen?'display:none':''}">${body}</div>
   </div>`;
 }
+function groupVisiblePromptEntries(group=activeGroup()){
+  const query=String(document.getElementById('group-comment-find')?.value||'').trim().toLowerCase();
+  const filter=document.getElementById('group-generation-filter')?.value||'all';
+  return (group?.prompts||[]).map((p,idx)=>({p,idx})).filter(({p})=>{
+    const state=generationState(p);
+    if(filter==='done'&&state!=='done')return false;
+    if(filter==='pending'&&state==='done')return false;
+    return !query||String([p.memo,p.title,p.comment].filter(Boolean).join('\n')).toLowerCase().includes(query);
+  });
+}
+function groupPromptPagingKey(){
+  return [activeGroupId,document.getElementById('group-comment-find')?.value||'',document.getElementById('group-generation-filter')?.value||'all'].join('\n');
+}
+function groupPromptPageWindow(entries){
+  const key=groupPromptPagingKey();
+  if(groupPromptPageKey!==key){groupPromptPage=0;groupPromptPageKey=key;}
+  if(editingGroupPromptId!==groupPromptPageEditingId){
+    const index=entries.findIndex(e=>e.p.id===editingGroupPromptId);
+    if(index>=0)groupPromptPage=Math.floor(index/groupPromptPageSize);
+    groupPromptPageEditingId=editingGroupPromptId;
+  }
+  const pages=Math.max(1,Math.ceil(entries.length/groupPromptPageSize));
+  groupPromptPage=Math.max(0,Math.min(groupPromptPage,pages-1));
+  const start=groupPromptPage*groupPromptPageSize;
+  return {entries:entries.slice(start,start+groupPromptPageSize),pages,start,end:Math.min(start+groupPromptPageSize,entries.length),total:entries.length};
+}
+function groupPromptPager(view){
+  const en=GROUP_TRANSFER_EN;
+  return '<div class="row group-prompt-pager" style="flex-wrap:wrap;margin:8px 0" role="navigation" aria-label="'+(en?'Prompt pages':'プロンプトのページ')+'">'
+    +'<button class="btn sm" onclick="setGroupPromptPage(0)" '+(groupPromptPage===0?'disabled':'')+'>'+ (en?'First':'先頭')+'</button>'
+    +'<button class="btn sm" onclick="setGroupPromptPage('+(groupPromptPage-1)+')" '+(groupPromptPage===0?'disabled':'')+'>'+ (en?'Previous':'前へ')+'</button>'
+    +'<span class="group-meta">'+(groupPromptPage+1)+' / '+view.pages+' — '+(view.total?view.start+1:0)+'–'+view.end+' / '+view.total+'</span>'
+    +'<button class="btn sm" onclick="setGroupPromptPage('+(groupPromptPage+1)+')" '+(groupPromptPage>=view.pages-1?'disabled':'')+'>'+ (en?'Next':'次へ')+'</button>'
+    +'<button class="btn sm" onclick="setGroupPromptPage('+(view.pages-1)+')" '+(groupPromptPage>=view.pages-1?'disabled':'')+'>'+ (en?'Last':'末尾')+'</button>'
+    +'<label class="group-meta">'+(en?'Per page':'表示件数')+' <select class="inp" style="width:auto" onchange="setGroupPromptPageSize(this.value)">'+[25,50,100].map(n=>'<option value="'+n+'" '+(n===groupPromptPageSize?'selected':'')+'>'+n+'</option>').join('')+'</select></label>'
+    +'<span class="group-meta">'+(en?'Selections and bulk operations include other pages.':'選択・全選択・一括操作は他ページも対象です。')+'</span></div>';
+}
+function setGroupPromptPage(page){
+  groupPromptPageWindow(groupVisiblePromptEntries());
+  groupPromptPage=Math.max(0,Math.floor(Number(page)||0));
+  renderGroups();
+  document.getElementById('group-prompt-list')?.scrollIntoView({block:'start',behavior:'instant'});
+}
+function setGroupPromptPageSize(value){
+  const size=Number(value);if(![25,50,100].includes(size))return;
+  const anchor=groupPromptPage*groupPromptPageSize;
+  groupPromptPageSize=size;groupPromptPage=Math.floor(anchor/size);renderGroups();
+}
+function revealGroupPromptPage(id){
+  const entries=groupVisiblePromptEntries();
+  const index=entries.findIndex(e=>e.p.id===id);if(index<0)return false;
+  groupPromptPageKey=groupPromptPagingKey();groupPromptPage=Math.floor(index/groupPromptPageSize);return true;
+}
+function renderTabIfChanged(name,render){
+  // Revision counters are cheap; never stringify the entire database just to decide whether to draw.
+  const key=uiDataRevision+':'+String(activeGroupId||'');
+  if(tabRenderRevisions.get(name)===key)return;
+  render();tabRenderRevisions.set(name,key);
+}
+
 function renderGroups(){
+  tabRenderRevisions.delete('groups');
   captureGroupPromptEditDrafts();
   const existingGroupIds=new Set(promptGroups.map(g=>g.id));
   selectedGroupIds=new Set([...selectedGroupIds].filter(id=>existingGroupIds.has(id)));
@@ -6751,7 +7452,7 @@ function renderGroups(){
   if(!list||!promptList) return;
   if(!promptGroups.length){
     list.innerHTML=groupFolders.length
-      ? groupFolders.map(folder=>renderGroupFolderSection(folder,[], '')).join('')+renderGroupFolderSection(null,[], '')
+      ? renderGroupFolderTree([], '')
       : '<div class="group-empty">No groups yet. Create a group first.</div>';
     promptList.innerHTML='<div class="group-empty">Create a group to collect prompts here.</div>';
     if(title) title.textContent='Select a group';
@@ -6762,20 +7463,10 @@ function renderGroups(){
   const folderNameById=new Map(groupFolders.map(f=>[f.id,f.name.toLowerCase()]));
   const visibleGroups=groupListQuery?promptGroups.filter(g=>{
     const own=String([g.name,g.memo,(g.prompts||[]).length+' prompts'].join(' ')).toLowerCase();
-    return own.includes(groupListQuery)||(folderNameById.get(g.folderId)||'').includes(groupListQuery);
+    const parentId=validGroupParentFolderId(groupFolders.find(f=>f.id===g.folderId)?.parentId);
+    return own.includes(groupListQuery)||(folderNameById.get(g.folderId)||'').includes(groupListQuery)||(folderNameById.get(parentId)||'').includes(groupListQuery);
   }):promptGroups;
-  if(!visibleGroups.length){
-    list.innerHTML='<div class="group-empty">No groups match the search.</div>';
-  }else{
-    const sections=[];
-    groupFolders.forEach(folder=>{
-      const groups=visibleGroups.filter(g=>validGroupFolderId(g.folderId||'')===folder.id);
-      if(!groupListQuery||groups.length) sections.push(renderGroupFolderSection(folder,groups,groupListQuery));
-    });
-    const unfiled=visibleGroups.filter(g=>!validGroupFolderId(g.folderId||''));
-    if(!groupListQuery||unfiled.length) sections.push(renderGroupFolderSection(null,unfiled,groupListQuery));
-    list.innerHTML=sections.join('');
-  }
+  list.innerHTML=renderGroupFolderTree(visibleGroups,groupListQuery)||'<div class="group-empty">No groups or folders match your search.</div>';
   const g=activeGroup();
   if(title) title.textContent=`${g.name} / ${(g.prompts||[]).length} prompts`;
   const status=document.getElementById('group-order-edit-status');
@@ -6787,15 +7478,11 @@ function renderGroups(){
   const commentQuery=String(document.getElementById('group-comment-find')?.value||'').trim().toLowerCase();
   const selectedSet=new Set(groupPromptSelectionOrder);
   const orderEditing=isActiveGroupOrderEditing();
-  const visiblePrompts=(g.prompts||[]).map((p,idx)=>({p,idx})).filter(({p})=>{
-    const statusFilter=document.getElementById('group-generation-filter')?.value||'all';
-    if(statusFilter==='done'&&generationState(p)!=='done')return false;
-    if(statusFilter==='pending'&&generationState(p)==='done')return false;
-    if(!commentQuery) return true;
-    return String([p.memo,p.title,p.comment].filter(Boolean).join('\n')).toLowerCase().includes(commentQuery);
-  });
+  const visiblePrompts=groupVisiblePromptEntries(g);
   if(!visiblePrompts.length){promptList.innerHTML='<div class="group-empty">No prompts match the comment search.</div>';return;}
-  promptList.innerHTML=visiblePrompts.map(({p,idx})=>{
+  const pageView=groupPromptPageWindow(visiblePrompts);
+  const pager=groupPromptPager(pageView);
+  promptList.innerHTML=pager+pageView.entries.map(({p,idx})=>{
     const isEditing=editingGroupPromptId===p.id;
     let editDraft=groupPromptEditDrafts[p.id]||null;
     if(editDraft && editDraft.baseUpdatedAt && p.updatedAt && editDraft.baseUpdatedAt!==p.updatedAt){
@@ -6811,12 +7498,12 @@ function renderGroups(){
     const sendSize=groupPromptSendSizes[p.id]||{};
     const loraOff=isPromptLoraOff(p.id);
     return `
-    <div class="prompt-item" ondragover="overGroupPromptDrag(event)" ondragleave="leaveGroupPromptDrag(event)" ondrop="dropGroupPrompt(event,'${escA(p.id)}')" ondragend="endGroupPromptDrag(event)">
-      <label style="display:flex;gap:8px;align-items:flex-start">
-        <input class="group-prompt-check" type="checkbox" value="${escA(p.id)}" style="margin-top:4px" ${selectedSet.has(p.id)?'checked':''} onchange="toggleGroupPromptSelection('${escA(p.id)}',this.checked)">
+    <div class="prompt-item" id="group-prompt-row-${escA(p.id)}" ondragover="overGroupPromptDrag(event)" ondragleave="leaveGroupPromptDrag(event)" ondrop="dropGroupPrompt(event,'${escA(p.id)}')" ondragend="endGroupPromptDrag(event)">
+      <div class="prompt-select-row" style="display:flex;gap:8px;align-items:flex-start">
+        <input class="group-prompt-check" aria-label="Select this prompt" type="checkbox" value="${escA(p.id)}" style="margin-top:4px" ${selectedSet.has(p.id)?'checked':''} onchange="toggleGroupPromptSelection('${escA(p.id)}',this.checked)">
         <span class="prompt-order-badge${orderEditing?' order-edit':''}" data-order-badge-id="${escV(p.id)}" draggable="true" title="Drag here to reorder" ondragstart="startGroupPromptDrag(event,'${escA(p.id)}')" ondragend="endGroupPromptDrag(event)">${escH(badgeText)}</span>
         <span class="prompt-item-text">${p.width&&p.height?`<span class="prompt-size-badge">${p.width}x${p.height}</span>`:''}<span id="group-prompt-text-${escA(p.id)}">${highlightPromptText(p.text,findQuery)}</span></span>
-      </label>
+      </div>
       ${p.memo?`<div class="group-meta">TITLE: ${escH(p.memo)}</div>`:''}
       ${p.negative?`<div class="group-meta">NEG: ${escH(p.negative)}</div>`:''}
       ${isEditing?`
@@ -6857,7 +7544,7 @@ function renderGroups(){
         <button class="btn sm danger" onclick="deleteGroupPrompt('${escA(p.id)}')">×</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+pager;
   updateGroupCrossSelectStatus();
 }
 
@@ -7239,23 +7926,106 @@ function previewComposeNegativeValueForItems(items){
   return negatives.length===1?negatives[0]:'';
 }
 
-async function selectPreviewFolder(){
+function previewGenerationEligibleImages(images){
+  return (images||[]).filter(item=>!previewFolderSources.get(item.file?._previewSourceId)?.excludeGeneration);
+}
+function previewGenerationFolderScopeKey(){
+  return [...previewFolderSources.values()].filter(source=>source.excludeGeneration).map(source=>source.id).sort().join('\n');
+}
+function setPreviewFolderGenerationExcluded(id,excluded){
+  const source=previewFolderSources.get(id);if(!source)return;
+  if(!!source.excludeGeneration===!!excluded)return;
+  source.excludeGeneration=!!excluded;
+  if(groupFolderGenerationBusy)stopGroupFolderGenerationMatch();
+  // Pending matches from the previous scope must never be confirmed after this change.
+  groupFolderGenerationRows=[];previewGenerationMatchRows=[];
+  for(const panelId of ['group-folder-generation-results','preview-generation-matches']){
+    const panel=document.getElementById(panelId);if(panel){panel.hidden=true;panel.innerHTML='';}
+  }
+  renderPreviewFolderSources();
+  toast(GROUP_TRANSFER_EN?'Generation-check scope updated. Existing generated flags are unchanged.':'生成済み照合の対象を変更しました。既存の生成済みチェックは変更しません');
+}
+
+function renderPreviewFolderSources(){
+  const el=document.getElementById('preview-folder-sources');if(!el)return;
+  const counts=new Map();previewImages.forEach(item=>{const id=item.file?._previewSourceId;if(id)counts.set(id,(counts.get(id)||0)+1);});
+  el.innerHTML=[...previewFolderSources.values()].map(s=>'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0;min-width:0"><span style="flex:1;min-width:100px;overflow-wrap:anywhere">'+escH(s.name)+' — '+(counts.get(s.id)||0)+' images</span><label style="display:inline-flex;gap:4px;align-items:center;font-size:12px"><input class="preview-folder-generation-exclude" type="checkbox" '+(s.excludeGeneration?'checked':'')+' onchange="setPreviewFolderGenerationExcluded(\''+escA(s.id)+'\',this.checked)">'+(GROUP_TRANSFER_EN?'Exclude from generation checks':'生成済み照合から除外')+'</label><button class="btn sm" onclick="refreshPreviewSource(\''+escA(s.id)+'\')">'+(GROUP_TRANSFER_EN?'Update':'更新')+'</button><button class="btn sm" onclick="removePreviewSource(\''+escA(s.id)+'\')">'+(GROUP_TRANSFER_EN?'Unload':'一覧から外す')+'</button></div>').join('');
+}
+async function commitPreviewFolderFiles(files,{append=false,sourceId=null,handle=null,name='Folder'}={}){
+  const id=sourceId||uid('image-folder');
+  if(!append)previewFolderSources.clear();
+  const source=previewFolderSources.get(id)||{id,name,handle};source.handle=handle||source.handle;
+  previewFolderSources.set(id,source);files.forEach(file=>{file._previewSourceId=id;const path=String(file.webkitRelativePath||'');file._previewDisplayPath=source.name+'/'+(file._previewPath||(path?path.split('/').slice(1).join('/')||file.name:file.name));});
+  previewDirectoryHandle=source.handle||null;
+  resetPreviewSearchForNewResult();
+  try{if(append)await appendPreviewFiles(files);else await loadPreviewFiles(files);}
+  finally{renderPreviewFolderSources();}
+}
+async function handlePreviewFolderInput(input,mode){
+  const files=[...(input.files||[])];input.value='';
+  const action=previewPendingFolderAction||{mode};previewPendingFolderAction=null;
+  if(!files.length)return;
+  if(previewFileLoading){toast(GROUP_TRANSFER_EN?'Wait for loading or stop it first.':'読み込み完了を待つか先に停止してください');return;}
+  const name=String(files[0].webkitRelativePath||'').split('/')[0]||'Folder';
+  if(action.sourceId){
+    const source=previewFolderSources.get(action.sourceId);if(!source)return;
+    if(source.name!==name){toast(GROUP_TRANSFER_EN?'Select the same folder as the update target.':'更新対象と同じフォルダを選択してください');return;}
+    if(!confirm(GROUP_TRANSFER_EN?'Update '+name+'? Verify the folder location: this browser cannot distinguish same-named folders.':'「'+name+'」を更新しますか？このブラウザは同名フォルダの場所を識別できないため、選択した保存場所を確認してください。'))return;
+  }
+  await commitPreviewFolderFiles(files,{append:action.mode!=='replace',sourceId:action.sourceId,name});
+}
+async function scanPreviewFolderSource(handle,append,sourceId=null){
+  const generation=++previewFileLoadGeneration;previewFileLoading=true;
+  const button=document.getElementById('preview-load-cancel');if(button)button.hidden=false;
+  const progress=document.getElementById('preview-load-progress');if(progress)progress.textContent=(GROUP_TRANSFER_EN?'Scanning folder: ':'フォルダを確認中: ')+(handle.name||'Folder');
+  try{
+    const files=[];await collectImageFilesFromDirectory(handle,files,'',generation);
+    if(generation!==previewFileLoadGeneration)return;
+    previewFileLoading=false;
+    await commitPreviewFolderFiles(files,{append,sourceId,handle,name:handle.name||'Folder'});
+  }catch(error){if(generation===previewFileLoadGeneration)toast(String(error.message||error));}
+  finally{if(generation===previewFileLoadGeneration){previewFileLoading=false;if(button)button.hidden=true;}renderPreviewFolderSources();}
+}
+async function selectPreviewFolder(append=false){
+  if(previewFileLoading){toast(GROUP_TRANSFER_EN?'Wait for loading or stop it first.':'読み込み完了を待つか先に停止してください');return;}
   if(window.showDirectoryPicker){
     try{
-      const dir=await window.showDirectoryPicker();
-      const files=[];
-      await collectImageFilesFromDirectory(dir,files,'');
-      previewDirectoryHandle=dir;
-      await loadPreviewFiles(files);
-      return;
-    }catch(e){
-      if(e?.name==='AbortError') return;
-      console.warn(e);
-      toast('Switched to file selection due to folder selection failure');
-    }
+      const dir=await window.showDirectoryPicker();let sourceId=null;
+      if(append)for(const s of previewFolderSources.values()){if(s.handle&&await dir.isSameEntry?.(s.handle)){sourceId=s.id;break;}}
+      await scanPreviewFolderSource(dir,append,sourceId);return;
+    }catch(error){if(error?.name==='AbortError')return;}
   }
-  document.getElementById('image-preview-folder-input')?.click();
+  previewPendingFolderAction={mode:append?'append':'replace'};
+  document.getElementById(append?'image-preview-add-input':'image-preview-folder-input')?.click();
 }
+async function refreshPreviewSource(id){
+  if(previewFileLoading){toast(GROUP_TRANSFER_EN?'Wait for loading or stop it first.':'読み込み完了を待つか先に停止してください');return;}
+  const source=previewFolderSources.get(id);if(!source)return;
+  if(!source.handle){previewPendingFolderAction={mode:'update',sourceId:id};document.getElementById('image-preview-update-input')?.click();return;}
+  try{
+    if(source.handle.requestPermission&&await source.handle.requestPermission({mode:'read'})!=='granted'){toast(GROUP_TRANSFER_EN?'Folder permission denied.':'フォルダの読み取りが許可されませんでした');return;}
+    await scanPreviewFolderSource(source.handle,true,id);
+  }catch(error){toast(String(error.message||error));}
+}
+function removePreviewSource(id){
+  const source=previewFolderSources.get(id);if(!source)return;
+  if(previewImg2ImgSending||previewUpscaleBusy){toast(GROUP_TRANSFER_EN?'Wait for image processing to finish.':'画像処理が終わってから外してください');return;}
+  if(!confirm(GROUP_TRANSFER_EN?'Unload '+source.name+'? Files on disk are not deleted.':'「'+source.name+'」を一覧から外しますか？保存ファイルは削除しません。'))return;
+  cancelPreviewFileLoad();
+  const removed=new Set();
+  previewImages=previewImages.filter(item=>{
+    if(item.file?._previewSourceId!==id)return true;
+    removed.add(item.id);releasePreviewImageResources(item);selectedPreviewImageIds.delete(item.id);
+    delete previewPromptEditDrafts[item.id];previewUpscalePromptDrafts.delete(item.id);return false;
+  });
+  previewFolderSources.delete(id);
+  if(removed.has(activePreviewId))activePreviewId=previewImages[0]?.id||null;
+  if(removed.has(lastPreviewSelectedId))lastPreviewSelectedId=null;
+  previewDirectoryHandle=null;
+  clearGroupImageResultsOnSelectionChange();topScoreViewRows=[];topGalleryZoomItems=[];topGalleryZoomIndex=-1;
+  resetPreviewSearchForNewResult();renderPreviewImages();renderPreviewDetail();renderPreviewFolderSources();
+}
+
 async function collectImageFilesFromDirectory(dir,files,prefix,generation=null){
   for await(const [name,handle] of dir.entries()){
     if(generation!==null&&generation!==previewFileLoadGeneration)return;
@@ -7447,14 +8217,15 @@ function setupPreviewThumbnailRendering(){
   schedulePreviewThumbnailObservers();
 }
 function previewFileIdentity(file){
-  if(file._previewPath)return file._previewPath;
   const path=String(file.webkitRelativePath||'');
-  return path?path.split('/').slice(1).join('/')||file.name:file.name;
+  const relative=file._previewPath||(path?path.split('/').slice(1).join('/')||file.name:file.name);
+  return file._previewSourceId?JSON.stringify([file._previewSourceId,relative]):relative;
 }
+
 function createIncrementalPreviewItem(file,id,lazy){
   return {
     id:id||'img_'+Date.now()+'_'+Math.random().toString(36).slice(2),
-    file,name:file.name,path:file._previewPath||file.webkitRelativePath||file.name,
+    file,name:file.name,path:file._previewDisplayPath||file._previewPath||file.webkitRelativePath||file.name,
     size:file.size,modified:file.lastModified||0,type:file.type||guessMime(file.name),
     url:'',width:null,height:null,
     prompt:'',negative:'',meta:{},metadataRaw:'',searchText:'',
@@ -7462,6 +8233,11 @@ function createIncrementalPreviewItem(file,id,lazy){
   };
 }
 async function refreshPreviewFolder(){
+  if(previewFolderSources.size){
+    if(previewFolderSources.size===1)await refreshPreviewSource([...previewFolderSources.keys()][0]);
+    else toast(GROUP_TRANSFER_EN?'Use Update next to the folder you want to refresh.':'更新したいフォルダの横にある「更新」を押してください');
+    return;
+  }
   if(!window.showDirectoryPicker){
     toast(GROUP_TRANSFER_EN?'Select the same folder again to load new and changed images.':'同じ画像フォルダを選び直してください。新規・更新分だけ追加します。');
     document.getElementById('image-preview-update-input')?.click();
@@ -7593,7 +8369,7 @@ async function loadPreviewFiles(files){
       id:'img_'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,6),
       file,
       name:file.name,
-      path:file._previewPath||file.webkitRelativePath||file.name,
+      path:file._previewDisplayPath||file._previewPath||file.webkitRelativePath||file.name,
       size:file.size,
       modified:file.lastModified||0,
       type:file.type||guessMime(file.name),
@@ -8042,6 +8818,7 @@ function renderPreviewDetail(){
   const box=document.getElementById('image-preview-detail');
   if(!box) return;
   const item=activePreviewImage();
+  syncPreviewUpscalePromptEditor(item);
   if(!item){box.innerHTML='<div class="group-empty">Select an image to display information.</div>';prunePreviewOriginalUrls();return;}
   const detailNote=item.lazyLoaded&&!item.detailsLoaded?"<div class=\"group-empty\">Fast loading: this image's metadata has not been parsed yet. Use the button below to load it.</div>":'';
   const meta=item.meta||{};
@@ -8211,6 +8988,143 @@ function previewImg2ImgNumber(id,label,{min=null,max=null,integer=false}={}){
   if(max!=null&&value>max) throw new Error(`${label} must be ${max} or less`);
   return integer?Math.floor(value):value;
 }
+let previewUpscaleBusy=false,previewUpscaleStopRequested=false,previewUpscaleResult=null;
+const previewUpscalePromptDrafts=new Map();
+function syncPreviewUpscalePromptEditor(item){
+  const prompt=document.getElementById('preview-upscale-prompt'),negative=document.getElementById('preview-upscale-negative');
+  if(!prompt||!negative)return;
+  const draft=item?previewUpscalePromptDrafts.get(item.id):null;
+  prompt.value=draft?draft.prompt:String(item?.prompt||'');
+  negative.value=draft?draft.negative:String(item?.negative||'');
+  prompt.disabled=negative.disabled=!item;
+  const label=document.getElementById('preview-upscale-prompt-source');
+  if(label)label.textContent=item?item.name:previewUpscaleText('画像未選択','No image selected');
+}
+function updatePreviewUpscalePromptDraft(){
+  const item=activePreviewImage();if(!item)return;
+  previewUpscalePromptDrafts.set(item.id,{prompt:document.getElementById('preview-upscale-prompt')?.value||'',negative:document.getElementById('preview-upscale-negative')?.value||''});
+}
+function resetPreviewUpscalePromptDraft(){
+  const item=activePreviewImage();if(!item)return;
+  previewUpscalePromptDrafts.delete(item.id);syncPreviewUpscalePromptEditor(item);
+}
+function previewUpscalePromptForItem(item,settings){
+  const draft=settings.editedSourceId===item.id?settings.editedPrompt:null;
+  const base=draft?draft.prompt:String(item.prompt||'');
+  const prefix=String(settings.prefix||'').trim().replace(/^,+|,+$/g,'').trim();
+  const suffix=String(settings.suffix||'').trim().replace(/^,+|,+$/g,'').trim();
+  return {prompt:[prefix,base.trim(),suffix].filter(Boolean).join(', '),negative:draft?draft.negative:String(item.negative||'')};
+}
+
+function previewUpscaleText(ja,en){return GROUP_TRANSFER_EN?en:ja;}
+function previewUpscaleStatus(text){const el=document.getElementById('preview-upscale-status');if(el)el.textContent=text;}
+function updatePreviewUpscaleScale(){
+  const model=document.getElementById('preview-upscale-model')?.value;
+  const select=document.getElementById('preview-upscale-scale');if(!select)return;
+  const native=model==='realesrgan_x2plus_f16.ckpt'?2:4;
+  select.value=String(native);
+  const option=select.querySelector('option[value="4"]');if(option)option.disabled=native===2;
+}
+function previewUpscaleSettings(){
+  const models={'realesrgan_x2plus_f16.ckpt':2,'realesrgan_x4plus_anime_6b_f16.ckpt':4,'4x_ultrasharp_f16.ckpt':4};
+  const model=document.getElementById('preview-upscale-model')?.value;
+  if(!models[model])throw new Error(previewUpscaleText('アップスケーラーを選択してください','Select an upscaler.'));
+  const raw=document.getElementById('preview-upscale-strength')?.value;
+  const strength=String(raw??'').trim()===''?0:Number(raw);
+  if(!Number.isFinite(strength)||strength<0||strength>1)throw new Error(previewUpscaleText('強度は0〜1で指定してください（例: 0.4＝40％）','Strength must be between 0 and 1 (e.g. 0.4 = 40%).'));
+  const rawScale=document.getElementById('preview-upscale-scale')?.value;
+  const scale=rawScale?Number(rawScale):models[model];
+  if(![2,4].includes(scale)||(models[model]===2&&scale!==2))throw new Error(previewUpscaleText('出力倍率は対応する200％または400％を選んでください','Select a supported output scale: 200% or 400%.'));
+  return {model,scale,strength};
+}
+function buildPreviewUpscalePayload(item,settings,imageBase64){
+  const {width,height}=item;
+  if(!Number.isInteger(width)||!Number.isInteger(height)||width<128||height<128||width>8192||height>8192||width%64||height%64){
+    throw new Error(previewUpscaleText('入力画像の縦横は128〜8192px・64の倍数が必要です。画像は自動リサイズしません: ','Input dimensions must be 128–8192 px and multiples of 64; images are not resized automatically: ')+item.name);
+  }
+  if(width*settings.scale>8192||height*settings.scale>8192)throw new Error(previewUpscaleText('拡大後は縦横8192px以下にしてください: ','Output dimensions must not exceed 8192 px: ')+item.name);
+  const edited=previewUpscalePromptForItem(item,settings);
+  if(settings.strength>0&&!edited.prompt.trim())throw new Error(previewUpscaleText('強度0％以外には画像のPromptが必要です: ','A source Prompt is required above 0% strength: ')+item.name);
+  return {prompt:edited.prompt,negative_prompt:edited.negative,init_images:[imageBase64],width,height,strength:settings.strength,upscaler:settings.model,upscaler_scale:settings.scale,hires_fix:false,batch_count:1,batch_size:1};
+}
+async function requestPreviewUpscale(payload){
+  const configured=normalizeDrawThingsApiUrl(),proxy=drawThingsProxyFallbackUrl();
+  const options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
+  let response;
+  try{response=await fetch(drawThingsApiPath(configured,'/sdapi/v1/img2img'),options);}
+  catch(error){if(configured===proxy)throw error;response=await fetch(drawThingsApiPath(proxy,'/sdapi/v1/img2img'),options);}
+  const text=await response.text();
+  if(!response.ok)throw new Error(`HTTP ${response.status} — ${text.slice(0,400)}`);
+  const data=JSON.parse(text||'{}'),raw=String(data?.images?.[0]||'').split(',').pop();
+  if(!raw)throw new Error(previewUpscaleText('画像が返りませんでした。Draw Thingsのモデルとアップスケーラー導入状況を確認してください','No image returned. Check the model and installed upscaler in Draw Things.'));
+  const bytes=Uint8Array.from(atob(raw),c=>c.charCodeAt(0));
+  if(bytes.length<24||bytes[0]!==137||bytes[1]!==80||bytes[2]!==78||bytes[3]!==71)throw new Error(previewUpscaleText('PNGではない応答です','Response is not a PNG.'));
+  const view=new DataView(bytes.buffer);return {blob:new Blob([bytes],{type:'image/png'}),width:view.getUint32(16),height:view.getUint32(20)};
+}
+function clearPreviewUpscaleResult(){
+  if(previewUpscaleResult){
+    if(document.getElementById('preview-lightbox-image')?.src===previewUpscaleResult.url)closePreviewImageZoom();
+    URL.revokeObjectURL(previewUpscaleResult.url);
+  }
+  previewUpscaleResult=null;
+  const image=document.getElementById('preview-upscale-result-image');if(image)image.removeAttribute('src');
+  const box=document.getElementById('preview-upscale-result');if(box)box.hidden=true;
+}
+function showPreviewUpscaleResult(result,item,settings){
+  clearPreviewUpscaleResult();
+  const stem=String(item.name||'image').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]/g,'_').slice(0,140);
+  previewUpscaleResult={url:URL.createObjectURL(result.blob),name:`${stem}_upscale_x${settings.scale}_s${Math.round(settings.strength*100)}.png`};
+  const image=document.getElementById('preview-upscale-result-image');if(image)image.src=previewUpscaleResult.url;
+  const label=document.getElementById('preview-upscale-result-label');if(label)label.textContent=`${item.name} — ${item.width}×${item.height} → ${result.width}×${result.height}`;
+  const box=document.getElementById('preview-upscale-result');if(box)box.hidden=false;
+}
+function openPreviewUpscaleZoom(){if(previewUpscaleResult)openPreviewZoomSource(previewUpscaleResult.url,previewUpscaleResult.name);}
+function downloadPreviewUpscaleResult(){
+  if(!previewUpscaleResult)return;
+  const a=document.createElement('a');a.href=previewUpscaleResult.url;a.download=previewUpscaleResult.name;document.body.appendChild(a);a.click();a.remove();
+}
+function stopPreviewUpscale(){
+  previewUpscaleStopRequested=true;
+  previewUpscaleStatus(previewUpscaleText('現在の1枚が終わったら停止します（Draw Thingsの処理は中断しません）','Stopping after the current image finishes (Draw Things is not interrupted).'));
+}
+async function runPreviewUpscale(selected=false){
+  if(previewUpscaleBusy||previewImg2ImgSending||dtApiSending){toast(previewUpscaleText('別のAPI処理が実行中です','Another API operation is running.'));return;}
+  const items=selected?selectedPreviewImages().slice():[activePreviewImage()].filter(Boolean);
+  if(!items.length){toast(previewUpscaleText('処理する画像を選択してください','Select images first.'));return;}
+  let settings;try{settings=previewUpscaleSettings();}catch(e){toast(e.message);return;}
+  // Freeze edits and common tags once: navigation or typing during a batch must not change later requests.
+  const editedItem=activePreviewImage();
+  settings.editedSourceId=!selected&&editedItem?editedItem.id:null;
+  const draft=previewUpscalePromptDrafts.get(settings.editedSourceId);
+  settings.editedPrompt=draft?{...draft}:null;
+  settings.prefix=String(document.getElementById('preview-upscale-prefix')?.value||'');
+  settings.suffix=String(document.getElementById('preview-upscale-suffix')?.value||'');
+  const warning=previewUpscaleText('強度が0％より大きい場合、処理用Prompt（表示画像は編集内容、選択画像は各元Prompt＋共通タグ）とDraw Thingsの現在のモデル・LoRA・Steps・CFG・Seedで描き直してから拡大します。','Above 0%, images are redrawn using processing Prompts (displayed image edits or batch source Prompts, plus common tags) and current Draw Things model/LoRA/Steps/CFG/Seed before upscaling.');
+  if(!confirm(previewUpscaleText(`${items.length}枚を${settings.scale}倍・強度${settings.strength*100}％で処理します。元ファイルは上書きしません。\n`,`${items.length} image(s), ${settings.scale}×, strength ${settings.strength*100}%. Source files will not be overwritten.\n`)+(settings.strength>0?warning:previewUpscaleText('強度0％：拡大のみ。Prompt編集・追加タグによる描き直しは行いません。','0%: upscale only; Prompt edits and added tags do not redraw the image.'))))return;
+  previewUpscaleBusy=true;previewImg2ImgSending=true;previewUpscaleStopRequested=false;
+  document.querySelectorAll('[data-upscale-start]').forEach(el=>{el.disabled=true;});
+  const stop=document.getElementById('preview-upscale-stop');if(stop)stop.hidden=false;
+  let done=0;
+  try{
+    // Validate all sources first, so a later unsupported size does not silently produce a partial batch.
+    for(let i=0;i<items.length;i++){
+      if(previewUpscaleStopRequested)break;
+      previewUpscaleStatus(previewUpscaleText(`画像確認 ${i+1}/${items.length}`,`Checking ${i+1}/${items.length}`));
+      await loadPreviewItemDetails(items[i]);buildPreviewUpscalePayload(items[i],settings,'');
+    }
+    for(const item of items){
+      if(previewUpscaleStopRequested)break;
+      previewUpscaleStatus(previewUpscaleText(`処理中 ${done+1}/${items.length} — ${item.name}`,`Processing ${done+1}/${items.length} — ${item.name}`));
+      const payload=buildPreviewUpscalePayload(item,settings,await previewItemBase64(item));
+      const result=await requestPreviewUpscale(payload);
+      if(result.width!==item.width*settings.scale||result.height!==item.height*settings.scale)throw new Error(previewUpscaleText('指定倍率と異なる画像サイズが返りました。アップスケーラーを確認してください','Unexpected output dimensions. Check the upscaler.'));
+      showPreviewUpscaleResult(result,item,settings);done++;
+    }
+    previewUpscaleStatus(previewUpscaleText(`${previewUpscaleStopRequested?'停止':'完了'}：${done}/${items.length}枚。最後の結果を表示しています。`,`${previewUpscaleStopRequested?'Stopped':'Complete'}: ${done}/${items.length}. Showing the latest result.`));
+  }catch(e){previewUpscaleStatus(previewUpscaleText(`失敗（${done}/${items.length}枚完了）：`,`Failed (${done}/${items.length} complete): `)+drawThingsApiFetchErrorMessage(e));}
+  finally{previewUpscaleBusy=false;previewImg2ImgSending=false;document.querySelectorAll('[data-upscale-start]').forEach(el=>{el.disabled=false;});if(stop)stop.hidden=true;}
+}
+
 async function previewItemBase64(item){
   let blob=item?.file||null;
   if(!blob&&item?.url){
@@ -8454,6 +9368,9 @@ function showPreviewGroupMatchImages(promptId){
 }
 function openGroupPromptFromPreviewMatch(groupId,promptId){
   activeGroupId=groupId;
+  const comment=document.getElementById('group-comment-find');if(comment)comment.value='';
+  const filter=document.getElementById('group-generation-filter');if(filter)filter.value='all';
+  revealGroupPromptPage(promptId);
   switchTab('groups');
   renderGroups(); renderGroupSelectors(); renderGroupSearchTerms();
   setTimeout(()=>{
@@ -8859,7 +9776,7 @@ function clearPreviewObjectUrls(){
   topScoreViewRows=[];topGalleryZoomItems=[];
   clearGroupRelatedImagesPanel();
 }
-function clearPreviewImages(){cancelPreviewFileLoad();const progress=document.getElementById("preview-load-progress");if(progress) progress.textContent="";clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewShowSelectedOnly=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Preview cleared');}
+function clearPreviewImages(){previewFolderSources.clear();previewPendingFolderAction=null;previewDirectoryHandle=null;renderPreviewFolderSources();previewUpscalePromptDrafts.clear();cancelPreviewFileLoad();const progress=document.getElementById("preview-load-progress");if(progress) progress.textContent="";clearPreviewObjectUrls();previewImages=[];activePreviewId=null;selectedPreviewImageIds.clear();lastPreviewSelectedId=null;previewSelectionMode=false;previewShowSelectedOnly=false;previewPromptEditingId=null;previewPromptEditDrafts={};previewForcedIds=null;previewForcedOrder=[];previewForcedLabel='';previewForcedOrderMode='score';renderPreviewImages();renderPreviewDetail();toast('Preview cleared');}
 function registerPreviewLorasToLibrary(){
   const item=activePreviewImage();
   const loras=Array.isArray(item?.meta?.lora)?item.meta.lora:(Array.isArray(item?.meta?.loras)?item.meta.loras:[]);
@@ -9111,12 +10028,19 @@ function composeBulkEdit(mode){
   const findRaw=document.getElementById('compose-bulk-find')?.value||'';
   const replacement=document.getElementById('compose-bulk-replace')?.value||'';
   if(!textarea||!String(findRaw).trim()){toast('Enter a tag or search text.');return;}
+  const probabilityRaw=document.getElementById('compose-bulk-add-probability')?.value;
+  const force100=!!document.getElementById('compose-bulk-force-100')?.checked;
+  const probability=force100?100:(probabilityRaw==null||String(probabilityRaw).trim()===''?100:Number(probabilityRaw));
+  if(!Number.isFinite(probability)||probability<0||probability>100){
+    toast(GROUP_TRANSFER_EN?'Enter an operation probability between 0 and 100%.':'タグ付与確率は0〜100%で入力してください');return;
+  }
   const before=textarea.value;
   const exactTags=new Set(String(findRaw).split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
   const addition=normalizeComposeTagText(findRaw);
   let changed=0;
   const output=before.split(/\r?\n/).map(line=>{
     if(!line.trim()) return line;
+    if(probability===0||(probability<100&&Math.random()>=probability/100)) return line;
     const {prefix,body}=splitComposeDirectivePrefix(line);
     let next=body;
     if(mode==='prepend') next=normalizeComposeTagText([addition,body].filter(Boolean).join(', '));
@@ -9127,7 +10051,7 @@ function composeBulkEdit(mode){
     if(next!==body) changed++;
     return prefix+next;
   }).join('\n');
-  if(!changed){toast('No matching content was found.');return;}
+  if(!changed){toast(GROUP_TRANSFER_EN?'No lines changed (no matches or no prompts selected by probability).':'変更はありません（一致する対象なし、または確率抽選の対象なし）');return;}
   rememberComposeBulkUndo(before);
   textarea.value=output;
   refreshComposeAfterBulkEdit();
